@@ -1,0 +1,121 @@
+{
+  "sword_of_might": {
+    "id": "sword_of_might",
+    "name": "Меч Силы",
+    "slot": "weapon",
+    "rarity": "minor",
+    "description": "Древний меч, увеличивающий атаку владельца",
+    "bonuses": {
+      "attack": 3
+    },
+    "cost": 1500
+  },
+  "shield_of_sentinel": {
+    "id": "shield_of_sentinel",
+    "name": "Щит Стража",
+    "slot": "shield",
+    "rarity": "minor",
+    "description": "Надёжный щит, защищающий от ударов",
+    "bonuses": {
+      "defense": 3
+    },
+    "cost": 1500
+  },
+  "helm_of_awareness": {
+    "id": "helm_of_awareness",
+    "name": "Шлем Бдительности",
+    "slot": "head",
+    "rarity": "minor",
+    "description": "Шлем, повышающий мораль воинов",
+    "bonuses": {
+      "morale": 1
+    },
+    "cost": 1200
+  },
+  "ring_of_mana": {
+    "id": "ring_of_mana",
+    "name": "Кольцо Маны",
+    "slot": "leftRing",
+    "rarity": "major",
+    "description": "Магическое кольцо, восстанавливающее ману",
+    "bonuses": {
+      "spellPower": 2,
+      "knowledge": 1
+    },
+    "cost": 3000
+  },
+  "amulet_of_fortune": {
+    "id": "amulet_of_fortune",
+    "name": "Амулет Удачи",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Амулет, приносящий удачу в бою",
+    "bonuses": {
+      "luck": 2
+    },
+    "cost": 2500
+  },
+  "boots_of_speed": {
+    "id": "boots_of_speed",
+    "name": "Сапоги Скорости",
+    "slot": "boots",
+    "rarity": "major",
+    "description": "Волшебные сапоги, увеличивающие движение",
+    "bonuses": {
+      "speed": 2
+    },
+    "cost": 2800
+  },
+  "breastplate_of_bravery": {
+    "id": "breastplate_of_bravery",
+    "name": "Кираса Храбрости",
+    "slot": "torso",
+    "rarity": "major",
+    "description": "Зачарованная кираса, повышающая защиту и мораль",
+    "bonuses": {
+      "defense": 4,
+      "morale": 1
+    },
+    "cost": 4000
+  },
+  "sword_of_judgement": {
+    "id": "sword_of_judgement",
+    "name": "Меч Суда",
+    "slot": "weapon",
+    "rarity": "relic",
+    "description": "Легендарный клинок, дарующий огромную силу",
+    "bonuses": {
+      "attack": 8,
+      "spellPower": 3
+    },
+    "cost": 10000
+  },
+  "crown_of_supremacy": {
+    "id": "crown_of_supremacy",
+    "name": "Корона Превосходства",
+    "slot": "head",
+    "rarity": "relic",
+    "description": "Корона древних королей, дарующая все бонусы",
+    "bonuses": {
+      "attack": 4,
+      "defense": 4,
+      "spellPower": 4,
+      "knowledge": 4,
+      "morale": 2,
+      "luck": 2
+    },
+    "cost": 25000
+  },
+  "cloak_of_darkness": {
+    "id": "cloak_of_darkness",
+    "name": "Плащ Тьмы",
+    "slot": "misc",
+    "rarity": "relic",
+    "description": "Зачарованный плащ, скрывающий владельца",
+    "bonuses": {
+      "defense": 5,
+      "luck": 3
+    },
+    "cost": 15000
+  }
+}

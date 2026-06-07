@@ -1,0 +1,28 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "deep-thinker": {
+      "type": "local",
+      "command": ["npx", "-y", "deep-thinker"],
+      "enabled": true
+    },
+    "exa": {
+      "type": "local",
+      "command": ["npx", "-y", "exa-mcp-server"],
+      "enabled": true,
+      "env": {
+        "EXA_API_KEY": "40fdad5e-6861-4090-a386-3f426046480f"
+      }
+    },
+    "godot-ai": {
+      "type": "remote",
+      "url": "http://127.0.0.1:8000/mcp",
+      "enabled": true
+    },
+    "blender": {
+      "type": "local",
+      "command": ["uv", "--directory", "C:\\Users\\gatil\\VisualStudioCodeProject\\blender_mcp\\mcp", "run", "blender-mcp"],
+      "enabled": false
+    }
+  }
+}

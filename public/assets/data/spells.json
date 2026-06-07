@@ -1,0 +1,209 @@
+{
+  "bless": {
+    "id": "bless",
+    "name": "Благословение",
+    "school": "water",
+    "manaCost": 5,
+    "description": "Увеличивает урон юнита на 20% на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "damage", "value": 20, "duration": 3 }
+    ]
+  },
+  "heal": {
+    "id": "heal",
+    "name": "Исцеление",
+    "school": "water",
+    "manaCost": 8,
+    "description": "Восстанавливает 30 HP юниту",
+    "target": "single",
+    "effects": [
+      { "type": "heal", "value": 30 }
+    ]
+  },
+  "slow": {
+    "id": "slow",
+    "name": "Замедление",
+    "school": "water",
+    "manaCost": 6,
+    "description": "Снижает скорость юнита на 50% на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "debuff", "stat": "speed", "value": 50, "duration": 3 }
+    ]
+  },
+  "teleport": {
+    "id": "teleport",
+    "name": "Телепорт",
+    "school": "water",
+    "manaCost": 10,
+    "description": "Перемещает юнита в любую свободную клетку",
+    "target": "single",
+    "effects": []
+  },
+  "clone": {
+    "id": "clone",
+    "name": "Клонирование",
+    "school": "water",
+    "manaCost": 20,
+    "description": "Создаёт копию юнита на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "summon", "duration": 3 }
+    ]
+  },
+  "bloodlust": {
+    "id": "bloodlust",
+    "name": "Жажда крови",
+    "school": "fire",
+    "manaCost": 6,
+    "description": "Увеличивает атаку юнита на 5 на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "attack", "value": 5, "duration": 3 }
+    ]
+  },
+  "fireball": {
+    "id": "fireball",
+    "name": "Огненный шар",
+    "school": "fire",
+    "manaCost": 12,
+    "description": "Наносит 25 урона в области 3x3",
+    "target": "area",
+    "effects": [
+      { "type": "damage", "value": 25 }
+    ]
+  },
+  "berserk": {
+    "id": "berserk",
+    "name": "Берсерк",
+    "school": "fire",
+    "manaCost": 15,
+    "description": "Юнит атакует ближайшую цель, теряя контроль",
+    "target": "single",
+    "effects": [
+      { "type": "debuff", "stat": "control", "duration": 2 }
+    ]
+  },
+  "armageddon": {
+    "id": "armageddon",
+    "name": "Армагеддон",
+    "school": "fire",
+    "manaCost": 30,
+    "description": "Наносит 100 урона всем юнитам на поле",
+    "target": "all",
+    "effects": [
+      { "type": "damage", "value": 100 }
+    ]
+  },
+  "shield": {
+    "id": "shield",
+    "name": "Щит",
+    "school": "earth",
+    "manaCost": 5,
+    "description": "Снижает получаемый урон на 30% на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "defense", "value": 30, "duration": 3 }
+    ]
+  },
+  "stoneskin": {
+    "id": "stoneskin",
+    "name": "Каменная кожа",
+    "school": "earth",
+    "manaCost": 7,
+    "description": "Увеличивает защиту юнита на 5 на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "defense", "value": 5, "duration": 3 }
+    ]
+  },
+  "meteor": {
+    "id": "meteor",
+    "name": "Метеор",
+    "school": "earth",
+    "manaCost": 15,
+    "description": "Наносит 50 урона одному юниту",
+    "target": "single",
+    "effects": [
+      { "type": "damage", "value": 50 }
+    ]
+  },
+  "resurrect": {
+    "id": "resurrect",
+    "name": "Воскрешение",
+    "school": "earth",
+    "manaCost": 25,
+    "description": "Воскрешает павших юнитов (до 50% HP)",
+    "target": "single",
+    "effects": [
+      { "type": "heal", "value": 50 }
+    ]
+  },
+  "haste": {
+    "id": "haste",
+    "name": "Ускорение",
+    "school": "air",
+    "manaCost": 6,
+    "description": "Увеличивает скорость юнита на 50% на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "speed", "value": 50, "duration": 3 }
+    ]
+  },
+  "lightning": {
+    "id": "lightning",
+    "name": "Молния",
+    "school": "air",
+    "manaCost": 10,
+    "description": "Наносит 30 урона одному юниту",
+    "target": "single",
+    "effects": [
+      { "type": "damage", "value": 30 }
+    ]
+  },
+  "chain_lightning": {
+    "id": "chain_lightning",
+    "name": "Цепная молния",
+    "school": "air",
+    "manaCost": 18,
+    "description": "Наносит 25 урона, переходит на 3 цели (-25% за цель)",
+    "target": "area",
+    "effects": [
+      { "type": "damage", "value": 25 }
+    ]
+  },
+  "fly": {
+    "id": "fly",
+    "name": "Полёт",
+    "school": "air",
+    "manaCost": 12,
+    "description": "Юнит получает способность летать на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "flying", "duration": 3 }
+    ]
+  },
+  "blind": {
+    "id": "blind",
+    "name": "Ослепление",
+    "school": "mind",
+    "manaCost": 8,
+    "description": "Юнит пропускает ход",
+    "target": "single",
+    "effects": [
+      { "type": "debuff", "stat": "stun", "duration": 1 }
+    ]
+  },
+  "forgetfulness": {
+    "id": "forgetfulness",
+    "name": "Забывчивость",
+    "school": "mind",
+    "manaCost": 10,
+    "description": "Стрелок не может стрелять 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "debuff", "stat": "ranged", "duration": 3 }
+    ]
+  }
+}

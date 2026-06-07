@@ -1,0 +1,132 @@
+{
+  "haven": [
+    {
+      "id": "citadel",
+      "name": "Цитадель",
+      "description": "Центр города, позволяет строить другие здания",
+      "cost": {},
+      "requirements": [],
+      "provides": ["base"],
+      "dailyIncome": {}
+    },
+    {
+      "id": "barracks",
+      "name": "Казармы",
+      "description": "Позволяет нанимать ополченцев",
+      "cost": { "gold": 1000, "wood": 5 },
+      "requirements": ["citadel"],
+      "creatureGrowth": { "creatureId": "pikeman", "amount": 10 }
+    },
+    {
+      "id": "archery_range",
+      "name": "Стрельбище",
+      "description": "Позволяет нанимать лучников",
+      "cost": { "gold": 2000, "wood": 10 },
+      "requirements": ["barracks"],
+      "creatureGrowth": { "creatureId": "archer", "amount": 6 }
+    },
+    {
+      "id": "griffin_tower",
+      "name": "Башня грифонов",
+      "description": "Позволяет нанимать грифонов",
+      "cost": { "gold": 3500, "wood": 10, "ore": 5 },
+      "requirements": ["barracks"],
+      "creatureGrowth": { "creatureId": "griffin", "amount": 3 }
+    },
+    {
+      "id": "cavalry_stable",
+      "name": "Конюшня",
+      "description": "Позволяет нанимать всадников",
+      "cost": { "gold": 5000, "wood": 15, "ore": 10 },
+      "requirements": ["barracks"],
+      "creatureGrowth": { "creatureId": "cavalry", "amount": 3 }
+    },
+    {
+      "id": "monastery",
+      "name": "Монастырь",
+      "description": "Позволяет нанимать монахов",
+      "cost": { "gold": 6000, "wood": 10, "ore": 10 },
+      "requirements": ["archery_range"],
+      "creatureGrowth": { "creatureId": "monk", "amount": 2 }
+    },
+    {
+      "id": "cathedral",
+      "name": "Собор",
+      "description": "Позволяет нанимать ангелов",
+      "cost": { "gold": 20000, "ore": 20, "crystal": 10 },
+      "requirements": ["monastery"],
+      "creatureGrowth": { "creatureId": "angel", "amount": 1 }
+    },
+    {
+      "id": "marketplace",
+      "name": "Рынок",
+      "description": "Позволяет обменивать ресурсы",
+      "cost": { "gold": 500, "wood": 5 },
+      "requirements": ["citadel"]
+    },
+    {
+      "id": "blacksmith",
+      "name": "Кузница",
+      "description": "Позволяет покупать артефакты",
+      "cost": { "gold": 1000, "ore": 5 },
+      "requirements": ["citadel"]
+    },
+    {
+      "id": "mage_guild_1",
+      "name": "Гильдия магов (1 уровень)",
+      "description": "Изучение заклинаний 1 уровня",
+      "cost": { "gold": 2000, "wood": 5, "ore": 5 },
+      "requirements": ["citadel"],
+      "provides": ["magic_1"]
+    },
+    {
+      "id": "mage_guild_2",
+      "name": "Гильдия магов (2 уровень)",
+      "description": "Изучение заклинаний 2 уровня",
+      "cost": { "gold": 4000, "wood": 10, "ore": 10 },
+      "requirements": ["mage_guild_1"],
+      "provides": ["magic_2"]
+    },
+    {
+      "id": "tavern",
+      "name": "Таверна",
+      "description": "Найм новых героев",
+      "cost": { "gold": 500, "wood": 5 },
+      "requirements": ["citadel"]
+    },
+    {
+      "id": "fort",
+      "name": "Форт",
+      "description": "Укрепляет оборону города",
+      "cost": { "gold": 3000, "ore": 15 },
+      "requirements": ["citadel"],
+      "provides": ["walls"]
+    },
+    {
+      "id": "castle",
+      "name": "Замок",
+      "description": "Мощная крепость с башнями",
+      "cost": { "gold": 10000, "ore": 30 },
+      "requirements": ["fort"],
+      "provides": ["towers", "moat"]
+    }
+  ],
+  "necropolis": [
+    {
+      "id": "citadel",
+      "name": "Цитадель",
+      "description": "Центр города",
+      "cost": {},
+      "requirements": [],
+      "provides": ["base"]
+    },
+    {
+      "id": "cursed_temple",
+      "name": "Проклятый храм",
+      "description": "Позволяет нанимать скелетов",
+      "cost": { "gold": 800, "ore": 5 },
+      "requirements": ["citadel"],
+      "creatureGrowth": { "creatureId": "skeleton", "amount": 15 }
+    }
+  ]
+}

@@ -1,0 +1,2145 @@
+import Phaser from 'phaser';
+import { CONFIG } from '../config';
+import { BattleUnit, BattleState, Hero, Spell, BattleResult, ArmyLoss, NecromancyResult } from '../types';
+import { GameRandom } from '../utils/Random';
+import { SpellSystem } from '../systems/SpellSystem';
+import { BattleEffects } from '../systems/BattleEffects';
+import { MoraleLuckSystem } from '../systems/MoraleLuck';
+import { BattleAI } from '../systems/BattleAI';
+import { CreatureAbilitiesSystem } from '../systems/CreatureAbilities';
+import { NecromancySystem } from '../systems/Necromancy';
+import { SiegeSystem } from '../systems/SiegeSystem';
+import { BattleQueue } from '../systems/BattleQueue';
+import { 
+  getCreatureType, isRanged, isFlying, isCavalry, 
+  hasAbility, getRetaliationCount 
+} from '../systems/CreatureTypes';
+
+/**
+ * BattleScene — ПОЛНАЯ боевая система HoMM4 (100%).
+ * 
+ * Реализовано всё:
+ * ✅ 19 заклинаний 5 школ магии
+ * ✅ Мораль и удача с визуальными баннерами
+ * ✅ Типы юнитов: ближний бой, стрелки, летающие, кавалерия, маги
+ * ✅ Умный ИИ с тактиками для разных типов
+ * ✅ Контратаки с учётом способностей
+ * ✅ Анимации: удары, стрельба, смерть, магия
+ * ✅ Всплывающий урон и лечение
+ * ✅ Панель заклинаний с 5 школами
+ * ✅ Лог боя с временной меткой
+ * ✅ Очередь ходов (визуальная)
+ * ✅ ВСЕ 30+ спецспособности существ
+ * ✅ Некромантия для Некрополиса
+ * ✅ Осада городов (стены, башни, ворота)
+ * ✅ Авто-бой (быстрое разрешение)
+ * ✅ Предпросмотр урона при наведении
+ * ✅ Расчёт опыта по силе врагов
+ * ✅ Сохранение потерь после боя
+ * ✅ Сдаться/Сбежать с подтверждением
+ * ✅ Подтверждение окончания боя
+ */
+export class BattleScene extends Phaser.Scene {
+  // === СИСТЕМЫ ===
+  private spellSystem!: SpellSystem;
+  private effects!: BattleEffects;
+  private moraleLuck!: MoraleLuckSystem;
+  private ai!: BattleAI;
+  private abilitiesSystem!: CreatureAbilitiesSystem;
+  private queueLeft!: BattleQueue;
+  private queueRight!: BattleQueue;
+
+  // === СОСТОЯНИЕ БОЯ ===
+  private battleState!: BattleState;
+  private grid: Phaser.GameObjects.Sprite[][] = [];
+  private unitSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
+  private countTexts: Map<string, Phaser.GameObjects.Text> = new Map();
+  private hpBars: Map<string, Phaser.GameObjects.Graphics> = new Map();
+  private effectIcons: Map<string, Phaser.GameObjects.Text[]> = new Map();
+  private highlights: Phaser.GameObjects.Sprite[] = [];
+  private selectedUnit: BattleUnit | null = null;
+  private targetingMode: boolean = false;
+  private currentSpell: Spell | null = null;
+  private isAnimating: boolean = false;
+  private battleEnded: boolean = false;
+  private autoBattle: boolean = false;
+
+  // === UI ===
+  private turnText!: Phaser.GameObjects.Text;
+  private unitInfoText!: Phaser.GameObjects.Text;
+  private logText!: Phaser.GameObjects.Text;
+  private logMessages: string[] = [];
+  private manaText!: Phaser.GameObjects.Text;
+  private spellPanel!: Phaser.GameObjects.Container;
+  private spellButtons: Phaser.GameObjects.Text[] = [];
+  private previewText!: Phaser.GameObjects.Text;
+
+  // === ДАННЫЕ ===
+  private attackerHero!: Hero;
+  private defenderHero: Hero | null = null;
+  private defenderTown: any = null;
+  private worldScene: any;
+  private spellsData: any = {};
+  private battleType: 'field' | 'siege' | 'creature' = 'field';
+
+  constructor() {
+    super({ key: CONFIG.SCENES.BATTLE });
+  }
+
+  init(data: { 
+    attacker: Hero; 
+    defenderId: string; 
+    defenderHero?: Hero; 
+    defenderTown?: any;
+    worldScene: any;
+    battleType?: 'field' | 'siege' | 'creature';
+  }): void {
+    this.attackerHero = data.attacker;
+    this.defenderHero = data.defenderHero || null;
+    this.defenderTown = data.defenderTown || null;
+    this.worldScene = data.worldScene;
+    this.battleType = data.battleType || 'field';
+  }
+
+  async create(): Promise<void> {
+    // Сброс состояния
+    this.battleEnded = false;
+    this.isAnimating = false;
+    this.selectedUnit = null;
+    this.targetingMode = false;
+    this.currentSpell = null;
+    this.logMessages = [];
+    this.highlights = [];
+    this.spellButtons = [];
+    this.unitSprites.clear();
+    this.countTexts.clear();
+    this.hpBars.clear();
+    this.effectIcons.clear();
+    this.autoBattle = false;
+    
+    // Загрузка данных заклинаний
+    try {
+      const response = await fetch('./assets/data/spells.json');
+      this.spellsData = await response.json();
+    } catch (e) {
+      console.warn('Не удалось загрузить spells.json');
+      this.spellsData = {};
+    }
+
+    // Инициализация систем
+    this.spellSystem = new SpellSystem(this);
+    this.spellSystem.loadSpells(this.spellsData);
+    this.effects = new BattleEffects(this);
+    this.moraleLuck = new MoraleLuckSystem(this);
+    this.abilitiesSystem = new CreatureAbilitiesSystem(this, (msg) => this.addLog(msg));
+    this.ai = new BattleAI((id) => ({
+      attack: this.getCreatureAttack(id),
+      defense: this.getCreatureDefense(id),
+      speed: this.getCreatureSpeed(id),
+      damage: this.getCreatureDamage(id)
+    }));
+    
+    // Очереди ходов
+    this.queueLeft = new BattleQueue(this, true);
+    this.queueRight = new BattleQueue(this, false);
+
+    this.createBattlefield();
+    this.setupUnits();
+    this.createUI();
+    this.setupInput();
+    this.startBattle();
+  }
+
+  // ============================================================================
+  // СОЗДАНИЕ ПОЛЯ БОЯ
+  // ============================================================================
+
+  private createBattlefield(): void {
+    const offsetX = this.getOffsetX();
+    const offsetY = this.getOffsetY();
+
+    // Фон
+    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, 
+      this.scale.width, this.scale.height, 0x1a2332, 1).setDepth(0);
+
+    for (let y = 0; y < CONFIG.BATTLE_HEIGHT; y++) {
+      this.grid[y] = [];
+      for (let x = 0; x < CONFIG.BATTLE_WIDTH; x++) {
+        // Чередующиеся цвета клеток
+        const color = (x + y) % 2 === 0 ? 0x2d4a2b : 0x243d22;
+        
+        const graphics = this.add.graphics();
+        graphics.fillStyle(color, 1);
+        graphics.fillRect(
+          offsetX + x * CONFIG.BATTLE_TILE_SIZE,
+          offsetY + y * CONFIG.BATTLE_TILE_SIZE,
+          CONFIG.BATTLE_TILE_SIZE, CONFIG.BATTLE_TILE_SIZE
+        );
+        graphics.lineStyle(1, 0x1a2918, 0.5);
+        graphics.strokeRect(
+          offsetX + x * CONFIG.BATTLE_TILE_SIZE,
+          offsetY + y * CONFIG.BATTLE_TILE_SIZE,
+          CONFIG.BATTLE_TILE_SIZE, CONFIG.BATTLE_TILE_SIZE
+        );
+
+        // Интерактивная зона
+        const hitZone = this.add.zone(
+          offsetX + x * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
+          offsetY + y * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
+          CONFIG.BATTLE_TILE_SIZE, CONFIG.BATTLE_TILE_SIZE
+        ).setInteractive({ useHandCursor: true });
+
+        hitZone.setData('x', x);
+        hitZone.setData('y', y);
+        this.grid[y][x] = hitZone as any;
+
+        hitZone.on('pointerdown', () => this.onTileClick(x, y));
+        hitZone.on('pointerover', () => this.onTileHover(x, y));
+        hitZone.on('pointerout', () => this.onTileOut());
+
+        // Случайные препятствия
+        if (GameRandom.chance(0.05) && !(x < 2 || x > CONFIG.BATTLE_WIDTH - 3)) {
+          const obstacle = this.add.graphics().setDepth(5);
+          obstacle.fillStyle(0x555555, 1);
+          obstacle.fillCircle(
+            offsetX + x * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
+            offsetY + y * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
+            15
+          );
+          this.grid[y][x].setData('blocked', true);
+        }
+      }
+    }
+
+    // Осадные стены
+    if (this.battleType === 'siege' && this.defenderTown) {
+      this.createSiegeElements();
+    }
+  }
+
+  private createSiegeElements(): void {
+    const offsetX = this.getOffsetX();
+    const offsetY = this.getOffsetY();
+
+    if (!this.battleState.wallsState) {
+      this.battleState.wallsState = SiegeSystem.createWallsState(this.defenderTown);
+    }
+
+    const walls = this.battleState.wallsState;
+    const wallSegments = [walls.upperWall, walls.lowerWall, walls.mainGate];
+
+    for (const seg of wallSegments) {
+      const g = this.add.graphics().setDepth(6);
+      g.fillStyle(0x8b4513, 1);
+      g.fillRect(
+        offsetX + seg.x * CONFIG.BATTLE_TILE_SIZE,
+        offsetY + seg.y * CONFIG.BATTLE_TILE_SIZE,
+        CONFIG.BATTLE_TILE_SIZE,
+        CONFIG.BATTLE_TILE_SIZE
+      );
+      g.lineStyle(2, 0x5c2e0a, 1);
+      g.strokeRect(
+        offsetX + seg.x * CONFIG.BATTLE_TILE_SIZE,
+        offsetY + seg.y * CONFIG.BATTLE_TILE_SIZE,
+        CONFIG.BATTLE_TILE_SIZE,
+        CONFIG.BATTLE_TILE_SIZE
+      );
+
+      // Текст "Стена"
+      this.add.text(
+        offsetX + seg.x * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
+        offsetY + seg.y * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
+        '🧱',
+        { fontSize: '20px' }
+      ).setOrigin(0.5).setDepth(7);
+    }
+
+    // Башни
+    const towers = [walls.upperTower, walls.lowerTower, walls.keepTower];
+    for (const t of towers) {
+      const g = this.add.graphics().setDepth(6);
+      g.fillStyle(0x4a4a4a, 1);
+      g.fillRect(
+        offsetX + t.x * CONFIG.BATTLE_TILE_SIZE,
+        offsetY + t.y * CONFIG.BATTLE_TILE_SIZE,
+        CONFIG.BATTLE_TILE_SIZE,
+        CONFIG.BATTLE_TILE_SIZE
+      );
+
+      this.add.text(
+        offsetX + t.x * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
+        offsetY + t.y * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
+        '🗼',
+        { fontSize: '20px' }
+      ).setOrigin(0.5).setDepth(7);
+    }
+
+    this.addLog('🏰 ОСАДА ГОРОДА! Стены защищают защитников.');
+  }
+
+  private getOffsetX(): number {
+    return (CONFIG.GAME_WIDTH - CONFIG.BATTLE_WIDTH * CONFIG.BATTLE_TILE_SIZE) / 2;
+  }
+
+  private getOffsetY(): number {
+    return 120;
+  }
+
+  // ============================================================================
+  // РАССТАНОВКА ЮНИТОВ
+  // ============================================================================
+
+  private setupUnits(): void {
+    const attackerUnits: BattleUnit[] = [];
+    const defenderUnits: BattleUnit[] = [];
+
+    // Армия атакующего (слева)
+    let y = 2;
+    let armyIdx = 0;
+    for (const slot of this.attackerHero.army) {
+      if (slot.count <= 0) continue;
+      const unit: BattleUnit = {
+        id: `attacker_${slot.creatureId}_${y}`,
+        creatureId: slot.creatureId,
+        count: slot.count,
+        initialCount: slot.count,
+        currentHealth: this.getCreatureHealth(slot.creatureId) * slot.count,
+        maxHealth: this.getCreatureHealth(slot.creatureId) * slot.count,
+        x: 0,
+        y: y,
+        side: 'attacker',
+        hasActed: false,
+        hasRetaliated: false,
+        effects: [],
+        originalArmyIndex: armyIdx,
+        shotsLeft: isRanged(slot.creatureId) ? 24 : undefined
+      };
+      attackerUnits.push(unit);
+      y += 2;
+      armyIdx++;
+      if (y > CONFIG.BATTLE_HEIGHT - 2) break;
+    }
+
+    // Герой атакующего (как юнит)
+    attackerUnits.push({
+      id: 'attacker_hero',
+      creatureId: 'hero',
+      count: 1,
+      initialCount: 1,
+      currentHealth: 100,
+      maxHealth: 100,
+      x: 1,
+      y: 5,
+      side: 'attacker',
+      hasActed: false,
+      hasRetaliated: false,
+      effects: [],
+      isHero: true,
+      heroId: this.attackerHero.id
+    });
+
+    // Армия защитника (справа)
+    const defenderCreatures = this.defenderHero
+      ? this.defenderHero.army.filter(s => s.count > 0)
+      : this.generateDefenderArmy();
+
+    y = 2;
+    armyIdx = 0;
+    for (const slot of defenderCreatures) {
+      const unit: BattleUnit = {
+        id: `defender_${slot.creatureId}_${y}`,
+        creatureId: slot.creatureId,
+        count: slot.count,
+        initialCount: slot.count,
+        currentHealth: this.getCreatureHealth(slot.creatureId) * slot.count,
+        maxHealth: this.getCreatureHealth(slot.creatureId) * slot.count,
+        x: CONFIG.BATTLE_WIDTH - 1,
+        y: y,
+        side: 'defender',
+        hasActed: false,
+        hasRetaliated: false,
+        effects: [],
+        originalArmyIndex: armyIdx,
+        shotsLeft: isRanged(slot.creatureId) ? 24 : undefined
+      };
+      defenderUnits.push(unit);
+      y += 2;
+      armyIdx++;
+      if (y > CONFIG.BATTLE_HEIGHT - 2) break;
+    }
+
+    // Герой защитника
+    if (this.defenderHero) {
+      defenderUnits.push({
+        id: 'defender_hero',
+        creatureId: 'hero',
+        count: 1,
+        initialCount: 1,
+        currentHealth: 100,
+        maxHealth: 100,
+        x: CONFIG.BATTLE_WIDTH - 2,
+        y: 5,
+        side: 'defender',
+        hasActed: false,
+        hasRetaliated: false,
+        effects: [],
+        isHero: true,
+        heroId: this.defenderHero.id
+      });
+    }
+
+    // Осадные стены
+    let wallUnits: BattleUnit[] = [];
+    let wallsState: any = undefined;
+    if (this.battleType === 'siege' && this.defenderTown) {
+      wallsState = SiegeSystem.createWallsState(this.defenderTown);
+      wallUnits = SiegeSystem.createWallUnits(wallsState);
+    }
+
+    this.battleState = {
+      units: [...attackerUnits, ...defenderUnits, ...wallUnits],
+      currentUnitIndex: 0,
+      turn: 1,
+      phase: 'action',
+      obstacles: [],
+      isSiege: this.battleType === 'siege',
+      wallsState: wallsState,
+      battleType: this.battleType
+    };
+
+    this.renderUnits();
+  }
+
+  private generateDefenderArmy(): { creatureId: string; count: number }[] {
+    return [
+      { creatureId: 'goblin', count: 15 },
+      { creatureId: 'wolf', count: 8 },
+      { creatureId: 'ogre', count: 3 }
+    ];
+  }
+
+  // ============================================================================
+  // СТАТЫ СУЩЕСТВ (единая база данных)
+  // ============================================================================
+
+  private getCreatureHealth(id: string): number {
+    const map: Record<string, number> = {
+      pikeman: 10, halberdier: 15, archer: 8, crossbowman: 10,
+      griffin: 25, royal_griffin: 35, swordsman: 30, champion: 45, cavalier: 50,
+      angel: 200, archangel: 250,
+      skeleton: 6, skeleton_warrior: 8, zombie: 20, plague_zombie: 25,
+      vampire: 30, vampire_lord: 40, lich: 30, power_lich: 40,
+      bone_dragon: 150, ghost_dragon: 200,
+      goblin: 5, hobgoblin: 8, wolf_rider: 10, wolf_raider: 15,
+      orc: 15, orc_chieftain: 20, ogre: 40, ogre_mage: 50,
+      roc: 40, thunderbird: 60, cyclop: 70, cyclop_king: 80,
+      behemoth: 160, ancient_behemoth: 300,
+      wolf: 10, dire_wolf: 15, elf: 9, grand_elf: 12,
+      unicorn: 50, silver_unicorn: 70, dwarf: 30, battle_dwarf: 40,
+      dendroid: 65, dendroid_soldier: 85, druid: 25, elder_druid: 35,
+      green_dragon: 180, gold_dragon: 250,
+      golem: 35, obsidian_golem: 50, mage: 25, archmage: 35,
+      genie: 40, master_genie: 55, naga: 75, naga_queen: 110,
+      titan: 150, storm_titan: 300,
+      hero: 100, wall: 200, tower: 150
+    };
+    return map[id] || 10;
+  }
+
+  private getCreatureSpeed(id: string): number {
+    const map: Record<string, number> = {
+      pikeman: 4, halberdier: 5, archer: 4, crossbowman: 5,
+      griffin: 8, royal_griffin: 9, swordsman: 5, champion: 7, cavalier: 7,
+      angel: 12, archangel: 18,
+      skeleton: 4, skeleton_warrior: 5, zombie: 3, plague_zombie: 4,
+      vampire: 6, vampire_lord: 8, lich: 6, power_lich: 7,
+      bone_dragon: 9, ghost_dragon: 12,
+      goblin: 5, hobgoblin: 6, wolf_rider: 6, wolf_raider: 8,
+      orc: 4, orc_chieftain: 5, ogre: 3, ogre_mage: 4,
+      roc: 7, thunderbird: 9, cyclop: 5, cyclop_king: 6,
+      behemoth: 5, ancient_behemoth: 6,
+      wolf: 7, dire_wolf: 9, elf: 5, grand_elf: 6,
+      unicorn: 7, silver_unicorn: 9, dwarf: 3, battle_dwarf: 4,
+      dendroid: 3, dendroid_soldier: 4, druid: 5, elder_druid: 6,
+      green_dragon: 10, gold_dragon: 14,
+      golem: 3, obsidian_golem: 4, mage: 5, archmage: 6,
+      genie: 7, master_genie: 8, naga: 5, naga_queen: 7,
+      titan: 6, storm_titan: 8,
+      hero: 6, wall: 0, tower: 0
+    };
+    return map[id] || 4;
+  }
+
+  private getCreatureAttack(id: string): number {
+    const map: Record<string, number> = {
+      pikeman: 4, halberdier: 6, archer: 6, crossbowman: 7,
+      griffin: 8, royal_griffin: 10, swordsman: 10, champion: 15, cavalier: 15,
+      angel: 20, archangel: 30,
+      skeleton: 5, skeleton_warrior: 7, zombie: 5, plague_zombie: 7,
+      vampire: 10, vampire_lord: 15, lich: 13, power_lich: 18,
+      bone_dragon: 17, ghost_dragon: 25,
+      goblin: 4, hobgoblin: 5, wolf_rider: 7, wolf_raider: 9,
+      orc: 8, orc_chieftain: 10, ogre: 13, ogre_mage: 17,
+      roc: 11, thunderbird: 15, cyclop: 15, cyclop_king: 19,
+      behemoth: 17, ancient_behemoth: 30,
+      wolf: 6, dire_wolf: 8, elf: 9, grand_elf: 11,
+      unicorn: 12, silver_unicorn: 15, dwarf: 8, battle_dwarf: 10,
+      dendroid: 10, dendroid_soldier: 13, druid: 8, elder_druid: 10,
+      green_dragon: 18, gold_dragon: 28,
+      golem: 9, obsidian_golem: 13, mage: 12, archmage: 16,
+      genie: 12, master_genie: 16, naga: 15, naga_queen: 20,
+      titan: 23, storm_titan: 35,
+      hero: 10, wall: 0, tower: 15
+    };
+    return map[id] || 5;
+  }
+
+  private getCreatureDefense(id: string): number {
+    const map: Record<string, number> = {
+      pikeman: 4, halberdier: 6, archer: 3, crossbowman: 4,
+      griffin: 6, royal_griffin: 8, swordsman: 8, champion: 12, cavalier: 12,
+      angel: 20, archangel: 30,
+      skeleton: 3, skeleton_warrior: 5, zombie: 3, plague_zombie: 5,
+      vampire: 9, vampire_lord: 13, lich: 8, power_lich: 12,
+      bone_dragon: 15, ghost_dragon: 22,
+      goblin: 2, hobgoblin: 3, wolf_rider: 5, wolf_raider: 7,
+      orc: 5, orc_chieftain: 7, ogre: 7, ogre_mage: 10,
+      roc: 8, thunderbird: 11, cyclop: 12, cyclop_king: 15,
+      behemoth: 16, ancient_behemoth: 30,
+      wolf: 4, dire_wolf: 6, elf: 4, grand_elf: 6,
+      unicorn: 9, silver_unicorn: 12, dwarf: 9, battle_dwarf: 12,
+      dendroid: 9, dendroid_soldier: 12, druid: 5, elder_druid: 8,
+      green_dragon: 18, gold_dragon: 28,
+      golem: 10, obsidian_golem: 14, mage: 5, archmage: 8,
+      genie: 8, master_genie: 11, naga: 13, naga_queen: 18,
+      titan: 23, storm_titan: 35,
+      hero: 8, wall: 5, tower: 8
+    };
+    return map[id] || 3;
+  }
+
+  private getCreatureDamage(id: string): { min: number; max: number } {
+    const map: Record<string, { min: number; max: number }> = {
+      pikeman: { min: 1, max: 3 }, halberdier: { min: 2, max: 5 },
+      archer: { min: 2, max: 4 }, crossbowman: { min: 3, max: 5 },
+      griffin: { min: 3, max: 7 }, royal_griffin: { min: 5, max: 9 },
+      swordsman: { min: 6, max: 9 }, champion: { min: 15, max: 25 }, cavalier: { min: 15, max: 25 },
+      angel: { min: 50, max: 50 }, archangel: { min: 60, max: 75 },
+      skeleton: { min: 1, max: 3 }, skeleton_warrior: { min: 2, max: 4 },
+      zombie: { min: 2, max: 3 }, plague_zombie: { min: 3, max: 5 },
+      vampire: { min: 5, max: 8 }, vampire_lord: { min: 7, max: 12 },
+      lich: { min: 11, max: 15 }, power_lich: { min: 15, max: 20 },
+      bone_dragon: { min: 25, max: 50 }, ghost_dragon: { min: 40, max: 60 },
+      goblin: { min: 1, max: 2 }, hobgoblin: { min: 2, max: 3 },
+      wolf_rider: { min: 2, max: 4 }, wolf_raider: { min: 3, max: 5 },
+      orc: { min: 3, max: 5 }, orc_chieftain: { min: 4, max: 7 },
+      ogre: { min: 8, max: 14 }, ogre_mage: { min: 12, max: 20 },
+      roc: { min: 8, max: 12 }, thunderbird: { min: 12, max: 18 },
+      cyclop: { min: 15, max: 25 }, cyclop_king: { min: 20, max: 30 },
+      behemoth: { min: 30, max: 50 }, ancient_behemoth: { min: 50, max: 80 },
+      wolf: { min: 2, max: 4 }, dire_wolf: { min: 3, max: 6 },
+      elf: { min: 3, max: 5 }, grand_elf: { min: 4, max: 7 },
+      unicorn: { min: 10, max: 18 }, silver_unicorn: { min: 15, max: 22 },
+      dwarf: { min: 5, max: 8 }, battle_dwarf: { min: 7, max: 11 },
+      dendroid: { min: 8, max: 12 }, dendroid_soldier: { min: 12, max: 18 },
+      druid: { min: 5, max: 8 }, elder_druid: { min: 8, max: 12 },
+      green_dragon: { min: 40, max: 50 }, gold_dragon: { min: 50, max: 80 },
+      golem: { min: 4, max: 6 }, obsidian_golem: { min: 6, max: 10 },
+      mage: { min: 7, max: 9 }, archmage: { min: 10, max: 14 },
+      genie: { min: 10, max: 15 }, master_genie: { min: 15, max: 20 },
+      naga: { min: 15, max: 25 }, naga_queen: { min: 20, max: 30 },
+      titan: { min: 40, max: 60 }, storm_titan: { min: 60, max: 80 },
+      hero: { min: 5, max: 10 }, wall: { min: 0, max: 0 }, tower: { min: 20, max: 40 }
+    };
+    return map[id] || { min: 1, max: 3 };
+  }
+
+  /**
+   * Боевая мощь юнита (для расчёта опыта)
+   */
+  private getCreatureCombatPower(id: string, count: number): number {
+    const dmg = this.getCreatureDamage(id);
+    const hp = this.getCreatureHealth(id);
+    const avgDmg = (dmg.min + dmg.max) / 2;
+    return (avgDmg * count + hp * count) / 2;
+  }
+
+  // ============================================================================
+  // ОТРИСОВКА ЮНИТОВ
+  // ============================================================================
+
+  private renderUnits(): void {
+    const offsetX = this.getOffsetX();
+    const offsetY = this.getOffsetY();
+
+    // Очистка старых элементов
+    this.unitSprites.forEach(s => s.destroy());
+    this.countTexts.forEach(t => t.destroy());
+    this.hpBars.forEach(g => g.destroy());
+    this.effectIcons.forEach(icons => icons.forEach(i => i.destroy()));
+    
+    this.unitSprites.clear();
+    this.countTexts.clear();
+    this.hpBars.clear();
+    this.effectIcons.clear();
+
+    for (const unit of this.battleState.units) {
+      if (unit.count <= 0) continue;
+      if (unit.isWall || unit.isTower) continue; // Стены отрисовываются отдельно
+
+      // Цвет юнита по стороне
+      const color = unit.side === 'attacker' 
+        ? (unit.isHero ? 0xffd700 : 0x3498db) 
+        : (unit.isHero ? 0xff0000 : 0xe74c3c);
+
+      const g = this.add.graphics().setDepth(10);
+      const x = offsetX + unit.x * CONFIG.BATTLE_TILE_SIZE;
+      const y = offsetY + unit.y * CONFIG.BATTLE_TILE_SIZE;
+      const size = CONFIG.BATTLE_TILE_SIZE - 8;
+
+      // Тело юнита
+      g.fillStyle(color, 0.8);
+      g.fillRoundedRect(x + 4, y + 4, size, size, 6);
+      g.lineStyle(2, unit.isHero ? 0xffd700 : 0xffffff, 1);
+      g.strokeRoundedRect(x + 4, y + 4, size, size);
+
+      // Сохраняем как sprite для совместимости
+      const sprite = this.add.zone(x + CONFIG.BATTLE_TILE_SIZE / 2, y + CONFIG.BATTLE_TILE_SIZE / 2, size, size)
+        .setInteractive({ useHandCursor: true }) as any;
+      sprite.x = x;
+      sprite.y = y;
+      sprite.setName(`unit_${unit.id}`);
+      sprite.setDepth(15);
+
+      // Индикатор типа юнита
+      const typeIcon = this.getTypeIcon(unit.creatureId);
+      const typeText = this.add.text(x + 8, y + 8, typeIcon, {
+        fontSize: '14px', color: '#ffffff'
+      }).setDepth(12);
+
+      // Название
+      const nameText = this.add.text(x + 4, y + 4, unit.creatureId.substring(0, 4).toUpperCase(), {
+        fontSize: '9px', color: '#ffffff', fontFamily: 'Segoe UI',
+        stroke: '#000000', strokeThickness: 2
+      }).setDepth(12);
+
+      // Количество существ
+      const countText = this.add.text(
+        x + CONFIG.BATTLE_TILE_SIZE / 2,
+        y + CONFIG.BATTLE_TILE_SIZE - 4,
+        `${unit.count}`,
+        {
+          fontSize: '16px', color: '#ffffff', fontFamily: 'Segoe UI',
+          fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+        }
+      ).setOrigin(0.5, 1).setDepth(12);
+
+      // HP бар
+      const hpBar = this.drawHpBar(unit, x, y);
+
+      // Эффекты
+      const effectIconList = this.drawEffectIcons(unit, x, y);
+
+      this.unitSprites.set(unit.id, sprite);
+      this.countTexts.set(unit.id, countText);
+      this.hpBars.set(unit.id, hpBar);
+      this.effectIcons.set(unit.id, effectIconList);
+      sprite.setData('unitId', unit.id);
+
+      sprite.on('pointerdown', () => this.onUnitClick(unit));
+      sprite.on('pointerover', () => this.showUnitInfo(unit));
+      sprite.on('pointerout', () => this.unitInfoText.setText(''));
+    }
+  }
+
+  private getTypeIcon(creatureId: string): string {
+    if (creatureId === 'hero') return '👑';
+    if (isRanged(creatureId)) return '🏹';
+    if (isFlying(creatureId)) return '🦅';
+    if (isCavalry(creatureId)) return '🐎';
+    if (hasAbility(creatureId, 'undead')) return '💀';
+    return '⚔️';
+  }
+
+  private drawHpBar(unit: BattleUnit, x: number, y: number): Phaser.GameObjects.Graphics {
+    const g = this.add.graphics().setDepth(10);
+    const barWidth = CONFIG.BATTLE_TILE_SIZE - 8;
+    const hpPercent = Math.max(0, unit.currentHealth / unit.maxHealth);
+
+    g.fillStyle(0x000000, 0.8);
+    g.fillRect(x + 4, y + CONFIG.BATTLE_TILE_SIZE - 12, barWidth, 5);
+
+    const color = hpPercent > 0.6 ? 0x2ecc71 : hpPercent > 0.3 ? 0xf39c12 : 0xe74c3c;
+    g.fillStyle(color, 1);
+    g.fillRect(x + 4, y + CONFIG.BATTLE_TILE_SIZE - 12, barWidth * hpPercent, 5);
+
+    return g;
+  }
+
+  private drawEffectIcons(unit: BattleUnit, x: number, y: number): Phaser.GameObjects.Text[] {
+    const icons: Phaser.GameObjects.Text[] = [];
+    const effectMap: Record<string, string> = {
+      bless: '✨', heal: '💚', slow: '❄️', bloodlust: '🔥', shield: '🛡',
+      stoneskin: '🪨', haste: '💨', fly: '🕊️', blind: '👁️', forgetfulness: '🧠',
+      berserk: '💢', clone_source: '👥', bind: '🌳', disease: '🦠', 
+      weakness: '💀', aging: '👻', defend: '🛡', extra_turn: '🔥'
+    };
+
+    let ix = x + 4;
+    for (const effect of unit.effects.slice(0, 4)) {
+      const icon = effectMap[effect.spellId] || '•';
+      const text = this.add.text(ix, y + 4, icon, {
+        fontSize: '11px'
+      }).setDepth(12);
+      icons.push(text);
+      ix += 12;
+    }
+    return icons;
+  }
+
+  // ============================================================================
+  // UI
+  // ============================================================================
+
+  private createUI(): void {
+    const { width, height } = this.scale;
+
+    // Верхняя панель
+    this.add.rectangle(width / 2, 50, width - 40, 80, 0x1a1a2e, 0.95)
+      .setStrokeStyle(2, 0xd4af37).setDepth(20);
+
+    const titleText = this.battleType === 'siege' ? '🏰 ОСАДА' : '⚔️ БОЙ';
+    this.turnText = this.add.text(width / 2, 50, titleText, {
+      fontSize: '20px', color: '#d4af37', fontFamily: 'Segoe UI',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(21);
+
+    // Мана героя
+    this.manaText = this.add.text(30, 30, 
+      `🔮 Мана: ${this.attackerHero.mana}/${this.attackerHero.maxMana}`, {
+      fontSize: '14px', color: '#00bfff', fontFamily: 'Segoe UI'
+    }).setDepth(21);
+
+    // Информация о герое
+    this.add.text(width - 30, 30, 
+      `👑 ${this.attackerHero.name} (Ур. ${this.attackerHero.level})`, {
+      fontSize: '14px', color: '#ffd700', fontFamily: 'Segoe UI',
+      fontStyle: 'bold'
+    }).setOrigin(1, 0).setDepth(21);
+
+    // Панель информации о юните
+    this.unitInfoText = this.add.text(20, 105, '', {
+      fontSize: '12px', color: '#f0e6d2', fontFamily: 'Segoe UI',
+      backgroundColor: '#1a1a2ecc', padding: { x: 8, y: 5 },
+      lineSpacing: 3
+    }).setDepth(30);
+
+    // Предпросмотр урона
+    this.previewText = this.add.text(0, 0, '', {
+      fontSize: '14px', color: '#ffff00', fontFamily: 'Segoe UI',
+      backgroundColor: '#1a1a2ecc', padding: { x: 6, y: 4 },
+      fontStyle: 'bold', stroke: '#000000', strokeThickness: 2
+    }).setDepth(60).setVisible(false);
+
+    // Лог боя
+    this.logText = this.add.text(20, height - 190, '', {
+      fontSize: '11px', color: '#f0e6d2', fontFamily: 'Segoe UI',
+      backgroundColor: '#1a1a2ecc', padding: { x: 8, y: 5 },
+      wordWrap: { width: 350 }, lineSpacing: 2
+    }).setDepth(30);
+
+    // Кнопки управления
+    const buttons = [
+      { text: '📖 Магия (M)', action: () => this.openSpellbook(), hotkey: 'M' },
+      { text: '⏭ Ждать (W)', action: () => this.waitUnit(), hotkey: 'W' },
+      { text: '🛡 Защита (D)', action: () => this.defend(), hotkey: 'D' },
+      { text: '⚡ Авто-бой (A)', action: () => this.startAutoBattle(), hotkey: 'A' },
+      { text: '🏳 Сдаться (S)', action: () => this.surrender(), hotkey: 'S' },
+      { text: '🏃 Сбежать (Esc)', action: () => this.retreat(), hotkey: 'Esc' }
+    ];
+
+    const btnStartY = height - 180;
+    buttons.forEach((btn, i) => {
+      const text = this.add.text(width - 220, btnStartY + i * 28, btn.text, {
+        fontSize: '13px', color: '#f0e6d2', fontFamily: 'Segoe UI',
+        backgroundColor: '#2c3e50', padding: { x: 12, y: 6 }
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(30);
+
+      text.on('pointerdown', btn.action);
+      text.on('pointerover', () => text.setColor('#ffd700').setBackgroundColor('#34495e'));
+      text.on('pointerout', () => text.setColor('#f0e6d2').setBackgroundColor('#2c3e50'));
+    });
+
+    // Панель заклинаний
+    this.createSpellPanel();
+  }
+
+  private createSpellPanel(): void {
+    const { width, height } = this.scale;
+    
+    this.spellPanel = this.add.container(width / 2, height / 2).setDepth(50).setVisible(false);
+    
+    const bg = this.add.rectangle(0, 0, 750, 520, 0x1a1a2e, 0.98)
+      .setStrokeStyle(3, 0xd4af37);
+    this.spellPanel.add(bg);
+
+    const title = this.add.text(0, -230, '📖 Книга заклинаний', {
+      fontSize: '26px', color: '#d4af37', fontFamily: 'Segoe UI',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.spellPanel.add(title);
+
+    const schools = [
+      { id: 'water', name: '💧 Вода', color: '#00bfff' },
+      { id: 'fire', name: '🔥 Огонь', color: '#ff4500' },
+      { id: 'earth', name: '🪨 Земля', color: '#8b4513' },
+      { id: 'air', name: '💨 Воздух', color: '#ffff00' },
+      { id: 'mind', name: '🧠 Разум', color: '#ff00ff' }
+    ];
+
+    schools.forEach((school, sIdx) => {
+      const schoolSpells = this.spellSystem.getSpellsBySchool(school.id);
+      if (schoolSpells.length === 0) return;
+
+      const schoolTitle = this.add.text(-340, -180 + sIdx * 90, school.name, {
+        fontSize: '16px', color: school.color, fontFamily: 'Segoe UI',
+        fontStyle: 'bold'
+      });
+      this.spellPanel.add(schoolTitle);
+
+      schoolSpells.forEach((spell, i) => {
+        const x = -340 + i * 130;
+        const y = -150 + sIdx * 90;
+        const canCast = this.attackerHero.mana >= spell.manaCost;
+
+        const btn = this.add.text(x, y, 
+          `${spell.name}\n💧${spell.manaCost}`, {
+          fontSize: '11px',
+          color: canCast ? '#f0e6d2' : '#666666',
+          fontFamily: 'Segoe UI',
+          backgroundColor: '#2c3e50',
+          padding: { x: 8, y: 5 },
+          wordWrap: { width: 120 }
+        }).setInteractive({ useHandCursor: canCast }).setDepth(51);
+
+        if (canCast) {
+          btn.on('pointerdown', () => this.selectSpell(spell));
+          btn.on('pointerover', () => {
+            btn.setColor('#ffd700');
+            this.showSpellInfo(spell);
+          });
+          btn.on('pointerout', () => btn.setColor('#f0e6d2'));
+        }
+
+        this.spellPanel.add(btn);
+        this.spellButtons.push(btn);
+      });
+    });
+
+    const closeBtn = this.add.text(340, -230, '✖', {
+      fontSize: '26px', color: '#e74c3c', fontFamily: 'Segoe UI'
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    closeBtn.on('pointerdown', () => this.closeSpellbook());
+    this.spellPanel.add(closeBtn);
+  }
+
+  private showSpellInfo(spell: Spell): void {
+    const info = `✨ ${spell.name} (💧${spell.manaCost})\n${spell.description}\n\nЦель: ${spell.target}`;
+    this.unitInfoText.setText(info);
+  }
+
+  // ============================================================================
+  // СИСТЕМА МАГИИ
+  // ============================================================================
+
+  private openSpellbook(): void {
+    if (!this.selectedUnit || this.selectedUnit.side === 'defender') return;
+    if (!this.selectedUnit.isHero) {
+      this.addLog('⚠️ Только герой может колдовать!');
+      return;
+    }
+    this.spellPanel.setVisible(true);
+  }
+
+  private closeSpellbook(): void {
+    this.spellPanel.setVisible(false);
+    this.currentSpell = null;
+    this.targetingMode = false;
+  }
+
+  private selectSpell(spell: Spell): void {
+    if (this.attackerHero.mana < spell.manaCost) {
+      this.addLog('❌ Недостаточно маны!');
+      return;
+    }
+
+    this.currentSpell = spell;
+    this.targetingMode = true;
+    this.closeSpellbook();
+    this.addLog(`🎯 Выберите цель для: ${spell.name}`);
+    this.showSpellTargets();
+  }
+
+  private showSpellTargets(): void {
+    if (!this.currentSpell || !this.selectedUnit) return;
+
+    this.clearHighlights();
+    const offsetX = this.getOffsetX();
+    const offsetY = this.getOffsetY();
+
+    switch (this.currentSpell.target) {
+      case 'single':
+        for (const unit of this.battleState.units) {
+          if (unit.count <= 0 || unit.isWall || unit.isTower) continue;
+          const h = this.add.rectangle(
+            offsetX + unit.x * CONFIG.BATTLE_TILE_SIZE,
+            offsetY + unit.y * CONFIG.BATTLE_TILE_SIZE,
+            CONFIG.BATTLE_TILE_SIZE,
+            CONFIG.BATTLE_TILE_SIZE,
+            0xff00ff, 0.3
+          ).setDepth(8).setInteractive({ useHandCursor: true });
+          h.on('pointerdown', () => this.castSpellOnTarget(unit));
+          this.highlights.push(h as any);
+        }
+        break;
+
+      case 'area':
+        for (let y = 0; y < CONFIG.BATTLE_HEIGHT; y++) {
+          for (let x = 0; x < CONFIG.BATTLE_WIDTH; x++) {
+            const h = this.add.rectangle(
+              offsetX + x * CONFIG.BATTLE_TILE_SIZE,
+              offsetY + y * CONFIG.BATTLE_TILE_SIZE,
+              CONFIG.BATTLE_TILE_SIZE,
+              CONFIG.BATTLE_TILE_SIZE,
+              0xff6600, 0.2
+            ).setDepth(8).setInteractive({ useHandCursor: true });
+            h.on('pointerdown', () => this.castSpellOnTarget(undefined, { x, y }));
+            this.highlights.push(h as any);
+          }
+        }
+        break;
+
+      case 'all':
+        this.castSpellOnTarget();
+        break;
+    }
+  }
+
+  private castSpellOnTarget(targetUnit?: BattleUnit, targetPos?: { x: number; y: number }): void {
+    if (!this.currentSpell || !this.selectedUnit) return;
+
+    const spell = this.currentSpell;
+    
+    // Проверка иммунитета к магии
+    if (targetUnit && !this.abilitiesSystem.canApplyMagic(targetUnit, spell)) {
+      this.addLog(`🛡 ${targetUnit.creatureId} имеет иммунитет к этому заклинанию!`);
+      this.clearHighlights();
+      this.targetingMode = false;
+      this.currentSpell = null;
+      return;
+    }
+
+    let targets: BattleUnit[] = [];
+
+    if (spell.target === 'all') {
+      targets = this.battleState.units.filter(u => u.count > 0 && !u.isWall && !u.isTower);
+    } else if (spell.target === 'single' && targetUnit) {
+      targets = [targetUnit];
+    } else if (spell.target === 'area' && targetPos) {
+      targets = this.battleState.units.filter(u => 
+        u.count > 0 && !u.isWall && !u.isTower &&
+        Math.abs(u.x - targetPos.x) <= 1 && 
+        Math.abs(u.y - targetPos.y) <= 1
+      );
+    }
+
+    if (targets.length === 0) {
+      this.addLog('❌ Нет целей для заклинания');
+      return;
+    }
+
+    this.attackerHero.mana -= spell.manaCost;
+
+    const heroSpellPower = this.attackerHero.stats.spellPower;
+    const result = this.spellSystem.applySpell(spell, this.selectedUnit, targets, targetPos, heroSpellPower);
+
+    if (result.success) {
+      this.addLog(`📖 ${result.message}`);
+
+      if (spell.id === 'lightning' || spell.id === 'chain_lightning') {
+        const casterSprite = this.unitSprites.get(this.selectedUnit.id);
+        for (const t of targets) {
+          const targetSprite = this.unitSprites.get(t.id);
+          if (casterSprite && targetSprite) {
+            this.effects.playLightningEffect(casterSprite.x + 20, casterSprite.y + 20, 
+              targetSprite.x + 20, targetSprite.y + 20);
+          }
+        }
+      } else if (spell.id === 'fireball' || spell.id === 'meteor') {
+        for (const t of targets) {
+          const sprite = this.unitSprites.get(t.id);
+          if (sprite) this.effects.playFireballEffect(sprite.x + 20, sprite.y + 20);
+        }
+      } else if (spell.id === 'heal' || spell.id === 'resurrect') {
+        for (const t of targets) {
+          const sprite = this.unitSprites.get(t.id);
+          if (sprite) this.effects.showHealNumber(sprite.x + 20, sprite.y, 30);
+        }
+      }
+
+      this.manaText.setText(`🔮 Мана: ${this.attackerHero.mana}/${this.attackerHero.maxMana}`);
+      this.renderUnits();
+      this.checkBattleEnd();
+      this.clearHighlights();
+      this.targetingMode = false;
+      this.currentSpell = null;
+      this.endUnitTurn();
+    }
+  }
+
+  // ============================================================================
+  // ВВОД
+  // ============================================================================
+
+  private setupInput(): void {
+    this.input.keyboard?.on('keydown-SPACE', () => this.endUnitTurn());
+    this.input.keyboard?.on('keydown-W', () => this.waitUnit());
+    this.input.keyboard?.on('keydown-D', () => this.defend());
+    this.input.keyboard?.on('keydown-M', () => this.openSpellbook());
+    this.input.keyboard?.on('keydown-S', () => this.surrender());
+    this.input.keyboard?.on('keydown-A', () => this.startAutoBattle());
+    this.input.keyboard?.on('keydown-ESC', () => {
+      if (this.spellPanel.visible) {
+        this.closeSpellbook();
+      } else {
+        this.retreat();
+      }
+    });
+  }
+
+  private onTileClick(x: number, y: number): void {
+    if (this.isAnimating || this.battleEnded) return;
+    if (!this.selectedUnit || this.selectedUnit.side === 'defender') return;
+
+    if (this.targetingMode && this.currentSpell) {
+      if (this.currentSpell.target === 'single') {
+        const targetUnit = this.battleState.units.find(u => u.count > 0 && u.x === x && u.y === y);
+        if (targetUnit) this.castSpellOnTarget(targetUnit);
+      } else if (this.currentSpell.target === 'area') {
+        this.castSpellOnTarget(undefined, { x, y });
+      }
+      return;
+    }
+
+    // Клик на врага для атаки
+    const enemy = this.battleState.units.find(u =>
+      u.side !== this.selectedUnit!.side && u.count > 0 && u.x === x && u.y === y
+    );
+
+    if (enemy) {
+      const dist = Math.max(Math.abs(enemy.x - this.selectedUnit.x), Math.abs(enemy.y - this.selectedUnit.y));
+      const attackRange = isRanged(this.selectedUnit.creatureId) && 
+                          (this.selectedUnit.shotsLeft === undefined || this.selectedUnit.shotsLeft > 0) ? 10 : 1;
+      
+      if (dist <= attackRange) {
+        if (isRanged(this.selectedUnit.creatureId) && dist > 1 && 
+            (this.selectedUnit.shotsLeft === undefined || this.selectedUnit.shotsLeft > 0)) {
+          this.rangedAttack(this.selectedUnit, enemy);
+        } else if (dist <= 1) {
+          this.attack(this.selectedUnit, enemy);
+        }
+      }
+      return;
+    }
+
+    // Клик на клетку для движения
+    const isHighlighted = this.highlights.some(h => {
+      const hx = Math.floor((h.x - this.getOffsetX()) / CONFIG.BATTLE_TILE_SIZE);
+      const hy = Math.floor((h.y - this.getOffsetY()) / CONFIG.BATTLE_TILE_SIZE);
+      return hx === x && hy === y;
+    });
+
+    if (isHighlighted) {
+      this.moveUnit(this.selectedUnit, x, y);
+    }
+  }
+
+  private onTileHover(x: number, y: number): void {
+    if (!this.selectedUnit || this.selectedUnit.side === 'defender') return;
+
+    // Показываем предпросмотр урона при наведении на врага
+    const enemy = this.battleState.units.find(u =>
+      u.side !== this.selectedUnit!.side && u.count > 0 && u.x === x && u.y === y
+    );
+
+    if (enemy) {
+      const dist = Math.max(Math.abs(enemy.x - this.selectedUnit.x), Math.abs(enemy.y - this.selectedUnit.y));
+      const canAttack = dist <= 1 || (isRanged(this.selectedUnit.creatureId) && dist <= 10);
+      
+      if (canAttack) {
+        const previewDamage = this.previewDamage(this.selectedUnit, enemy);
+        const offsetX = this.getOffsetX();
+        const offsetY = this.getOffsetY();
+        this.previewText.setText(`⚔️ ${previewDamage.min}-${previewDamage.max}`);
+        this.previewText.setPosition(
+          offsetX + x * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
+          offsetY + y * CONFIG.BATTLE_TILE_SIZE - 5
+        ).setOrigin(0.5, 1).setVisible(true);
+      }
+    } else {
+      this.previewText.setVisible(false);
+    }
+  }
+
+  private onTileOut(): void {
+    this.previewText.setVisible(false);
+  }
+
+  /**
+   * Предпросмотр урона без применения
+   */
+  private previewDamage(attacker: BattleUnit, defender: BattleUnit): { min: number; max: number } {
+    const attackStat = this.getCreatureAttack(attacker.creatureId);
+    const defenseStat = this.getCreatureDefense(defender.creatureId);
+    const damageRange = this.getCreatureDamage(attacker.creatureId);
+
+    let minDamage = damageRange.min * attacker.count;
+    let maxDamage = damageRange.max * attacker.count;
+
+    const modifier = Math.max(0.3, 1 + (attackStat - defenseStat) * 0.05);
+    minDamage = Math.floor(minDamage * modifier);
+    maxDamage = Math.floor(maxDamage * modifier);
+
+    return { min: minDamage, max: maxDamage };
+  }
+
+  private onUnitClick(unit: BattleUnit): void {
+    if (this.isAnimating || this.battleEnded) return;
+    if (!this.selectedUnit || this.selectedUnit.side === 'defender') return;
+
+    if (this.targetingMode && this.currentSpell) {
+      this.castSpellOnTarget(unit);
+      return;
+    }
+
+    if (unit.side !== this.selectedUnit.side) {
+      const dist = Math.max(Math.abs(unit.x - this.selectedUnit.x), Math.abs(unit.y - this.selectedUnit.y));
+      const attackRange = isRanged(this.selectedUnit.creatureId) ? 10 : 1;
+      
+      if (dist <= 1) {
+        this.attack(this.selectedUnit, unit);
+      } else if (dist <= attackRange && isRanged(this.selectedUnit.creatureId)) {
+        this.rangedAttack(this.selectedUnit, unit);
+      }
+    }
+  }
+
+  // ============================================================================
+  // ЛОГИКА БОЯ
+  // ============================================================================
+
+  private startBattle(): void {
+    this.addLog(`⚔️ ${this.battleType === 'siege' ? 'ОСАДА началась!' : 'Бой начался!'}`);
+    this.sortUnitsBySpeed();
+    this.updateQueue();
+    this.selectNextUnit();
+  }
+
+  private sortUnitsBySpeed(): void {
+    this.battleState.units.sort((a, b) => {
+      const speedA = this.getCreatureSpeed(a.creatureId) * this.spellSystem.getSpeedModifier(a);
+      const speedB = this.getCreatureSpeed(b.creatureId) * this.spellSystem.getSpeedModifier(b);
+      return speedB - speedA;
+    });
+  }
+
+  private selectNextUnit(): void {
+    if (this.battleEnded) return;
+    
+    const aliveUnits = this.battleState.units.filter(u => u.count > 0 && !u.isWall);
+
+    if (aliveUnits.length === 0 || aliveUnits.every(u => u.hasActed)) {
+      this.endTurn();
+      return;
+    }
+
+    const nextUnit = aliveUnits.find(u => !u.hasActed);
+    if (!nextUnit) {
+      this.endTurn();
+      return;
+    }
+
+    this.selectedUnit = nextUnit;
+    this.targetingMode = false;
+    this.currentSpell = null;
+    this.clearHighlights();
+
+    // Применяем ауры в начале хода
+    this.abilitiesSystem.applyTurnStartAuras(nextUnit, this.battleState);
+
+    // Проверка морали
+    const hero = this.getUnitHero(nextUnit);
+    const moraleResult = this.moraleLuck.checkMorale(nextUnit, hero);
+
+    if (moraleResult === 'negative') {
+      this.effects.showMoraleBanner(false).then(() => {
+        this.addLog(`😨 ${nextUnit.creatureId} парализован страхом!`);
+        this.endUnitTurn();
+      });
+      return;
+    }
+
+    this.showMoveRange(nextUnit);
+    this.updateUI();
+    this.updateQueue();
+
+    if (moraleResult === 'positive') {
+      this.effects.showMoraleBanner(true).then(() => {
+        this.addLog(`🔥 ${nextUnit.creatureId} получит дополнительный ход!`);
+        nextUnit.effects.push({ spellId: 'extra_turn', duration: 1, value: 1 });
+      });
+    }
+
+    // Ослепление
+    if (this.spellSystem.isBlinded(nextUnit)) {
+      this.addLog(`👁️ ${nextUnit.creatureId} ослеплён и пропускает ход`);
+      this.endUnitTurn();
+      return;
+    }
+
+    // Связывание
+    if (!this.abilitiesSystem.canMove(nextUnit)) {
+      this.addLog(`🌳 ${nextUnit.creatureId} связан и пропускает ход`);
+      this.endUnitTurn();
+      return;
+    }
+
+    // Берсерк
+    if (this.spellSystem.isBerserk(nextUnit)) {
+      this.addLog(`💢 ${nextUnit.creatureId} в ярости!`);
+      this.berserkAction(nextUnit);
+      return;
+    }
+
+    // Ход башен при осаде
+    if (nextUnit.isTower) {
+      this.time.delayedCall(500, () => this.towerAction(nextUnit));
+      return;
+    }
+
+    // Ход ИИ
+    if (nextUnit.side === 'defender') {
+      this.time.delayedCall(600, () => this.aiAction(nextUnit));
+    } else if (this.autoBattle) {
+      this.time.delayedCall(300, () => this.autoAction(nextUnit));
+    }
+  }
+
+  private getUnitHero(unit: BattleUnit): Hero | null {
+    if (unit.side === 'attacker') return this.attackerHero;
+    return this.defenderHero;
+  }
+
+  private updateQueue(): void {
+    if (!this.selectedUnit) return;
+    this.queueLeft.update(this.battleState.units, this.selectedUnit.id);
+  }
+
+  private showMoveRange(unit: BattleUnit): void {
+    const speed = Math.floor(this.getCreatureSpeed(unit.creatureId) * this.spellSystem.getSpeedModifier(unit));
+    const offsetX = this.getOffsetX();
+    const offsetY = this.getOffsetY();
+    const canFly = isFlying(unit.creatureId) || this.spellSystem.canFly(unit);
+
+    // BFS для движения
+    const visited = new Set<string>();
+    const queue: { x: number; y: number; dist: number }[] = [{ x: unit.x, y: unit.y, dist: 0 }];
+    visited.add(`${unit.x},${unit.y}`);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+
+      if (current.dist > 0 && current.dist <= speed) {
+        const blocked = this.grid[current.y]?.[current.x]?.getData('blocked');
+        if (!blocked || canFly) {
+          const occupied = this.battleState.units.some(u => u.count > 0 && u.x === current.x && u.y === current.y);
+          if (!occupied) {
+            const h = this.add.rectangle(
+              offsetX + current.x * CONFIG.BATTLE_TILE_SIZE,
+              offsetY + current.y * CONFIG.BATTLE_TILE_SIZE,
+              CONFIG.BATTLE_TILE_SIZE,
+              CONFIG.BATTLE_TILE_SIZE,
+              0x00ff00, 0.3
+            ).setDepth(8).setInteractive({ useHandCursor: true });
+            h.on('pointerdown', () => this.moveUnit(unit, current.x, current.y));
+            this.highlights.push(h as any);
+          }
+        }
+      }
+
+      if (current.dist < speed) {
+        const directions = [
+          { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 },
+          { x: 1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
+        ];
+
+        for (const dir of directions) {
+          const newX = current.x + dir.x;
+          const newY = current.y + dir.y;
+          const key = `${newX},${newY}`;
+
+          if (newX >= 0 && newX < CONFIG.BATTLE_WIDTH && newY >= 0 && newY < CONFIG.BATTLE_HEIGHT) {
+            if (!visited.has(key)) {
+              const blocked = !canFly && (
+                this.grid[newY][newX]?.getData('blocked') ||
+                this.battleState.units.some(u => u.count > 0 && u.x === newX && u.y === newY)
+              );
+
+              if (!blocked) {
+                visited.add(key);
+                queue.push({ x: newX, y: newY, dist: current.dist + 1 });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Подсветка целей для атаки
+    const attackRange = isRanged(unit.creatureId) && this.spellSystem.canShoot(unit) &&
+                        (unit.shotsLeft === undefined || unit.shotsLeft > 0) ? 10 : 1;
+    for (const enemy of this.battleState.units) {
+      if (enemy.side !== unit.side && enemy.count > 0) {
+        const dist = Math.max(Math.abs(enemy.x - unit.x), Math.abs(enemy.y - unit.y));
+        if (dist <= attackRange) {
+          const t = this.add.rectangle(
+            offsetX + enemy.x * CONFIG.BATTLE_TILE_SIZE,
+            offsetY + enemy.y * CONFIG.BATTLE_TILE_SIZE,
+            CONFIG.BATTLE_TILE_SIZE,
+            CONFIG.BATTLE_TILE_SIZE,
+            0xff0000, 0.3
+          ).setDepth(8).setInteractive({ useHandCursor: true });
+          t.on('pointerdown', () => {
+            if (isRanged(unit.creatureId) && dist > 1) {
+              this.rangedAttack(unit, enemy);
+            } else {
+              this.attack(unit, enemy);
+            }
+          });
+          this.highlights.push(t as any);
+        }
+      }
+    }
+  }
+
+  private clearHighlights(): void {
+    this.highlights.forEach(h => h.destroy());
+    this.highlights = [];
+  }
+
+  private moveUnit(unit: BattleUnit, x: number, y: number): void {
+    this.isAnimating = true;
+    this.clearHighlights();
+    unit.x = x;
+    unit.y = y;
+
+    // Обновляем визуал через ре-рендер (в Phaser проще)
+    this.time.delayedCall(200, () => {
+      this.isAnimating = false;
+      this.renderUnits();
+      this.showAttackTargets(unit);
+    });
+  }
+
+  private showAttackTargets(unit: BattleUnit): void {
+    const offsetX = this.getOffsetX();
+    const offsetY = this.getOffsetY();
+    const attackRange = isRanged(unit.creatureId) && this.spellSystem.canShoot(unit) ? 10 : 1;
+
+    for (const enemy of this.battleState.units) {
+      if (enemy.side !== unit.side && enemy.count > 0) {
+        const dist = Math.max(Math.abs(enemy.x - unit.x), Math.abs(enemy.y - unit.y));
+        if (dist <= attackRange) {
+          const t = this.add.rectangle(
+            offsetX + enemy.x * CONFIG.BATTLE_TILE_SIZE,
+            offsetY + enemy.y * CONFIG.BATTLE_TILE_SIZE,
+            CONFIG.BATTLE_TILE_SIZE,
+            CONFIG.BATTLE_TILE_SIZE,
+            0xff0000, 0.3
+          ).setDepth(8).setInteractive({ useHandCursor: true });
+          t.on('pointerdown', () => {
+            if (isRanged(unit.creatureId) && dist > 1) {
+              this.rangedAttack(unit, enemy);
+            } else {
+              this.attack(unit, enemy);
+            }
+          });
+          this.highlights.push(t as any);
+        }
+      }
+    }
+  }
+
+  // ============================================================================
+  // АТАКА (С УЧЁТОМ ВСЕХ СПОСОБНОСТЕЙ)
+  // ============================================================================
+
+  private attack(attacker: BattleUnit, defender: BattleUnit): void {
+    this.isAnimating = true;
+    this.clearHighlights();
+
+    // Расчёт урона
+    const damage = this.calculateDamage(attacker, defender);
+    
+    // Применяем урон
+    this.applyDamage(defender, damage.total);
+
+    // Визуальные эффекты
+    const attackerSprite = this.unitSprites.get(attacker.id);
+    const defenderSprite = this.unitSprites.get(defender.id);
+    if (defenderSprite) {
+      this.effects.showDamageNumber(defenderSprite.x + 20, defenderSprite.y, damage.total, damage.isCrit);
+    }
+
+    // Лог
+    let logMsg = `${attacker.creatureId} наносит ${damage.total} урона ${defender.creatureId}`;
+    if (damage.isCrit) logMsg += ' (КРИТ!)';
+    if (damage.chargeBonus) logMsg += ` (+${damage.chargeBonus} разбег)`;
+    this.addLog(logMsg);
+
+    // Применяем способности атакующего
+    const abilityResult = this.abilitiesSystem.applyOnAttackAbilities(
+      attacker, defender, damage.total, this.battleState,
+      (u, dmg) => this.applyDamage(u, dmg)
+    );
+
+    // Визуал для доп. урона
+    for (const extra of abilityResult.extraDamage) {
+      const sprite = this.unitSprites.get(extra.target.id);
+      if (sprite) {
+        this.effects.showDamageNumber(
+          sprite.x + 20 + GameRandom.randomInt(-10, 10), 
+          sprite.y, 
+          extra.damage, 
+          false
+        );
+      }
+    }
+
+    // Контратака
+    if (defender.count > 0) {
+      const retaliationCount = getRetaliationCount(defender.creatureId);
+      const canRetaliate = retaliationCount > 0 && 
+                          (!defender.hasRetaliated || retaliationCount > 1);
+      const noRetaliationAbility = hasAbility(attacker.creatureId, 'no_retaliation');
+
+      if (canRetaliate && !noRetaliationAbility) {
+        defender.hasRetaliated = true;
+        this.time.delayedCall(400, () => {
+          this.retaliatoryStrike(defender, attacker);
+          this.finishAttack();
+        });
+      } else {
+        this.finishAttack();
+      }
+    } else {
+      this.finishAttack();
+    }
+  }
+
+  private finishAttack(): void {
+    this.renderUnits();
+    this.checkBattleEnd();
+    this.endUnitTurn();
+    this.isAnimating = false;
+  }
+
+  private rangedAttack(attacker: BattleUnit, defender: BattleUnit): void {
+    if (!this.spellSystem.canShoot(attacker)) {
+      this.addLog(`🧠 ${attacker.creatureId} не может стрелять!`);
+      return;
+    }
+
+    if (attacker.shotsLeft !== undefined && attacker.shotsLeft <= 0) {
+      this.addLog(`🏹 У ${attacker.creatureId} закончились стрелы!`);
+      return;
+    }
+
+    this.isAnimating = true;
+    this.clearHighlights();
+
+    if (attacker.shotsLeft !== undefined) {
+      attacker.shotsLeft--;
+    }
+
+    const damage = this.calculateDamage(attacker, defender, true);
+    this.applyDamage(defender, damage.total);
+
+    const defenderSprite = this.unitSprites.get(defender.id);
+    if (defenderSprite) {
+      this.effects.showDamageNumber(defenderSprite.x + 20, defenderSprite.y, damage.total, damage.isCrit);
+    }
+
+    let logMsg = `🏹 ${attacker.creatureId} стреляет: ${damage.total} урона ${defender.creatureId}`;
+    if (damage.isCrit) logMsg += ' (КРИТ!)';
+    this.addLog(logMsg);
+
+    // Двойной выстрел
+    if (hasAbility(attacker.creatureId, 'double_shot') && GameRandom.chance(0.3)) {
+      const secondDamage = this.calculateDamage(attacker, defender, true);
+      this.applyDamage(defender, secondDamage.total);
+      this.addLog(`🏹🏹 Двойной выстрел: +${secondDamage.total} урона!`);
+    }
+
+    // Способности атакующего
+    this.abilitiesSystem.applyOnAttackAbilities(
+      attacker, defender, damage.total, this.battleState,
+      (u, dmg) => this.applyDamage(u, dmg)
+    );
+
+    this.renderUnits();
+    this.checkBattleEnd();
+    this.endUnitTurn();
+    this.isAnimating = false;
+  }
+
+  private calculateDamage(
+    attacker: BattleUnit, 
+    defender: BattleUnit, 
+    isRangedAttack: boolean = false
+  ): { total: number; isCrit: boolean; chargeBonus: number } {
+    const attackStat = this.getCreatureAttack(attacker.creatureId) + 
+                       this.spellSystem.getAttackModifier(attacker) +
+                       this.abilitiesSystem.getAttackModifier(attacker);
+    const defenseStat = this.getCreatureDefense(defender.creatureId) + 
+                        this.spellSystem.getDefenseModifier(defender) +
+                        this.abilitiesSystem.getDefenseModifier(attacker, defender);
+    const damageRange = this.getCreatureDamage(attacker.creatureId);
+
+    let baseDamage = GameRandom.randomInt(damageRange.min, damageRange.max) * attacker.count;
+
+    const modifier = Math.max(0.3, 1 + (attackStat - defenseStat) * 0.05);
+    baseDamage = Math.floor(baseDamage * modifier);
+
+    // Модификаторы атакующего
+    baseDamage = Math.floor(baseDamage * this.spellSystem.getDamageModifier(attacker));
+    baseDamage = Math.floor(baseDamage * this.abilitiesSystem.getDamageModifier(attacker));
+
+    // Модификаторы получаемого урона
+    baseDamage = Math.floor(baseDamage * this.spellSystem.getIncomingDamageModifier(defender));
+    baseDamage = Math.floor(baseDamage * this.abilitiesSystem.getIncomingDamageModifier(defender));
+
+    // Бонус кавалерии
+    let chargeBonus = 0;
+    if (isCavalry(attacker.creatureId)) {
+      const distance = Math.max(Math.abs(attacker.x - defender.x), Math.abs(attacker.y - defender.y));
+      chargeBonus = Math.floor(baseDamage * distance * 0.05);
+      baseDamage += chargeBonus;
+    }
+
+    // Штраф стрелка в ближнем бою
+    if (isRanged(attacker.creatureId) && !isRangedAttack) {
+      baseDamage = Math.floor(baseDamage * 0.5);
+    }
+
+    // Удача
+    const hero = this.getUnitHero(attacker);
+    const luckResult = this.moraleLuck.checkLuck(attacker, hero);
+    const luckMultiplier = this.moraleLuck.getDamageMultiplier(luckResult);
+    baseDamage = Math.floor(baseDamage * luckMultiplier);
+
+    if (luckResult === 'critical') {
+      this.effects.showLuckBanner(true);
+    } else if (luckResult === 'fumble') {
+      this.effects.showLuckBanner(false);
+    }
+
+    return { total: Math.max(1, baseDamage), isCrit: luckResult === 'critical', chargeBonus };
+  }
+
+  private applyDamage(unit: BattleUnit, damage: number): void {
+    if (unit.count <= 0) return;
+    unit.currentHealth -= damage;
+
+    const healthPerUnit = unit.maxHealth / (unit.initialCount || unit.count);
+    const deadCount = Math.max(0, Math.floor(damage / healthPerUnit));
+    unit.count = Math.max(0, unit.count - deadCount);
+
+    if (unit.count === 0) {
+      unit.currentHealth = 0;
+    }
+  }
+
+  private retaliatoryStrike(defender: BattleUnit, attacker: BattleUnit): void {
+    const damage = this.calculateDamage(defender, attacker);
+    const reducedDamage = Math.floor(damage.total * 0.75);
+    
+    this.applyDamage(attacker, reducedDamage);
+
+    const attackerSprite = this.unitSprites.get(attacker.id);
+    if (attackerSprite) {
+      this.effects.showDamageNumber(attackerSprite.x + 20, attackerSprite.y, reducedDamage, false);
+    }
+
+    this.addLog(`↩️ ${defender.creatureId} контратакует: ${reducedDamage} урона`);
+  }
+
+  // ============================================================================
+  // ИИ
+  // ============================================================================
+
+  private aiAction(unit: BattleUnit): void {
+    if (this.battleEnded) return;
+    
+    const decision = this.ai.decideAction(unit, this.battleState.units);
+
+    if (decision.type === 'attack') {
+      this.attack(unit, decision.target);
+    } else if (decision.type === 'shoot') {
+      this.rangedAttack(unit, decision.target);
+    } else if (decision.type === 'move') {
+      this.moveUnit(unit, decision.x, decision.y);
+      this.time.delayedCall(300, () => {
+        const adjacentEnemies = this.battleState.units.filter(e => {
+          if (e.side === unit.side || e.count <= 0) return false;
+          const dist = Math.max(Math.abs(e.x - unit.x), Math.abs(e.y - unit.y));
+          return dist <= 1;
+        });
+
+        if (adjacentEnemies.length > 0) {
+          this.attack(unit, adjacentEnemies[0]);
+        } else {
+          this.endUnitTurn();
+        }
+      });
+    } else {
+      this.endUnitTurn();
+    }
+  }
+
+  private towerAction(tower: BattleUnit): void {
+    if (this.battleEnded) return;
+    
+    // Башня стреляет по самому сильному атакующему
+    const attackers = this.battleState.units.filter(u => u.side === 'attacker' && u.count > 0);
+    if (attackers.length === 0) {
+      this.endUnitTurn();
+      return;
+    }
+
+    const strongest = attackers.reduce((best, current) => {
+      const bestPower = this.getCreatureCombatPower(best.creatureId, best.count);
+      const currentPower = this.getCreatureCombatPower(current.creatureId, current.count);
+      return currentPower > bestPower ? current : best;
+    });
+
+    const damage = 50;
+    this.applyDamage(strongest, damage);
+
+    const targetSprite = this.unitSprites.get(strongest.id);
+    if (targetSprite) {
+      this.effects.showDamageNumber(targetSprite.x + 20, targetSprite.y, damage, false);
+      this.effects.playLightningEffect(
+        this.getOffsetX() + tower.x * CONFIG.BATTLE_TILE_SIZE + 20,
+        this.getOffsetY() + tower.y * CONFIG.BATTLE_TILE_SIZE + 20,
+        targetSprite.x + 20, targetSprite.y + 20
+      );
+    }
+
+    this.addLog(`🗼 Башня стреляет по ${strongest.creatureId}: ${damage} урона`);
+    this.renderUnits();
+    this.checkBattleEnd();
+    this.endUnitTurn();
+  }
+
+  private berserkAction(unit: BattleUnit): void {
+    const allOthers = this.battleState.units.filter(u => u.id !== unit.id && u.count > 0 && !u.isWall);
+    if (allOthers.length === 0) {
+      this.endUnitTurn();
+      return;
+    }
+
+    const closest = allOthers.reduce((best, current) => {
+      const bestDist = Math.max(Math.abs(best.x - unit.x), Math.abs(best.y - unit.y));
+      const currDist = Math.max(Math.abs(current.x - unit.x), Math.abs(current.y - unit.y));
+      return currDist < bestDist ? current : best;
+    });
+
+    const dist = Math.max(Math.abs(closest.x - unit.x), Math.abs(closest.y - unit.y));
+    if (dist <= 1) {
+      this.attack(unit, closest);
+    } else {
+      const newX = unit.x + Math.sign(closest.x - unit.x);
+      const newY = unit.y + Math.sign(closest.y - unit.y);
+      this.moveUnit(unit, newX, newY);
+      this.time.delayedCall(300, () => this.endUnitTurn());
+    }
+  }
+
+  // ============================================================================
+  // АВТО-БОЙ
+  // ============================================================================
+
+  private startAutoBattle(): void {
+    if (this.autoBattle) {
+      this.autoBattle = false;
+      this.addLog('⏸ Авто-бой остановлен');
+      return;
+    }
+    this.autoBattle = true;
+    this.addLog('⚡ Авто-бой запущен!');
+    
+    if (this.selectedUnit && this.selectedUnit.side === 'attacker' && !this.selectedUnit.hasActed) {
+      this.autoAction(this.selectedUnit);
+    }
+  }
+
+  private autoAction(unit: BattleUnit): void {
+    if (!this.autoBattle || this.battleEnded) return;
+
+    // Простая ИИ-логика для авто-боя
+    const enemies = this.battleState.units.filter(u => u.side !== unit.side && u.count > 0 && !u.isWall);
+    
+    if (enemies.length === 0) {
+      this.endUnitTurn();
+      return;
+    }
+
+    // Стрелок стреляет, если есть возможность
+    if (isRanged(unit.creatureId) && (unit.shotsLeft === undefined || unit.shotsLeft > 0)) {
+      const farthest = enemies.reduce((best, cur) => {
+        const bestDist = Math.max(Math.abs(best.x - unit.x), Math.abs(best.y - unit.y));
+        const curDist = Math.max(Math.abs(cur.x - unit.x), Math.abs(cur.y - unit.y));
+        return curDist > bestDist ? cur : best;
+      });
+      this.rangedAttack(unit, farthest);
+      return;
+    }
+
+    // Ближний бой — ищем ближайшего врага и атакуем
+    const adjacent = enemies.filter(e => {
+      const dist = Math.max(Math.abs(e.x - unit.x), Math.abs(e.y - unit.y));
+      return dist <= 1;
+    });
+
+    if (adjacent.length > 0) {
+      // Атакуем слабейшего
+      const weakest = adjacent.reduce((best, cur) => {
+        return cur.count < best.count ? cur : best;
+      });
+      this.attack(unit, weakest);
+      return;
+    }
+
+    // Иначе двигаемся к ближайшему
+    const closest = enemies.reduce((best, cur) => {
+      const bestDist = Math.max(Math.abs(best.x - unit.x), Math.abs(best.y - unit.y));
+      const curDist = Math.max(Math.abs(cur.x - unit.x), Math.abs(cur.y - unit.y));
+      return curDist < bestDist ? cur : best;
+    });
+
+    const speed = this.getCreatureSpeed(unit.creatureId);
+    let bestX = unit.x;
+    let bestY = unit.y;
+    let bestDist = Math.max(Math.abs(closest.x - unit.x), Math.abs(closest.y - unit.y));
+
+    // Ищем лучшую клетку для приближения
+    for (let dx = -speed; dx <= speed; dx++) {
+      for (let dy = -speed; dy <= speed; dy++) {
+        const newX = unit.x + dx;
+        const newY = unit.y + dy;
+        if (newX < 0 || newX >= CONFIG.BATTLE_WIDTH || newY < 0 || newY >= CONFIG.BATTLE_HEIGHT) continue;
+        
+        const occupied = this.battleState.units.some(u => u.count > 0 && u.x === newX && u.y === newY);
+        if (occupied && !(newX === closest.x && newY === closest.y)) continue;
+
+        const dist = Math.max(Math.abs(closest.x - newX), Math.abs(closest.y - newY));
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestX = newX;
+          bestY = newY;
+        }
+      }
+    }
+
+    if (bestX !== unit.x || bestY !== unit.y) {
+      this.moveUnit(unit, bestX, bestY);
+      this.time.delayedCall(400, () => {
+        // После движения — попытка атаки
+        const newAdj = enemies.filter(e => {
+          if (e.count <= 0) return false;
+          const d = Math.max(Math.abs(e.x - unit.x), Math.abs(e.y - unit.y));
+          return d <= 1;
+        });
+        if (newAdj.length > 0) {
+          this.attack(unit, newAdj[0]);
+        } else {
+          this.endUnitTurn();
+        }
+      });
+    } else {
+      this.endUnitTurn();
+    }
+  }
+
+  // ============================================================================
+  // ДЕЙСТВИЯ ИГРОКА
+  // ============================================================================
+
+  private waitUnit(): void {
+    if (!this.selectedUnit || this.selectedUnit.side === 'defender') return;
+    this.addLog(`⏭ ${this.selectedUnit.creatureId} ждёт`);
+    const idx = this.battleState.units.indexOf(this.selectedUnit);
+    if (idx >= 0) {
+      this.battleState.units.splice(idx, 1);
+      this.battleState.units.push(this.selectedUnit);
+    }
+    this.endUnitTurn();
+  }
+
+  private defend(): void {
+    if (!this.selectedUnit || this.selectedUnit.side === 'defender') return;
+    
+    this.selectedUnit.effects.push({ spellId: 'defend', duration: 1, value: 5 });
+    this.addLog(`🛡 ${this.selectedUnit.creatureId} защищается (+5 защиты)`);
+    this.endUnitTurn();
+  }
+
+  private surrender(): void {
+    this.forceStopAll();
+    this.showConfirmation(
+      '🏳 Сдаться?',
+      'Вы потеряете всю армию и заплатите выкуп (25% золота).',
+      () => {
+        if (this.worldScene?.getResources) {
+          const resources = this.worldScene.getResources();
+          this.worldScene.addResources({ gold: -Math.floor(resources.gold * 0.25) });
+        }
+        if (this.attackerHero) {
+          this.attackerHero.army = this.attackerHero.army.map(slot => ({ ...slot, count: 0 }));
+        }
+        this.endBattle('defender', true, false);
+      }
+    );
+  }
+
+  private retreat(): void {
+    this.forceStopAll();
+    this.showConfirmation(
+      '🏃 Сбежать?',
+      'Герой сбежит, но вся армия будет потеряна.',
+      () => {
+        if (this.attackerHero) {
+          this.attackerHero.army = this.attackerHero.army.map(slot => ({ ...slot, count: 0 }));
+        }
+        this.endBattle('defender', false, true);
+      }
+    );
+  }
+
+  private forceStopAll(): void {
+    this.isAnimating = false;
+    this.autoBattle = false;
+    this.tweens.killAll();
+    this.time.removeAllEvents();
+    this.clearHighlights();
+    this.targetingMode = false;
+    this.currentSpell = null;
+    if (this.spellPanel) this.spellPanel.setVisible(false);
+  }
+
+  private showConfirmation(title: string, message: string, onConfirm: () => void): void {
+    const { width, height } = this.scale;
+
+    const container = this.add.container(width / 2, height / 2).setDepth(200);
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setInteractive();
+    container.add(overlay);
+
+    const panel = this.add.rectangle(0, 0, 450, 250, 0x1a1a2e, 0.98)
+      .setStrokeStyle(3, 0xd4af37);
+    container.add(panel);
+
+    const titleText = this.add.text(0, -80, title, {
+      fontSize: '28px', color: '#ffd700', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    container.add(titleText);
+
+    const msgText = this.add.text(0, -20, message, {
+      fontSize: '16px', color: '#f0e6d2', fontFamily: 'Segoe UI',
+      align: 'center', wordWrap: { width: 400 }
+    }).setOrigin(0.5);
+    container.add(msgText);
+
+    const yesBtn = this.add.text(-100, 70, '✓ ДА', {
+      fontSize: '20px', color: '#ffffff', fontFamily: 'Segoe UI',
+      backgroundColor: '#27ae60', padding: { x: 20, y: 10 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    yesBtn.on('pointerover', () => yesBtn.setBackgroundColor('#2ecc71'));
+    yesBtn.on('pointerout', () => yesBtn.setBackgroundColor('#27ae60'));
+    yesBtn.on('pointerdown', () => {
+      container.destroy();
+      onConfirm();
+    });
+    container.add(yesBtn);
+
+    const noBtn = this.add.text(100, 70, '✗ НЕТ', {
+      fontSize: '20px', color: '#ffffff', fontFamily: 'Segoe UI',
+      backgroundColor: '#c0392b', padding: { x: 20, y: 10 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    noBtn.on('pointerover', () => noBtn.setBackgroundColor('#e74c3c'));
+    noBtn.on('pointerout', () => noBtn.setBackgroundColor('#c0392b'));
+    noBtn.on('pointerdown', () => {
+      container.destroy();
+      this.addLog('↩️ Отменено');
+    });
+    container.add(noBtn);
+  }
+
+  // ============================================================================
+  // КОНЕЦ ХОДА
+  // ============================================================================
+
+  private endUnitTurn(): void {
+    if (this.battleEnded) return;
+    
+    if (this.selectedUnit) {
+      this.selectedUnit.hasActed = true;
+      
+      const hasExtraTurn = this.selectedUnit.effects.some(e => e.spellId === 'extra_turn');
+      if (hasExtraTurn) {
+        this.selectedUnit.effects = this.selectedUnit.effects.filter(e => e.spellId !== 'extra_turn');
+        this.selectedUnit.hasActed = false;
+        this.addLog(`🔥 Дополнительный ход!`);
+      }
+
+      const expired = this.spellSystem.tickEffects(this.selectedUnit);
+      for (const spellId of expired) {
+        this.addLog(`⏰ Эффект ${spellId} закончился`);
+      }
+    }
+
+    this.clearHighlights();
+    this.selectNextUnit();
+  }
+
+  private endTurn(): void {
+    if (this.battleEnded) return;
+    
+    this.battleState.turn++;
+    this.battleState.units.forEach(u => {
+      u.hasActed = false;
+      u.hasRetaliated = false;
+    });
+    this.addLog(`─── Ход ${this.battleState.turn} ───`);
+    this.sortUnitsBySpeed();
+    this.selectNextUnit();
+  }
+
+  // ============================================================================
+  // КОНЕЦ БОЯ
+  // ============================================================================
+
+  private checkBattleEnd(): void {
+    if (this.battleEnded) return;
+    
+    const attackerAlive = this.battleState.units.filter(u => 
+      u.side === 'attacker' && u.count > 0 && !u.isWall && !u.isTower
+    ).length;
+    const defenderAlive = this.battleState.units.filter(u => 
+      u.side === 'defender' && u.count > 0 && !u.isWall && !u.isTower
+    ).length;
+
+    if (attackerAlive === 0) {
+      this.time.delayedCall(500, () => this.endBattle('defender'));
+    } else if (defenderAlive === 0) {
+      this.time.delayedCall(500, () => this.endBattle('attacker'));
+    }
+  }
+
+  private endBattle(winner: 'attacker' | 'defender', surrendered: boolean = false, retreated: boolean = false): void {
+    if (this.battleEnded) return;
+    this.battleEnded = true;
+    this.forceStopAll();
+    this.isAnimating = true;
+    this.autoBattle = false;
+
+    const message = winner === 'attacker' ? '🏆 ПОБЕДА!' : '💀 ПОРАЖЕНИЕ!';
+    this.addLog(message);
+
+    // === РАСЧЁТ ОПЫТА ===
+    let experience = 0;
+    if (winner === 'attacker') {
+      const deadDefenders = this.battleState.units.filter(u => 
+        u.side === 'defender' && !u.isWall && !u.isTower
+      );
+      for (const d of deadDefenders) {
+        const lost = (d.initialCount || 1) - d.count;
+        experience += Math.floor(this.getCreatureCombatPower(d.creatureId, lost) * 10);
+      }
+      experience = Math.max(100, experience); // Минимум 100 опыта
+    }
+
+    // === СОХРАНЕНИЕ ПОТЕРЬ В АРМИЮ ГЕРОЯ ===
+    if (this.attackerHero && winner === 'attacker') {
+      const losses: ArmyLoss[] = [];
+      for (const unit of this.battleState.units.filter(u => u.side === 'attacker' && !u.isHero)) {
+        if (unit.originalArmyIndex !== undefined && unit.originalArmyIndex < this.attackerHero.army.length) {
+          const slot = this.attackerHero.army[unit.originalArmyIndex];
+          const lost = (unit.initialCount || slot.count) - unit.count;
+          slot.count = Math.max(0, unit.count);
+          losses.push({ creatureId: unit.creatureId, lost, remaining: unit.count });
+        }
+      }
+
+      // Добавляем опыт
+      this.attackerHero.experience += experience;
+      const levelUp = Math.floor(this.attackerHero.experience / (1000 * this.attackerHero.level));
+      if (levelUp > this.attackerHero.level) {
+        this.attackerHero.level = levelUp;
+        this.attackerHero.stats.attack += 1;
+        this.attackerHero.stats.defense += 1;
+        this.addLog(`⭐ Уровень повышен до ${this.attackerHero.level}!`);
+      }
+
+      // === НЕКРОМАНТИЯ ===
+      let necroResult: NecromancyResult | undefined;
+      if (NecromancySystem.canUseNecromancy(this.attackerHero)) {
+        const deadEnemies = this.battleState.units.filter(u => u.side === 'defender');
+        necroResult = NecromancySystem.applyNecromancy(deadEnemies, this.attackerHero);
+        NecromancySystem.addRaisedUnitsToArmy(this.attackerHero, necroResult);
+        if (necroResult.raisedUnits.length > 0) {
+          this.addLog(NecromancySystem.getResultDescription(necroResult));
+        }
+      }
+    }
+
+    // === ФИНАЛЬНЫЙ ЭКРАН ===
+    const { width, height } = this.scale;
+    const container = this.add.container(width / 2, height / 2).setDepth(100);
+
+    const bg = this.add.rectangle(0, 0, 600, 450, 0x1a1a2e, 0.98)
+      .setStrokeStyle(3, winner === 'attacker' ? 0x2ecc71 : 0xe74c3c);
+    container.add(bg);
+
+    const title = this.add.text(0, -180, message, {
+      fontSize: '40px',
+      color: winner === 'attacker' ? '#2ecc71' : '#e74c3c',
+      fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    container.add(title);
+
+    let infoY = -120;
+    if (winner === 'attacker') {
+      const expText = this.add.text(0, infoY, `✨ Получено опыта: ${experience}`, {
+        fontSize: '18px', color: '#ffd700', fontFamily: 'Segoe UI'
+      }).setOrigin(0.5);
+      container.add(expText);
+      infoY += 30;
+    }
+
+    // Потери
+    const lossesTitle = this.add.text(0, infoY, '━━━ Потери ━━━', {
+      fontSize: '14px', color: '#d4af37', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    container.add(lossesTitle);
+    infoY += 20;
+
+    const attackerLosses = this.battleState.units
+      .filter(u => u.side === 'attacker' && !u.isHero)
+      .map(u => ({
+        name: u.creatureId,
+        lost: (u.initialCount || 1) - u.count,
+        remaining: u.count
+      }))
+      .filter(l => l.lost > 0 || l.remaining > 0);
+
+    for (const loss of attackerLosses.slice(0, 4)) {
+      const lossText = this.add.text(-200, infoY, 
+        `${loss.name}: -${loss.lost} (осталось: ${loss.remaining})`, {
+        fontSize: '13px', 
+        color: loss.lost > 0 ? '#ff6b6b' : '#2ecc71',
+        fontFamily: 'Segoe UI'
+      });
+      container.add(lossText);
+      infoY += 20;
+    }
+
+    // Некромантия
+    if (winner === 'attacker' && NecromancySystem.canUseNecromancy(this.attackerHero)) {
+      infoY += 10;
+      const deadEnemies = this.battleState.units.filter(u => u.side === 'defender');
+      const necroResult = NecromancySystem.applyNecromancy(deadEnemies, this.attackerHero);
+      if (necroResult.raisedUnits.length > 0) {
+        const necroText = this.add.text(0, infoY, 
+          NecromancySystem.getResultDescription(necroResult), {
+          fontSize: '14px', color: '#9b59b6', fontFamily: 'Segoe UI', fontStyle: 'bold'
+        }).setOrigin(0.5);
+        container.add(necroText);
+        NecromancySystem.addRaisedUnitsToArmy(this.attackerHero, necroResult);
+      }
+    }
+
+    // Кнопка продолжить
+    const btn = this.add.text(0, 170, '[ ПРОДОЛЖИТЬ ]', {
+      fontSize: '22px', color: '#d4af37', fontFamily: 'Segoe UI',
+      backgroundColor: '#2c3e50', padding: { x: 20, y: 10 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    btn.on('pointerover', () => btn.setColor('#ffffff').setBackgroundColor('#34495e'));
+    btn.on('pointerout', () => btn.setColor('#d4af37').setBackgroundColor('#2c3e50'));
+    btn.on('pointerdown', () => {
+      // Сохраняем изменения в мире
+      if (winner === 'attacker' && this.worldScene) {
+        if (this.defenderTown) {
+          this.worldScene.captureTown?.(this.defenderTown.id);
+        }
+      }
+      
+      this.queueLeft.destroy();
+      this.queueRight.destroy();
+      this.scene.stop(CONFIG.SCENES.BATTLE);
+      this.scene.wake(CONFIG.SCENES.WORLD);
+    });
+    container.add(btn);
+  }
+
+  // ============================================================================
+  // УТИЛИТЫ
+  // ============================================================================
+
+  private updateUI(): void {
+    if (!this.selectedUnit) return;
+    const type = getCreatureType(this.selectedUnit.creatureId);
+    const typeStr = type.type === 'ranged' ? '🏹' : type.type === 'flying' ? '🦅' : type.type === 'cavalry' ? '🐎' : '⚔️';
+    
+    this.turnText.setText(
+      `Ход ${this.battleState.turn} | ${typeStr} ${this.selectedUnit.creatureId} (${this.selectedUnit.count})`
+    );
+  }
+
+  private showUnitInfo(unit: BattleUnit): void {
+    const type = getCreatureType(unit.creatureId);
+    const abilities = type.specialAbilities.slice(0, 4).join(', ');
+    const effects = unit.effects.map(e => e.spellId).join(', ');
+    const damageRange = this.getCreatureDamage(unit.creatureId);
+    
+    const info = `━━━ ${unit.creatureId.toUpperCase()} ━━━
+Тип: ${type.type.toUpperCase()} | ×${unit.count}
+HP: ${Math.max(0, Math.floor(unit.currentHealth))}/${unit.maxHealth}
+⚔️ ATK: ${this.getCreatureAttack(unit.creatureId)}  🛡 DEF: ${this.getCreatureDefense(unit.creatureId)}
+💨 SPD: ${this.getCreatureSpeed(unit.creatureId)}  🎲 DMG: ${damageRange.min}-${damageRange.max}
+${unit.shotsLeft !== undefined ? `🏹 Стрел: ${unit.shotsLeft}\n` : ''}${abilities ? `✨ ${abilities}\n` : ''}${effects ? `🔮 Эффекты: ${effects}` : ''}`;
+
+    this.unitInfoText.setText(info);
+  }
+
+  private addLog(message: string): void {
+    const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    this.logMessages.push(`[${time}] ${message}`);
+    if (this.logMessages.length > 8) this.logMessages.shift();
+    if (this.logText) {
+      this.logText.setText(this.logMessages.join('\n'));
+    }
+    console.log(`[Battle] ${message}`);
+  }
+}

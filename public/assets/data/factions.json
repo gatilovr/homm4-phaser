@@ -1,0 +1,50 @@
+{
+  "haven": {
+    "id": "haven",
+    "name": "Убежище",
+    "description": "Рыцари и святые воины, защищающие слабых",
+    "creatures": ["pikeman", "archer", "griffin", "cavalry", "monk", "angel"],
+    "heroClasses": ["knight", "cleric"],
+    "uniqueAbility": "Благословение: +1 мораль всем юнитам"
+  },
+  "necropolis": {
+    "id": "necropolis",
+    "name": "Некрополис",
+    "description": "Повелители нежити и тёмной магии",
+    "creatures": ["skeleton", "zombie", "vampire", "lich", "black_knight", "bone_dragon"],
+    "heroClasses": ["death_knight", "necromancer"],
+    "uniqueAbility": "Некромантия: поднятие скелетов из павших"
+  },
+  "preserve": {
+    "id": "preserve",
+    "name": "Заповедник",
+    "description": "Хранители природы и диких зверей",
+    "creatures": ["wolf", "elf", "unicorn", "druid", "treant", "green_dragon"],
+    "heroClasses": ["ranger", "beastmaster"],
+    "uniqueAbility": "Связь с природой: +1 скорость на траве"
+  },
+  "asylum": {
+    "id": "asylum",
+    "name": "Азилум",
+    "description": "Варвары и дикие орды",
+    "creatures": ["goblin", "orc", "ogre", "roc", "cyclops", "behemoth"],
+    "heroClasses": ["barbarian", "battlemage"],
+    "uniqueAbility": "Ярость: +10% урона при низком здоровье"
+  },
+  "academy": {
+    "id": "academy",
+    "name": "Академия",
+    "description": "Мудрецы и создатели артефактов",
+    "creatures": ["gremlin", "golem", "mage", "genie", "naga", "titan"],
+    "heroClasses": ["wizard", "artificer"],
+    "uniqueAbility": "Арканум: -10% стоимости заклинаний"
+  },
+  "stronghold": {
+    "id": "stronghold",
+    "name": "Крепость",
+    "description": "Осадные мастера и защитники",
+    "creatures": ["goblin_trapper", "wolf_rider", "orc_warrior", "ogre_mage", "thunderbird", "cyclops_king"],
+    "heroClasses": ["warlord", "siege_master"],
+    "uniqueAbility": "Осадное мастерство: +20% урона катапульт"
+  }
+}

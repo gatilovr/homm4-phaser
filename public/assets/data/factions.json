@@ -1,50 +1,169 @@
 {
-  "haven": {
-    "id": "haven",
-    "name": "Убежище",
-    "description": "Рыцари и святые воины, защищающие слабых",
-    "creatures": ["pikeman", "archer", "griffin", "cavalry", "monk", "angel"],
-    "heroClasses": ["knight", "cleric"],
-    "uniqueAbility": "Благословение: +1 мораль всем юнитам"
-  },
-  "necropolis": {
-    "id": "necropolis",
-    "name": "Некрополис",
-    "description": "Повелители нежити и тёмной магии",
-    "creatures": ["skeleton", "zombie", "vampire", "lich", "black_knight", "bone_dragon"],
-    "heroClasses": ["death_knight", "necromancer"],
-    "uniqueAbility": "Некромантия: поднятие скелетов из павших"
-  },
-  "preserve": {
-    "id": "preserve",
-    "name": "Заповедник",
-    "description": "Хранители природы и диких зверей",
-    "creatures": ["wolf", "elf", "unicorn", "druid", "treant", "green_dragon"],
-    "heroClasses": ["ranger", "beastmaster"],
-    "uniqueAbility": "Связь с природой: +1 скорость на траве"
-  },
-  "asylum": {
-    "id": "asylum",
-    "name": "Азилум",
-    "description": "Варвары и дикие орды",
-    "creatures": ["goblin", "orc", "ogre", "roc", "cyclops", "behemoth"],
-    "heroClasses": ["barbarian", "battlemage"],
-    "uniqueAbility": "Ярость: +10% урона при низком здоровье"
-  },
-  "academy": {
-    "id": "academy",
-    "name": "Академия",
-    "description": "Мудрецы и создатели артефактов",
-    "creatures": ["gremlin", "golem", "mage", "genie", "naga", "titan"],
-    "heroClasses": ["wizard", "artificer"],
-    "uniqueAbility": "Арканум: -10% стоимости заклинаний"
-  },
-  "stronghold": {
-    "id": "stronghold",
-    "name": "Крепость",
-    "description": "Осадные мастера и защитники",
-    "creatures": ["goblin_trapper", "wolf_rider", "orc_warrior", "ogre_mage", "thunderbird", "cyclops_king"],
-    "heroClasses": ["warlord", "siege_master"],
-    "uniqueAbility": "Осадное мастерство: +20% урона катапульт"
-  }
+  "factions": [
+    {
+      "id": "haven",
+      "name": "Убежище",
+      "nameEn": "Haven",
+      "description": "Фракция света и порядка. Сильные защитные существа, мощные заклинания поддержки.",
+      "color": "#FFD700",
+      "icon": "🏰",
+      "heroClasses": [
+        {
+          "id": "knight",
+          "name": "Рыцарь",
+          "description": "Воин с сильной защитой и лидерством"
+        },
+        {
+          "id": "cleric",
+          "name": "Клирик",
+          "description": "Священник, владеющий магией света"
+        }
+      ],
+      "startingHero": {
+        "class": "knight",
+        "name": "Сэр Гэвин",
+        "startingArmy": [
+          { "creatureId": "pikeman", "count": 20 },
+          { "creatureId": "archer", "count": 10 }
+        ]
+      },
+      "townBuildings": ["haven_barracks", "haven_archery", "haven_griffin_tower", "haven_swordsmith", "haven_monastery", "haven_jousting_arena", "haven_portal_of_glory"]
+    },
+    {
+      "id": "necropolis",
+      "name": "Некрополис",
+      "nameEn": "Necropolis",
+      "description": "Фракция нежити. Некромантия, воскрешение павших, мощные заклинания проклятий.",
+      "color": "#8B008B",
+      "icon": "💀",
+      "heroClasses": [
+        {
+          "id": "death_knight",
+          "name": "Рыцарь смерти",
+          "description": "Воин-нежить с некронавыками"
+        },
+        {
+          "id": "necromancer",
+          "name": "Некромант",
+          "description": "Маг, владеющий магией смерти"
+        }
+      ],
+      "startingHero": {
+        "class": "necromancer",
+        "name": "Сандро",
+        "startingArmy": [
+          { "creatureId": "skeleton", "count": 25 },
+          { "creatureId": "zombie", "count": 15 }
+        ]
+      },
+      "specialAbility": "necromancy",
+      "townBuildings": ["necropolis_cursed_temple", "necropolis_graveyard", "necropolis_estate_of_ancestors", "necropolis_mausoleum", "necropolis_hall_of_darkness", "necropolis_dragon_vault"]
+    },
+    {
+      "id": "preserve",
+      "name": "Заповедник",
+      "nameEn": "Preserve",
+      "description": "Фракция природы. Сильные стрелки, быстрые существа, природная магия.",
+      "color": "#228B22",
+      "icon": "🌲",
+      "heroClasses": [
+        {
+          "id": "ranger",
+          "name": "Следопыт",
+          "description": "Стрелок с высокой скоростью и разведкой"
+        },
+        {
+          "id": "druid",
+          "name": "Друид",
+          "description": "Маг природы, владеющий стихиями"
+        }
+      ],
+      "startingHero": {
+        "class": "ranger",
+        "name": "Гемма",
+        "startingArmy": [
+          { "creatureId": "wolf", "count": 15 },
+          { "creatureId": "elf", "count": 10 }
+        ]
+      },
+      "townBuildings": ["preserve_wolf_den", "preserve_elven_tree", "preserve_unicorn_glade", "preserve_phoenix_nest"]
+    },
+    {
+      "id": "asylum",
+      "name": "Азилум",
+      "nameEn": "Asylum",
+      "description": "Фракция хаоса. Быстрые и агрессивные существа, разрушительная магия.",
+      "color": "#FF4500",
+      "icon": "👹",
+      "heroClasses": [
+        {
+          "id": "demoniac",
+          "name": "Демониак",
+          "description": "Воин-демон с силой хаоса"
+        },
+        {
+          "id": "heretic",
+          "name": "Еретик",
+          "description": "Маг хаоса, владеющий разрушением"
+        }
+      ],
+      "startingHero": {
+        "class": "demoniac",
+        "name": "Ксерон",
+        "startingArmy": [
+          { "creatureId": "imp", "count": 30 },
+          { "creatureId": "goblin", "count": 20 }
+        ]
+      },
+      "townBuildings": ["asylum_imp_crucible", "asylum_hovel", "asylum_hall_of_war", "asylum_ogre_fort", "asylum_cyclops_cave"]
+    },
+    {
+      "id": "academy",
+      "name": "Академия",
+      "nameEn": "Academy",
+      "description": "Фракция знания. Искусственные существа, мощные маги, заклинания всех школ.",
+      "color": "#4169E1",
+      "icon": "📚",
+      "heroClasses": [
+        {
+          "id": "wizard",
+          "name": "Волшебник",
+          "description": "Могущественный маг всех школ"
+        }
+      ],
+      "startingHero": {
+        "class": "wizard",
+        "name": "Иона",
+        "startingArmy": [
+          { "creatureId": "gremlin", "count": 40 },
+          { "creatureId": "stone_golem", "count": 10 }
+        ]
+      },
+      "townBuildings": ["academy_workshop", "academy_golem_factory", "academy_mage_tower", "academy_altar", "academy_titan_spire"]
+    },
+    {
+      "id": "stronghold",
+      "name": "Твердыня",
+      "nameEn": "Stronghold",
+      "description": "Фракция варваров. Сильные бойцы ближнего боя, дешевые существа, мало магии.",
+      "color": "#8B4513",
+      "icon": "⚔️",
+      "heroClasses": [
+        {
+          "id": "barbarian",
+          "name": "Варвар",
+          "description": "Свирепый воин с высокой атакой"
+        }
+      ],
+      "startingHero": {
+        "class": "barbarian",
+        "name": "Краг Хак",
+        "startingArmy": [
+          { "creatureId": "goblin_raider", "count": 30 },
+          { "creatureId": "wolf_rider", "count": 10 }
+        ]
+      },
+      "townBuildings": ["stronghold_warren", "stronghold_kennels", "stronghold_ogre_fort", "stronghold_roc_cliff", "stronghold_behemoth_lair"]
+    }
+  ]
 }

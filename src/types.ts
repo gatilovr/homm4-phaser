@@ -1,104 +1,53 @@
-// ============================================================================
-// БАЗОВЫЕ ТИПЫ
-// ============================================================================
+/**
+ * Типы данных игры Heroes IV
+ */
 
-export interface Position {
-  x: number;
-  y: number;
-}
-
+// ===== Ресурсы =====
 export interface Resources {
   gold: number;
   wood: number;
   ore: number;
-  crystal: number;
+  crystals: number;
   gems: number;
   sulfur: number;
   mercury: number;
 }
 
-// ============================================================================
-// КАРТА
-// ============================================================================
+export type ResourceType = keyof Resources;
 
-export type TileType = 
-  | 'grass' 
-  | 'sand' 
-  | 'water' 
-  | 'rock' 
-  | 'snow' 
-  | 'swamp' 
-  | 'lava' 
-  | 'forest';
+// ===== Карта =====
+export type TileType = 'grass' | 'dirt' | 'water' | 'sand' | 'rock' | 'snow' | 'swamp' | 'lava' | 'forest' | 'mountain';
 
 export interface Tile {
   x: number;
   y: number;
   type: TileType;
-  passable: boolean;
-  moveCost: number;
   object?: MapObject;
-  revealed: boolean;
+  visible: boolean;
+  visited: boolean;
+  moveCost: number;
 }
-
-export type MapObjectType = 
-  | 'town' 
-  | 'enemy_town'
-  | 'hero' 
-  | 'enemy_hero'
-  | 'mine' 
-  | 'artifact' 
-  | 'creature' 
-  | 'resource' 
-  | 'portal';
 
 export interface MapObject {
   id: string;
   type: MapObjectType;
-  x: number;
-  y: number;
+  owner?: string;
   data?: any;
 }
 
-// ============================================================================
-// СУЩЕСТВА
-// ============================================================================
+export type MapObjectType = 
+  | 'town'
+  | 'hero'
+  | 'mine'
+  | 'artifact'
+  | 'creature'
+  | 'resource'
+  | 'portal'
+  | 'treasure'
+  | 'building'
+  | 'shrine';
 
-export interface Creature {
-  id: string;
-  name: string;
-  faction: string;
-  tier: number;
-  attack: number;
-  defense: number;
-  damage: { min: number; max: number };
-  health: number;
-  speed: number;
-  growth: number;
-  cost: Partial<Resources>;
-  abilities: string[];
-  upgradeTo?: string;
-}
-
-// ============================================================================
-// ГЕРОИ
-// ============================================================================
-
-export interface HeroStats {
-  attack: number;
-  defense: number;
-  spellPower: number;
-  knowledge: number;
-  morale: number;
-  luck: number;
-}
-
-export interface HeroSkill {
-  id: string;
-  name: string;
-  level: number; // 1 = базовый, 2 = продвинутый, 3 = эксперт
-}
-
+// ===== Герой =====
 export interface Hero {
   id: string;
   name: string;
@@ -106,306 +55,286 @@ export interface Hero {
   faction: string;
   level: number;
   experience: number;
+  x: number;
+  y: number;
+  movementPoints: number;
+  maxMovementPoints: number;
   stats: HeroStats;
   skills: HeroSkill[];
+  equipment: Equipment;
+  army: ArmyUnit[];
   mana: number;
   maxMana: number;
-  army: ArmySlot[];
-  equipment: HeroEquipment;
   spells: string[];
-  specialization?: string;
-  /** Позиция на карте (для ИИ) */
-  x?: number;
-  /** Позиция на карте (для ИИ) */
-  y?: number;
-  /** Очки движения */
-  movementPoints?: number;
+  morale: number;
+  luck: number;
+  owner: 'player' | 'enemy';
+  sprite?: Phaser.GameObjects.Sprite;
 }
 
-export interface ArmySlot {
-  creatureId: string;
-  count: number;
+export interface HeroStats {
+  attack: number;
+  defense: number;
+  spellPower: number;
+  knowledge: number;
 }
 
-export interface HeroEquipment {
+export interface HeroSkill {
+  id: string;
+  name: string;
+  level: number;
+  category: SkillCategory;
+  effects: SkillEffect[];
+}
+
+export type SkillCategory = 'combat' | 'magic' | 'adventure' | 'economy';
+
+export interface SkillEffect {
+  type: string;
+  value: number;
+}
+
+export interface Equipment {
   head?: Artifact;
   neck?: Artifact;
-  torso?: Artifact;
-  weapon?: Artifact;
-  shield?: Artifact;
+  body?: Artifact;
+  leftHand?: Artifact;
+  rightHand?: Artifact;
   leftRing?: Artifact;
   rightRing?: Artifact;
-  boots?: Artifact;
-  gloves?: Artifact;
-  misc?: Artifact;
+  feet?: Artifact;
+  misc1?: Artifact;
+  misc2?: Artifact;
 }
 
-// ============================================================================
-// АРТЕФАКТЫ
-// ============================================================================
+export type EquipmentSlot = keyof Equipment;
 
-export type ArtifactSlot = keyof HeroEquipment;
-export type ArtifactRarity = 'minor' | 'major' | 'relic';
+export interface ArmyUnit {
+  creatureId: string;
+  count: number;
+  creature?: Creature;
+}
 
+// ===== Существа =====
+export interface Creature {
+  id: string;
+  name: string;
+  nameEn?: string;
+  faction: string;
+  tier: number;
+  attack: number;
+  defense: number;
+  damageMin: number;
+  damageMax: number;
+  health: number;
+  speed: number;
+  shots: number;
+  growth: number;
+  cost: Partial<Resources>;
+  abilities: string[];
+  type: CreatureType;
+  upgradeFrom?: string;
+  upgradeTo?: string;
+}
+
+export type CreatureType = 'infantry' | 'shooter' | 'cavalry' | 'flying' | 'beast' | 'siege' | 'hero';
+
+// ===== Артефакты =====
 export interface Artifact {
   id: string;
   name: string;
-  slot: ArtifactSlot;
-  rarity: ArtifactRarity;
   description: string;
-  bonuses: Partial<HeroStats>;
+  tier: ArtifactTier;
+  slot: EquipmentSlot;
   cost: number;
+  effects: ArtifactEffect[];
+  icon?: string;
 }
 
-// ============================================================================
-// ГОРОДА
-// ============================================================================
+export type ArtifactTier = 'minor' | 'major' | 'relic';
 
-export interface Building {
+export interface ArtifactEffect {
+  type: string;
+  value: number;
+  stat?: string;
+}
+
+// ===== Заклинания =====
+export interface Spell {
   id: string;
   name: string;
   description: string;
-  cost: Partial<Resources>;
-  requirements: string[];
-  provides?: string[];
-  dailyIncome?: Partial<Resources>;
-  creatureGrowth?: { creatureId: string; amount: number };
+  level: number;
+  school: SpellSchool;
+  manaCost: number;
+  target: SpellTarget;
+  effects: SpellEffect[];
+  icon?: string;
 }
 
+export type SpellSchool = 'water' | 'fire' | 'earth' | 'air' | 'mind';
+
+export type SpellTarget = 'single' | 'area' | 'self' | 'ally' | 'enemy' | 'any';
+
+export interface SpellEffect {
+  type: string;
+  value: number;
+  duration?: number;
+}
+
+// ===== Здания =====
+export interface Building {
+  id: string;
+  name: string;
+  faction: string;
+  category: BuildingCategory;
+  tier: number;
+  cost: Partial<Resources>;
+  description: string;
+  requires: string[];
+  effects: BuildingEffects;
+  creatureId?: string;
+  upgradeTo?: string;
+}
+
+export type BuildingCategory = 'core' | 'dwelling' | 'economy' | 'magic' | 'special';
+
+export interface BuildingEffects {
+  growthMultiplier?: number;
+  defenseBonus?: number;
+  market?: boolean;
+  blacksmith?: boolean;
+  tavern?: boolean;
+  mageGuildLevel?: number;
+  incomeBonus?: number;
+  [key: string]: any;
+}
+
+// ===== Город =====
 export interface Town {
   id: string;
   name: string;
   faction: string;
   x: number;
   y: number;
-  builtBuildings: string[];
-  garrison: ArmySlot[];
+  owner: 'player' | 'enemy' | 'neutral';
+  buildings: string[];
+  garrison: ArmyUnit[];
   heroes: string[];
-  resources: Resources;
+  growthDay: number;
+  sprite?: Phaser.GameObjects.Sprite;
 }
 
-// ============================================================================
-// МАГИЯ
-// ============================================================================
-
-export type SpellSchool = 'water' | 'fire' | 'earth' | 'air' | 'mind';
-export type SpellTarget = 'single' | 'area' | 'all' | 'self';
-
-export interface Spell {
-  id: string;
-  name: string;
-  school: SpellSchool;
-  manaCost: number;
-  description: string;
-  target: SpellTarget;
-  effects: SpellEffect[];
-}
-
-export interface SpellEffect {
-  type: 'damage' | 'heal' | 'buff' | 'debuff' | 'summon';
-  value?: number;
-  duration?: number;
-  stat?: keyof HeroStats;
-}
-
-// ============================================================================
-// БОЙ
-// ============================================================================
-
+// ===== Бой =====
 export interface BattleUnit {
   id: string;
   creatureId: string;
+  creature: Creature;
   count: number;
   currentHealth: number;
   maxHealth: number;
   x: number;
   y: number;
   side: 'attacker' | 'defender';
-  hasActed: boolean;
-  hasRetaliated: boolean;
-  effects: BattleEffect[];
   isHero?: boolean;
-  heroId?: string;
-  // === НОВЫЕ ПОЛЯ ДЛЯ 100% БОЕВОЙ СИСТЕМЫ ===
-  isClone?: boolean;              // Клон (умирает при получении урона)
-  initialCount?: number;          // Начальное количество (для расчёта воскрешения)
-  shotsLeft?: number;             // Оставшиеся выстрелы (для стрелков)
-  isWall?: boolean;               // Это стена при осаде
-  isTower?: boolean;              // Это башня при осаде
-  wallHp?: number;                // HP стены
-  originalArmyIndex?: number;     // Индекс в армии героя (для сохранения потерь)
+  hero?: Hero;
+  speed: number;
+  moved: boolean;
+  acted: boolean;
+  retaliations: number;
+  maxRetaliations: number;
+  effects: BattleEffect[];
+  sprite?: Phaser.GameObjects.Sprite;
+  healthBar?: Phaser.GameObjects.Graphics;
+  countText?: Phaser.GameObjects.Text;
 }
 
 export interface BattleEffect {
-  spellId: string;
-  duration: number;
-  value?: number;
-}
-
-export interface BattleState {
-  units: BattleUnit[];
-  currentUnitIndex: number;
-  turn: number;
-  phase: 'deployment' | 'action' | 'targeting' | 'resolution' | 'victory';
-  obstacles: Position[];
-  winner?: 'attacker' | 'defender';
-  // === НОВЫЕ ПОЛЯ ===
-  isSiege?: boolean;              // Это осада города
-  wallsState?: WallsState;        // Состояние стен при осаде
-  battleType?: 'field' | 'siege' | 'creature';  // Тип боя
-}
-
-// ============================================================================
-// ОСАДА ГОРОДОВ (НОВОЕ)
-// ============================================================================
-
-export interface WallsState {
-  mainGate: WallSegment;    // Главные ворота
-  upperWall: WallSegment;   // Верхняя стена
-  lowerWall: WallSegment;   // Нижняя стена
-  keepTower: WallSegment;   // Главная башня
-  upperTower: WallSegment;  // Верхняя башня
-  lowerTower: WallSegment;  // Нижняя башня
-}
-
-export interface WallSegment {
   id: string;
-  type: 'gate' | 'wall' | 'tower';
-  currentHp: number;
-  maxHp: number;
-  x: number;
-  y: number;
-  isDestroyed: boolean;
+  name: string;
+  type: string;
+  value: number;
+  duration: number;
+  source?: string;
 }
 
-// ============================================================================
-// НЕКРОМАНТИЯ (НОВОЕ)
-// ============================================================================
-
-export interface NecromancyResult {
-  raisedUnits: { creatureId: string; count: number }[];
-  totalDeadConverted: number;
-  necromancyPower: number;
-}
-
-// ============================================================================
-// РЕЗУЛЬТАТЫ БОЯ (НОВОЕ)
-// ============================================================================
-
-export interface BattleResult {
-  winner: 'attacker' | 'defender';
-  experience: number;
-  attackerLosses: ArmyLoss[];
-  defenderLosses: ArmyLoss[];
-  necromancyResult?: NecromancyResult;
-  townCaptured?: string;
-  heroDefeated?: string;
-  surrendered?: boolean;
-  retreated?: boolean;
-}
-
-export interface ArmyLoss {
-  creatureId: string;
-  lost: number;
-  remaining: number;
-}
-
-// ============================================================================
-// СПОСОБНОСТИ СУЩЕСТВ (НОВОЕ)
-// ============================================================================
-
-export type AbilityId =
-  | 'double_attack'       // Двойная атака
-  | 'triple_attack'       // Тройная атака
-  | 'double_shot'         // Двойной выстрел
-  | 'multi_shot'          // Стрельба по всем соседям цели
-  | 'charge'              // Бонус за разбег
-  | 'life_drain'          // Вампиризм
-  | 'no_retaliation'      // Враг не контратакует
-  | 'unlimited_retaliation' // Бесконечные контратаки
-  | 'resurrect'           // Воскрешение (ангелы)
-  | 'morale_boost'        // +1 мораль союзникам
-  | 'morale_debuff'       // -1 мораль врагам
-  | 'blind_attack'        // 50% шанс ослепить
-  | 'binding_attack'      // Связывание (враг не двигается)
-  | 'death_cloud'         // Облако смерти (урон соседям)
-  | 'disease'             // Болезнь (-20% к статам)
-  | 'weakness'            // Слабость (-2 атаки при попадании)
-  | 'aging'               // Старение (-атк/деф цели)
-  | 'lightning_strike'    // Молния (50% доп. урон)
-  | 'lightning_attack'    // Атака молнией
-  | 'breath_attack'       // Дыхание (урон соседям)
-  | 'magic_immunity'      // Иммунитет к магии
-  | 'magic_resistance'    // Шанс сопротивления магии
-  | 'damage_reduction'    // Снижение урона (големы)
-  | 'ignore_defense'      // Игнорирование защиты
-  | 'ignore_armor'        // Игнорирование доспехов
-  | 'bloodlust_aura'      // Аура жажды крови
-  | 'mana_drain'          // Поглощение маны
-  | 'random_spell'        // Случайное заклинание
-  | 'caster'              // Может использовать заклинания
-  | 'siege'               // Эффективен против стен
-  | 'undead'              // Нежить
-  | 'hate_effrit'         // Ненависть к ифритам
-  | 'hate_black_dragon';  // Ненависть к чёрным драконам
-
-// ============================================================================
-// ФРАКЦИИ
-// ============================================================================
-
+// ===== Фракция =====
 export interface Faction {
   id: string;
   name: string;
+  nameEn?: string;
   description: string;
-  creatures: string[];
-  heroClasses: string[];
-  uniqueAbility?: string;
+  color?: string;
+  icon?: string;
+  heroClasses?: HeroClass[];
+  startingHero?: StartingHero;
+  specialAbility?: string;
+  townBuildings?: string[];
 }
 
-// ============================================================================
-// ИГРОВОЕ СОСТОЯНИЕ
-// ============================================================================
+export interface HeroClass {
+  id: string;
+  name: string;
+  description: string;
+}
 
+export interface StartingHero {
+  class: string;
+  name: string;
+  startingArmy: { creatureId: string; count: number }[];
+}
+
+// ===== Игровое состояние =====
 export interface GameState {
-  player: PlayerState;
-  aiPlayers: AIPlayerState[];
   map: Tile[][];
-  towns: Town[];
   heroes: Hero[];
-  day: number;
-  week: number;
-  currentHeroId?: string;
+  towns: Town[];
+  mines: Mine[];
+  currentDay: number;
+  currentWeek: number;
+  currentMonth: number;
+  activeHeroId: string;
+  resources: Resources;
+  settings: GameSettings;
 }
 
-export interface PlayerState {
+export interface Mine {
   id: string;
-  faction: string;
-  resources: Resources;
-  heroes: string[];
-  towns: string[];
-  mines: string[];
-  revealedTiles: Position[];
+  x: number;
+  y: number;
+  type: ResourceType;
+  owner: 'player' | 'enemy' | 'neutral';
+  income: number;
 }
 
-export interface AIPlayerState {
-  id: string;
-  faction: string;
-  resources: Resources;
-  heroes: string[];
-  towns: string[];
+export interface GameSettings {
+  musicVolume: number;
+  sfxVolume: number;
   difficulty: 'easy' | 'normal' | 'hard';
+  mapSize: 'small' | 'medium' | 'large';
 }
 
-// ============================================================================
-// СОБЫТИЯ
-// ============================================================================
+// ===== События =====
+export interface GameEvent {
+  type: string;
+  data: any;
+  timestamp: number;
+}
 
-export type GameEvent = 
-  | { type: 'hero:moved'; heroId: string; from: Position; to: Position }
-  | { type: 'hero:attacked'; heroId: string; targetId: string }
-  | { type: 'battle:start'; attacker: string; defender: string }
-  | { type: 'battle:end'; winner: 'attacker' | 'defender' }
-  | { type: 'town:captured'; townId: string; playerId: string }
-  | { type: 'resource:collected'; resource: keyof Resources; amount: number }
-  | { type: 'turn:end'; day: number }
-  | { type: 'week:end'; week: number };
+// ===== Утилиты =====
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface Size {
+  width: number;
+  height: number;
+}
+
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}

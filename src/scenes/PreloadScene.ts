@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
+import { contentManager } from '../systems/ContentManager';
 
 /**
  * PreloadScene — загрузка всех JSON-данных игры.
@@ -60,6 +61,11 @@ export class PreloadScene extends Phaser.Scene {
     this.load.json('creatures', 'assets/data/creatures.json');
 
     console.log('[PreloadScene] JSON files queued for loading');
+
+    // Обработка ошибок загрузки
+    this.load.on('loaderror', (file: any) => {
+      console.warn(`[PreloadScene] ⚠️ Не удалось загрузить ${file.key}:`, file.url);
+    });
   }
 
   create(): void {
@@ -104,14 +110,26 @@ export class PreloadScene extends Phaser.Scene {
     this.registry.set('creatures', creatures);
 
     console.log('[PreloadScene] ✓ Данные загружены в registry:');
-    console.log('[PreloadScene]   factions:', factions ? 'OK' : 'MISSING');
-    console.log('[PreloadScene]   spells:', Array.isArray(spells) ? `${spells.length} заклинаний` : 'MISSING');
-    console.log('[PreloadScene]   artifacts:', Array.isArray(artifacts) ? `${artifacts.length} артефактов` : 'MISSING');
-    console.log('[PreloadScene]   buildings:', buildings ? 'OK' : 'MISSING');
-    console.log('[PreloadScene]   creatures:', creatures ? `${Object.keys(creatures).length} существ` : 'MISSING');
+    console.log('[PreloadScene]   factions:', factions ? `${factions.factions?.length || 0} фракций` : 'MISSING');
+    console.log('[PreloadScene]   spells:', spells?.spells ? `${spells.spells.length} заклинаний` : 'MISSING');
+    console.log('[PreloadScene]   artifacts:', artifacts?.artifacts ? `${artifacts.artifacts.length} артефактов` : 'MISSING');
+    console.log('[PreloadScene]   buildings:', buildings?.buildings ? `${buildings.buildings.length} зданий` : 'MISSING');
+    console.log('[PreloadScene]   creatures:', creatures?.creatures ? `${creatures.creatures.length} существ` : 'MISSING');
 
-    // Переход в меню через 800мс
-    this.time.delayedCall(800, () => {
+    // === ИНИЦИАЛИЗАЦИЯ CONTENT MANAGER ===
+    // ContentManager будет использовать данные из fetch, а fallback возьмёт из registry
+    console.log('[PreloadScene] → Инициализация ContentManager...');
+
+    // Переход в меню через 800мс (ContentManager загрузится параллельно)
+    this.time.delayedCall(800, async () => {
+      try {
+        await contentManager.loadAll();
+        console.log('[PreloadScene] ✅ ContentManager готов!');
+        console.log('[PreloadScene] Статистика:', contentManager.getStats());
+      } catch (err) {
+        console.warn('[PreloadScene] ⚠️ ContentManager fallback:', err);
+      }
+      
       console.log('[PreloadScene] → Переход в MenuScene');
       this.scene.start(CONFIG.SCENES.MENU);
     });

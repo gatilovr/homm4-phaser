@@ -27,6 +27,12 @@ export class WorldScene extends Phaser.Scene {
   private victorySystem!: VictorySystem;
   private aiSystem!: AISystem;
   private aiHeroSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
+  private aiHeroNameTexts: Map<string, Phaser.GameObjects.Text> = new Map();
+  
+  // === СИСТЕМА НЕСКОЛЬКИХ ГЕРОЕВ ===
+  private playerHeroes: Hero[] = [];
+  private playerHeroSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
+  private currentHeroIndex: number = 0;
 
   constructor() {
     super({ key: CONFIG.SCENES.WORLD });
@@ -237,6 +243,10 @@ export class WorldScene extends Phaser.Scene {
       'hero'
     ).setOrigin(0, 0).setDepth(100);
     
+    this.playerHeroes = [this.hero];
+    this.playerHeroSprites.set(this.hero.id, this.heroSprite);
+    this.currentHeroIndex = 0;
+    
     console.log(`[WorldScene] Hero placed at ${startX},${startY}`);
   }
 
@@ -329,6 +339,10 @@ export class WorldScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ENTER', () => this.endTurn());
     this.input.keyboard?.on('keydown-H', () => this.showHeroInfo());
     this.input.keyboard?.on('keydown-ESC', () => this.scene.start(CONFIG.SCENES.MENU));
+    this.input.keyboard?.on('keydown-TAB', (event: KeyboardEvent) => {
+      event.preventDefault();
+      this.switchToNextHero();
+    });
   }
 
   private moveHeroTo(target: Position): void {
@@ -856,6 +870,100 @@ export class WorldScene extends Phaser.Scene {
   public getHero(): Hero { return this.hero; }
   public getResources(): typeof this.resources { return this.resources; }
   
+  /**
+   * Получить список всех героев игрока
+   */
+  public getPlayerHeroes(): Hero[] {
+    return this.playerHeroes;
+  }
+  
+  /**
+   * Добавить нового героя на карту (для таверны)
+   */
+  public addNewHero(newHero: Hero, townX: number, townY: number): void {
+    const TS = CONFIG.TILE_SIZE;
+    const mapW = this.map[0]?.length || 0;
+    const mapH = this.map.length;
+    
+    // Ищем проходимую клетку рядом с городом
+    let spawnX = townX + 1;
+    let spawnY = townY;
+    if (!this.map[spawnY]?.[spawnX]?.passable) {
+      spawnX = townX;
+      spawnY = townY + 1;
+    }
+    if (!this.map[spawnY]?.[spawnX]?.passable) {
+      spawnX = townX - 1;
+      spawnY = townY;
+    }
+    if (!this.map[spawnY]?.[spawnX]?.passable) {
+      // Ищем в радиусе
+      for (let r = 2; r < 5; r++) {
+        let found = false;
+        for (let dy = -r; dy <= r && !found; dy++) {
+          for (let dx = -r; dx <= r && !found; dx++) {
+            const nx = townX + dx;
+            const ny = townY + dy;
+            if (nx >= 0 && nx < mapW && ny >= 0 && ny < mapH) {
+              if (this.map[ny][nx].passable && !this.map[ny][nx].object) {
+                spawnX = nx;
+                spawnY = ny;
+                found = true;
+              }
+            }
+          }
+        }
+        if (found) break;
+      }
+    }
+    
+    // Создаём спрайт героя
+    const sprite = this.add.sprite(spawnX * TS, spawnY * TS, 'hero')
+      .setOrigin(0, 0)
+      .setDepth(100)
+      .setTint(0x4488ff); // Голубой оттенок для новых героев
+    
+    this.playerHeroes.push(newHero);
+    this.playerHeroSprites.set(newHero.id, sprite);
+    
+    // Регистрируем в VictorySystem
+    if (this.victorySystem) {
+      this.victorySystem.registerHero({
+        id: newHero.id,
+        hero: newHero,
+        owner: 'player',
+        alive: true,
+        x: spawnX,
+        y: spawnY
+      });
+    }
+    
+    this.showNotification(`🦸 Новый герой ${newHero.name} появился рядом с городом!`);
+    console.log(`[WorldScene] New hero added: ${newHero.name} at ${spawnX},${spawnY}. Total heroes: ${this.playerHeroes.length}`);
+  }
+  
+  /**
+   * Переключиться на следующего героя
+   */
+  private switchToNextHero(): void {
+    if (this.playerHeroes.length <= 1) {
+      this.showNotification('У вас только один герой');
+      return;
+    }
+    
+    this.currentHeroIndex = (this.currentHeroIndex + 1) % this.playerHeroes.length;
+    this.hero = this.playerHeroes[this.currentHeroIndex];
+    
+    // Меняем спрайт активного героя
+    const newSprite = this.playerHeroSprites.get(this.hero.id);
+    if (newSprite) {
+      this.heroSprite = newSprite;
+      this.camera.startFollow(this.heroSprite, true, 0.08, 0.08);
+    }
+    
+    this.showNotification(`🦸 Активный герой: ${this.hero.name} (${this.currentHeroIndex + 1}/${this.playerHeroes.length})`);
+  }
+  
   public addExperience(exp: number): void {
     this.hero.experience += exp;
     // Проверка повышения уровня
@@ -876,14 +984,14 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Инициализация системы ИИ
+   * Инициализация системы ИИ (полноценная версия)
    */
   private initAISystem(): void {
     // Собираем все объекты карты
     const objects: any[] = [];
     const mapW = this.map[0]?.length || 0;
     const mapH = this.map.length;
-    
+
     for (let y = 0; y < mapH; y++) {
       for (let x = 0; x < mapW; x++) {
         const obj = this.map[y]?.[x]?.object;
@@ -893,61 +1001,180 @@ export class WorldScene extends Phaser.Scene {
       }
     }
 
-    // Создаём систему ИИ
-    this.aiSystem = new AISystem(this.map, objects);
+    // Создаём систему ИИ с коллбэками
+    this.aiSystem = new AISystem(this.map, objects, {
+      getVictorySystem: () => this.victorySystem,
+      getPlayerHero: () => this.hero,
+      getPlayerPosition: () => this.getHeroPosition(),
+      getTownData: (townId: string) => this.getTownDataForAI(townId),
+      onAIAttackHero: (aiHero) => this.handleAIAttackHero(aiHero),
+      onAIAttackCreature: (aiHero, creatureId) => this.handleAIAttackCreature(aiHero, creatureId),
+      onAIMove: (aiId, x, y) => this.animateAIHeroMove(aiId, x, y),
+      onAICaptureTown: (aiId, townId) => this.handleAICaptureTown(aiId, townId),
+      onAICaptureMine: (aiId, mineId) => this.handleAICaptureMine(aiId, mineId),
+      onAINotification: (msg) => this.showNotification(msg)
+    });
 
     // Получаем вражеские города
     const aiTowns = this.victorySystem.getAITowns();
-    
+
     // Создаём ИИ героев для каждого города
     for (let i = 0; i < aiTowns.length; i++) {
       const town = aiTowns[i];
-      const colors = [0xff0000, 0x00ff00];
-      const names = ['Красный Маг', 'Зелёный Рыцарь'];
-      
-      const aiHero: Hero = {
+      const TS = CONFIG.TILE_SIZE;
+
+      // Ищем проходимую клетку рядом с городом
+      let spawnX = town.x + 1;
+      let spawnY = town.y;
+      if (!this.map[spawnY]?.[spawnX]?.passable) {
+        spawnX = town.x;
+        spawnY = town.y + 1;
+      }
+
+      const isNecro = town.faction === 'necropolis';
+      const hero: Hero = {
         id: `ai_hero_${i}`,
-        name: names[i] || `ИИ Герой ${i}`,
-        class: 'Маг',
+        name: isNecro ? 'Лорд Мортис' : 'Тёмный Рыцарь',
+        class: isNecro ? 'Некромант' : 'Рыцарь',
         faction: town.faction,
         level: 1,
         experience: 0,
-        stats: { attack: 2, defense: 2, spellPower: 2, knowledge: 2, morale: 0, luck: 0 },
+        stats: { attack: 2, defense: 2, spellPower: isNecro ? 3 : 1, knowledge: isNecro ? 3 : 1, morale: 0, luck: 0 },
         skills: [],
         mana: 20,
         maxMana: 20,
-        army: [
-          { creatureId: 'skeleton', count: 30 },
-          { creatureId: 'zombie', count: 20 }
-        ],
+        army: isNecro
+          ? [
+              { creatureId: 'skeleton', count: 40 },
+              { creatureId: 'zombie', count: 25 }
+            ]
+          : [
+              { creatureId: 'pikeman', count: 30 },
+              { creatureId: 'archer', count: 15 }
+            ],
         equipment: {},
         spells: [],
-        x: town.x,
-        y: town.y,
-        movementPoints: 100
+        x: spawnX,
+        y: spawnY,
+        movementPoints: 1500
       };
 
       // Создаём спрайт ИИ героя
-      const color = colors[i] || 0xff0000;
-      const TS = CONFIG.TILE_SIZE;
-      const sprite = this.add.sprite(town.x * TS, town.y * TS, 'hero')
+      const sprite = this.add.sprite(spawnX * TS, spawnY * TS, 'hero')
         .setOrigin(0, 0)
         .setDepth(100)
-        .setTint(color);
+        .setTint(0xff4444);
 
-      this.aiHeroSprites.set(aiHero.id, sprite);
+      // Добавляем имя
+      const nameText = this.add.text(spawnX * TS + TS / 2, spawnY * TS - 5, hero.name, {
+        fontSize: '11px',
+        color: '#ff4444',
+        fontFamily: 'Segoe UI',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5).setDepth(101);
+
+      this.aiHeroSprites.set(hero.id, sprite);
+      this.aiHeroNameTexts.set(hero.id, nameText);
     }
 
-    // Инициализируем ИИ игроков (передаём пустые массивы для простоты)
-    this.aiSystem.initAIPlayers([], []);
+    // Инициализируем ИИ игроков с данными о городах
+    this.aiSystem.initAIPlayers(aiTowns, []);
 
     console.log(`[AI] Инициализировано ${aiTowns.length} ИИ противников`);
   }
 
-
+  /**
+   * Получить данные о городе для ИИ
+   */
+  private getTownDataForAI(townId: string): any {
+    return this.victorySystem.getTown(townId);
+  }
 
   /**
-   * Обновление позиций ИИ героев на карте
+   * ИИ атакует героя игрока
+   */
+  private handleAIAttackHero(aiHero: Hero): void {
+    console.log('[AI] Атака героя игрока!', aiHero.name);
+    this.showNotification(`⚔️ ${aiHero.name} нападает на вас!`);
+
+    // Останавливаем движение игрока
+    this.stopMovement();
+
+    // Запускаем бой (ИИ — атакующий, игрок — защитник)
+    this.time.delayedCall(500, () => {
+      this.scene.sleep();
+      this.scene.launch(CONFIG.SCENES.BATTLE, {
+        attacker: aiHero,           // ИИ атакует
+        defenderHero: this.hero,   // Игрок защищается
+        isAIAttack: true,
+        worldScene: this
+      });
+    });
+  }
+
+  /**
+   * ИИ атакует нейтральное существо
+   */
+  private handleAIAttackCreature(aiHero: Hero, creatureId: string): void {
+    console.log(`[AI] ${aiHero.name} атакует ${creatureId}`);
+    // Удаляем существо с карты
+    this.removeObject(creatureId, { x: aiHero.x!, y: aiHero.y! });
+  }
+
+  /**
+   * Анимация движения ИИ героя
+   */
+  private animateAIHeroMove(aiId: string, x: number, y: number): void {
+    const sprite = this.aiHeroSprites.get(aiId);
+    const nameText = this.aiHeroNameTexts.get(aiId);
+    if (!sprite) return;
+
+    const TS = CONFIG.TILE_SIZE;
+    this.tweens.add({
+      targets: sprite,
+      x: x * TS,
+      y: y * TS,
+      duration: 400,
+      ease: 'Linear'
+    });
+
+    if (nameText) {
+      this.tweens.add({
+        targets: nameText,
+        x: x * TS + TS / 2,
+        y: y * TS - 5,
+        duration: 400,
+        ease: 'Linear'
+      });
+    }
+  }
+
+  /**
+   * ИИ захватил город игрока
+   */
+  private handleAICaptureTown(aiId: string, townId: string): void {
+    console.log(`[AI] Захвачен город ${townId}`);
+    // Обновляем цвет спрайта города на красный
+    const sprite = this.objectSprites.get(townId);
+    if (sprite) {
+      sprite.setTint(0xff4444);
+    }
+  }
+
+  /**
+   * ИИ захватил шахту игрока
+   */
+  private handleAICaptureMine(aiId: string, mineId: string): void {
+    console.log(`[AI] Захвачена шахта ${mineId}`);
+    const sprite = this.objectSprites.get(mineId);
+    if (sprite) {
+      sprite.setTint(0xff4444);
+    }
+  }
+
+  /**
+   * Обновление позиций ИИ героев на карте (после хода)
    */
   private updateAIHeroPositions(): void {
     const aiPlayers = this.aiSystem.getAIPlayers();
@@ -955,15 +1182,12 @@ export class WorldScene extends Phaser.Scene {
 
     for (const ai of aiPlayers) {
       const sprite = this.aiHeroSprites.get(ai.hero.id);
+      const nameText = this.aiHeroNameTexts.get(ai.hero.id);
       if (sprite) {
-        // Плавно перемещаем спрайт к новой позиции
-        this.tweens.add({
-          targets: sprite,
-          x: ai.hero.x * TS,
-          y: ai.hero.y * TS,
-          duration: 300,
-          ease: 'Linear'
-        });
+        sprite.setPosition(ai.hero.x! * TS, ai.hero.y! * TS);
+      }
+      if (nameText) {
+        nameText.setPosition(ai.hero.x! * TS + TS / 2, ai.hero.y! * TS - 5);
       }
     }
   }

@@ -24,7 +24,10 @@ export class TownScene extends Phaser.Scene {
   private mainContainer!: Phaser.GameObjects.Container;
   private resourceTexts: Map<string, Phaser.GameObjects.Text> = new Map();
   private townNameText!: Phaser.GameObjects.Text;
-  private activeTab: 'buildings' | 'hire' | 'market' | 'blacksmith' | 'garrison' = 'buildings';
+  private activeTab: 'buildings' | 'hire' | 'market' | 'blacksmith' | 'garrison' | 'tavern' = 'buildings';
+  
+  // Для таверны
+  private tavernHeroes: any[] = [];
   private tabButtons: Map<string, Phaser.GameObjects.Container> = new Map();
   private contentContainer!: Phaser.GameObjects.Container;
   
@@ -156,7 +159,8 @@ export class TownScene extends Phaser.Scene {
       { id: 'hire', label: '👥 Найм', x: width / 2 - 130 },
       { id: 'garrison', label: '🛡️ Гарнизон', x: width / 2 - 10 },
       { id: 'market', label: '🏪 Рынок', x: width / 2 + 110 },
-      { id: 'blacksmith', label: '⚒️ Кузница', x: width / 2 + 230 }
+      { id: 'blacksmith', label: '⚒️ Кузница', x: width / 2 + 230 },
+      { id: 'tavern', label: '🍺 Таверна', x: width / 2 + 350 }
     ];
 
     for (const tab of tabs) {
@@ -218,6 +222,7 @@ export class TownScene extends Phaser.Scene {
       case 'garrison': this.renderGarrison(); break;
       case 'market': this.renderMarket(); break;
       case 'blacksmith': this.renderBlacksmith(); break;
+      case 'tavern': this.renderTavern(); break;
     }
   }
 
@@ -795,6 +800,7 @@ export class TownScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-THREE', () => this.showTab('garrison'));
     this.input.keyboard?.on('keydown-FOUR', () => this.showTab('market'));
     this.input.keyboard?.on('keydown-FIVE', () => this.showTab('blacksmith'));
+    this.input.keyboard?.on('keydown-SIX', () => this.showTab('tavern'));
   }
 
   private returnToWorld(): void {
@@ -805,9 +811,57 @@ export class TownScene extends Phaser.Scene {
   }
 
   private loadBuildings(): Building[] {
-    const buildings = this.registry.get('buildings');
+    const buildingsData = this.registry.get('buildings');
     const faction = this.town.faction || 'haven';
-    return buildings?.[faction] || [];
+    
+    if (!buildingsData) {
+      console.warn('[TownScene] Buildings data not loaded from registry');
+      return this.getFallbackBuildings();
+    }
+    
+    // Формат JSON: { buildings: [{ id, faction, ... }, ...] }
+    const allBuildings: Building[] = Array.isArray(buildingsData) 
+      ? buildingsData 
+      : (buildingsData.buildings || []);
+    
+    // Фильтруем по фракции (common + faction)
+    const factionBuildings = allBuildings.filter(b => 
+      b.faction === 'common' || b.faction === faction
+    );
+    
+    // Приводим к типу Building (JSON может использовать `requires` вместо `requirements`)
+    return factionBuildings.map(b => ({
+      ...b,
+      requirements: b.requires || b.requirements || [],
+      creatureGrowth: b.creature ? {
+        creatureId: b.creature,
+        amount: this.getCreatureGrowth(b.creature, b.tier || 1)
+      } : undefined
+    }));
+  }
+  
+  private getCreatureGrowth(creatureId: string, tier: number): number {
+    const growthMap: Record<string, number> = {
+      pikeman: 14, archer: 9, griffin: 7, cavalier: 5, priest: 4, cavalier2: 3, angel: 2,
+      skeleton: 14, zombie: 9, wight: 7, vampire: 5, lich: 4, blackKnight: 3, boneDragon: 2,
+      wolf: 12, elf: 8, centaur: 6, unicorn: 4, dendroid: 3, druid: 2, phoenix: 1,
+      goblin: 16, medusa: 8, orc: 6, minotaur: 4, ogre: 3, roc: 2, cyclop: 1,
+      gremlin: 16, golem: 8, mage: 6, genie: 4, naga: 3, giant: 2,
+      gnoll: 14, lizardman: 9, troll: 6, wyvern: 4, behemoth: 2
+    };
+    return growthMap[creatureId] || Math.max(2, 14 - (tier - 1) * 2);
+  }
+  
+  private getFallbackBuildings(): Building[] {
+    return [
+      { id: 'citadel', name: 'Цитадель', description: 'Оборона', cost: { gold: 2000, ore: 10 }, requirements: [], provides: [] },
+      { id: 'barracks', name: 'Казарма', description: 'Ополченцы', cost: { gold: 500 }, requirements: [], provides: ['pikeman'], creatureGrowth: { creatureId: 'pikeman', amount: 14 } },
+      { id: 'archeryRange', name: 'Стрельбище', description: 'Лучники', cost: { gold: 1000, wood: 5 }, requirements: [], provides: ['archer'], creatureGrowth: { creatureId: 'archer', amount: 9 } },
+      { id: 'tavern', name: 'Таверна', description: 'Найм героев', cost: { gold: 500, wood: 5 }, requirements: [], provides: [] },
+      { id: 'marketplace', name: 'Рынок', description: 'Обмен ресурсов', cost: { gold: 500, wood: 5 }, requirements: [], provides: [] },
+      { id: 'blacksmith', name: 'Кузница', description: 'Артефакты', cost: { gold: 1000, ore: 5 }, requirements: [], provides: [] },
+      { id: 'mageGuild1', name: 'Гильдия магов', description: 'Заклинания', cost: { gold: 1000, wood: 5 }, requirements: [], provides: [] }
+    ];
   }
 
   private getFallbackCreatures(): any {
@@ -816,5 +870,261 @@ export class TownScene extends Phaser.Scene {
       archer: { id: 'archer', name: 'Лучник', tier: 2, attack: 6, defense: 3, damage: { min: 2, max: 4 }, health: 10, speed: 4, growth: 9, cost: { gold: 100 }, abilities: ['shooter'] },
       skeleton: { id: 'skeleton', name: 'Скелет', tier: 1, attack: 5, defense: 4, damage: { min: 1, max: 3 }, health: 8, speed: 5, growth: 14, cost: { gold: 60 }, abilities: ['undead'] }
     };
+  }
+
+  // ==================== ТАВЕРНА ====================
+
+  private renderTavern(): void {
+    const { width } = this.scale;
+    const panel = this.add.rectangle(width / 2, 400, 800, 500, 0x1a1a2e, 0.95)
+      .setStrokeStyle(2, 0xd4af37);
+    this.contentContainer.add(panel);
+
+    const hasTavern = this.town.builtBuildings.includes('tavern');
+    if (!hasTavern) {
+      const noTavern = this.add.text(width / 2, 300, '🍺 Постройте Таверну для найма героев', {
+        fontSize: '18px', color: '#888888', fontFamily: 'Segoe UI'
+      }).setOrigin(0.5);
+      this.contentContainer.add(noTavern);
+      return;
+    }
+
+    const title = this.add.text(width / 2, 140, '🍺 Таверна — найм героев (💰 2500)', {
+      fontSize: '18px', color: '#d4af37', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.contentContainer.add(title);
+
+    // Проверяем лимит героев
+    const playerHeroes = this.worldScene.getPlayerHeroes ? this.worldScene.getPlayerHeroes() : [this.worldScene.getHero()];
+    const maxHeroes = 3;
+    
+    if (playerHeroes.length >= maxHeroes) {
+      const limitMsg = this.add.text(width / 2, 180, 
+        `⚠️ Максимум ${maxHeroes} героев. Увольте одного для найма нового.`, {
+        fontSize: '14px', color: '#e74c3c', fontFamily: 'Segoe UI'
+      }).setOrigin(0.5);
+      this.contentContainer.add(limitMsg);
+    }
+
+    // Генерируем героев для найма (2-3 штуки)
+    this.tavernHeroes = this.generateTavernHeroes();
+
+    let y = 200;
+    for (const tavernHero of this.tavernHeroes) {
+      const canHire = this.worldScene.getResources().gold >= 2500 && playerHeroes.length < maxHeroes;
+
+      const bg = this.add.rectangle(width / 2, y, 750, 80, 0x2c3e50, 0.95)
+        .setStrokeStyle(2, canHire ? 0xd4af37 : 0x444444);
+
+      // Иконка героя (цветной круг)
+      const factionColors: Record<string, number> = {
+        haven: 0x4169e1,
+        necropolis: 0x8b0000,
+        preserve: 0x228b22,
+        asylum: 0xff4500,
+        academy: 0x9370db,
+        stronghold: 0xa0522d
+      };
+      const icon = this.add.circle(width / 2 - 340, y, 25, factionColors[tavernHero.faction] || 0x4169e1)
+        .setStrokeStyle(2, 0xffffff);
+      const iconText = this.add.text(width / 2 - 340, y, '👑', {
+        fontSize: '20px'
+      }).setOrigin(0.5);
+
+      const nameText = this.add.text(width / 2 - 300, y - 20, tavernHero.name, {
+        fontSize: '16px', color: '#f0e6d2', fontFamily: 'Segoe UI', fontStyle: 'bold'
+      });
+
+      const classText = this.add.text(width / 2 - 300, y, `${tavernHero.class} (${tavernHero.faction})`, {
+        fontSize: '12px', color: '#aaaaaa', fontFamily: 'Segoe UI'
+      });
+
+      const statsText = this.add.text(width / 2 - 300, y + 15,
+        `АТК:${tavernHero.stats.attack} ЗАЩ:${tavernHero.stats.defense} СП:${tavernHero.stats.spellPower} ЗН:${tavernHero.stats.knowledge}`, {
+        fontSize: '11px', color: '#888888', fontFamily: 'Segoe UI'
+      });
+
+      // Армия героя
+      const armyText = this.add.text(width / 2 + 50, y - 20,
+        `Армия: ${tavernHero.army.map((s: any) => `${s.count}×${s.creatureId}`).join(', ')}`, {
+        fontSize: '11px', color: '#2ecc71', fontFamily: 'Segoe UI'
+      });
+
+      const costText = this.add.text(width / 2 + 50, y, '💰 2500', {
+        fontSize: '14px', color: '#ffd700', fontFamily: 'Segoe UI', fontStyle: 'bold'
+      });
+
+      if (canHire) {
+        const hireBtn = this.createMiniButton(width / 2 + 320, y, 'Нанять', 0x2ecc71, () => {
+          this.hireTavernHero(tavernHero);
+        });
+        this.contentContainer.add([bg, icon, iconText, nameText, classText, statsText, armyText, costText, hireBtn]);
+      } else {
+        const disabledBtn = this.createMiniButton(width / 2 + 320, y, 'Нанять', 0x555555, () => {
+          if (this.worldScene.getResources().gold < 2500) {
+            this.showNotification('❌ Недостаточно золота!');
+          } else {
+            this.showNotification(`❌ Максимум ${maxHeroes} героев!`);
+          }
+        });
+        this.contentContainer.add([bg, icon, iconText, nameText, classText, statsText, armyText, costText, disabledBtn]);
+      }
+
+      y += 90;
+    }
+
+    // Информация о текущих героях
+    const currentHeroesTitle = this.add.text(width / 2, y + 20, '🦸 Ваши герои:', {
+      fontSize: '14px', color: '#4169e1', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.contentContainer.add(currentHeroesTitle);
+
+    let heroY = y + 50;
+    for (const hero of playerHeroes) {
+      const heroInfo = this.add.text(width / 2, heroY, 
+        `${hero.name} (${hero.class}) — Уровень ${hero.level}, Армия: ${hero.army.length} отрядов`, {
+        fontSize: '12px', color: '#f0e6d2', fontFamily: 'Segoe UI'
+      }).setOrigin(0.5);
+      this.contentContainer.add(heroInfo);
+      heroY += 25;
+    }
+  }
+
+  private generateTavernHeroes(): any[] {
+    const heroes: any[] = [];
+    const count = 2 + Math.floor(Math.random() * 2); // 2-3 героя
+
+    const heroTemplates: Record<string, any[]> = {
+      haven: [
+        { name: 'Сэр Гэвин', class: 'Рыцарь', stats: { attack: 3, defense: 3, spellPower: 1, knowledge: 1, morale: 1, luck: 0 } },
+        { name: 'Леди Кэтрин', class: 'Рыцарь', stats: { attack: 2, defense: 4, spellPower: 1, knowledge: 1, morale: 1, luck: 1 } },
+        { name: 'Паладин Артур', class: 'Паладин', stats: { attack: 4, defense: 2, spellPower: 2, knowledge: 1, morale: 1, luck: 0 } }
+      ],
+      necropolis: [
+        { name: 'Мортис', class: 'Некромант', stats: { attack: 1, defense: 1, spellPower: 4, knowledge: 4, morale: -1, luck: 0 } },
+        { name: 'Сандро', class: 'Некромант', stats: { attack: 2, defense: 2, spellPower: 3, knowledge: 3, morale: -1, luck: 0 } },
+        { name: 'Видомина', class: 'Некромант', stats: { attack: 1, defense: 2, spellPower: 4, knowledge: 3, morale: -1, luck: 0 } }
+      ],
+      preserve: [
+        { name: 'Элани', class: 'Следопыт', stats: { attack: 3, defense: 2, spellPower: 2, knowledge: 2, morale: 1, luck: 1 } },
+        { name: 'Гемма', class: 'Друид', stats: { attack: 2, defense: 2, spellPower: 3, knowledge: 3, morale: 1, luck: 1 } }
+      ],
+      asylum: [
+        { name: 'Грок', class: 'Варвар', stats: { attack: 4, defense: 3, spellPower: 0, knowledge: 1, morale: 1, luck: 1 } },
+        { name: 'Тирания', class: 'Варвар', stats: { attack: 5, defense: 2, spellPower: 0, knowledge: 1, morale: 1, luck: 0 } }
+      ],
+      academy: [
+        { name: 'Аламар', class: 'Волшебник', stats: { attack: 1, defense: 1, spellPower: 5, knowledge: 4, morale: 0, luck: 0 } },
+        { name: 'Иона', class: 'Волшебник', stats: { attack: 2, defense: 2, spellPower: 4, knowledge: 3, morale: 0, luck: 0 } }
+      ],
+      stronghold: [
+        { name: 'Краг Хак', class: 'Вождь', stats: { attack: 5, defense: 4, spellPower: 0, knowledge: 0, morale: 1, luck: 1 } },
+        { name: 'Шива', class: 'Вождь', stats: { attack: 4, defense: 3, spellPower: 1, knowledge: 1, morale: 1, luck: 1 } }
+      ]
+    };
+
+    const faction = this.town.faction || 'haven';
+    const templates = heroTemplates[faction] || heroTemplates.haven;
+
+    for (let i = 0; i < count; i++) {
+      const template = templates[Math.floor(Math.random() * templates.length)];
+      
+      // Генерируем случайную начальную армию
+      const army = this.generateStartingArmy(faction);
+
+      heroes.push({
+        ...template,
+        faction,
+        level: 1,
+        experience: 0,
+        mana: 20,
+        maxMana: 20,
+        army,
+        equipment: {},
+        spells: [],
+        skills: []
+      });
+    }
+
+    return heroes;
+  }
+
+  private generateStartingArmy(faction: string): any[] {
+    const armies: Record<string, any[]> = {
+      haven: [
+        { creatureId: 'pikeman', count: 15 + Math.floor(Math.random() * 10) },
+        { creatureId: 'archer', count: 8 + Math.floor(Math.random() * 5) }
+      ],
+      necropolis: [
+        { creatureId: 'skeleton', count: 20 + Math.floor(Math.random() * 10) },
+        { creatureId: 'zombie', count: 12 + Math.floor(Math.random() * 8) }
+      ],
+      preserve: [
+        { creatureId: 'wolf', count: 10 + Math.floor(Math.random() * 8) },
+        { creatureId: 'elf', count: 6 + Math.floor(Math.random() * 4) }
+      ],
+      asylum: [
+        { creatureId: 'goblin', count: 18 + Math.floor(Math.random() * 10) },
+        { creatureId: 'orc', count: 8 + Math.floor(Math.random() * 5) }
+      ],
+      academy: [
+        { creatureId: 'gremlin', count: 20 + Math.floor(Math.random() * 10) },
+        { creatureId: 'golem', count: 6 + Math.floor(Math.random() * 4) }
+      ],
+      stronghold: [
+        { creatureId: 'goblin', count: 15 + Math.floor(Math.random() * 10) },
+        { creatureId: 'wolf_rider', count: 8 + Math.floor(Math.random() * 5) }
+      ]
+    };
+
+    return armies[faction] || armies.haven;
+  }
+
+  private hireTavernHero(tavernHero: any): void {
+    const resources = this.worldScene.getResources();
+    const heroCost = 2500;
+
+    if (resources.gold < heroCost) {
+      this.showNotification('❌ Недостаточно золота!');
+      return;
+    }
+
+    // Проверяем лимит героев
+    const playerHeroes = this.worldScene.getPlayerHeroes ? this.worldScene.getPlayerHeroes() : [this.worldScene.getHero()];
+    if (playerHeroes.length >= 3) {
+      this.showNotification('❌ Максимум 3 героя!');
+      return;
+    }
+
+    // Списываем золото
+    resources.gold -= heroCost;
+
+    // Создаём нового героя
+    const newHero: Hero = {
+      id: `hero_${Date.now()}`,
+      name: tavernHero.name,
+      class: tavernHero.class,
+      faction: tavernHero.faction,
+      level: tavernHero.level,
+      experience: tavernHero.experience,
+      stats: tavernHero.stats,
+      skills: tavernHero.skills || [],
+      mana: tavernHero.mana,
+      maxMana: tavernHero.maxMana,
+      army: tavernHero.army,
+      equipment: tavernHero.equipment || {},
+      spells: tavernHero.spells || [],
+      specialization: tavernHero.specialization
+    };
+
+    // Добавляем героя в WorldScene
+    if (this.worldScene.addNewHero) {
+      this.worldScene.addNewHero(newHero, this.town.x, this.town.y);
+    } else {
+      console.warn('[TownScene] addNewHero method not found in WorldScene');
+    }
+
+    this.showNotification(`✅ Нанят герой: ${newHero.name}!`);
+    this.refreshUI();
   }
 }

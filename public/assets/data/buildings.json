@@ -1,132 +1,773 @@
 {
-  "haven": [
+  "buildings": [
     {
       "id": "citadel",
       "name": "Цитадель",
-      "description": "Центр города, позволяет строить другие здания",
-      "cost": {},
-      "requirements": [],
-      "provides": ["base"],
-      "dailyIncome": {}
-    },
-    {
-      "id": "barracks",
-      "name": "Казармы",
-      "description": "Позволяет нанимать ополченцев",
-      "cost": { "gold": 1000, "wood": 5 },
-      "requirements": ["citadel"],
-      "creatureGrowth": { "creatureId": "pikeman", "amount": 10 }
-    },
-    {
-      "id": "archery_range",
-      "name": "Стрельбище",
-      "description": "Позволяет нанимать лучников",
-      "cost": { "gold": 2000, "wood": 10 },
-      "requirements": ["barracks"],
-      "creatureGrowth": { "creatureId": "archer", "amount": 6 }
-    },
-    {
-      "id": "griffin_tower",
-      "name": "Башня грифонов",
-      "description": "Позволяет нанимать грифонов",
-      "cost": { "gold": 3500, "wood": 10, "ore": 5 },
-      "requirements": ["barracks"],
-      "creatureGrowth": { "creatureId": "griffin", "amount": 3 }
-    },
-    {
-      "id": "cavalry_stable",
-      "name": "Конюшня",
-      "description": "Позволяет нанимать всадников",
-      "cost": { "gold": 5000, "wood": 15, "ore": 10 },
-      "requirements": ["barracks"],
-      "creatureGrowth": { "creatureId": "cavalry", "amount": 3 }
-    },
-    {
-      "id": "monastery",
-      "name": "Монастырь",
-      "description": "Позволяет нанимать монахов",
-      "cost": { "gold": 6000, "wood": 10, "ore": 10 },
-      "requirements": ["archery_range"],
-      "creatureGrowth": { "creatureId": "monk", "amount": 2 }
-    },
-    {
-      "id": "cathedral",
-      "name": "Собор",
-      "description": "Позволяет нанимать ангелов",
-      "cost": { "gold": 20000, "ore": 20, "crystal": 10 },
-      "requirements": ["monastery"],
-      "creatureGrowth": { "creatureId": "angel", "amount": 1 }
-    },
-    {
-      "id": "marketplace",
-      "name": "Рынок",
-      "description": "Позволяет обменивать ресурсы",
-      "cost": { "gold": 500, "wood": 5 },
-      "requirements": ["citadel"]
-    },
-    {
-      "id": "blacksmith",
-      "name": "Кузница",
-      "description": "Позволяет покупать артефакты",
-      "cost": { "gold": 1000, "ore": 5 },
-      "requirements": ["citadel"]
-    },
-    {
-      "id": "mage_guild_1",
-      "name": "Гильдия магов (1 уровень)",
-      "description": "Изучение заклинаний 1 уровня",
-      "cost": { "gold": 2000, "wood": 5, "ore": 5 },
-      "requirements": ["citadel"],
-      "provides": ["magic_1"]
-    },
-    {
-      "id": "mage_guild_2",
-      "name": "Гильдия магов (2 уровень)",
-      "description": "Изучение заклинаний 2 уровня",
-      "cost": { "gold": 4000, "wood": 10, "ore": 10 },
-      "requirements": ["mage_guild_1"],
-      "provides": ["magic_2"]
-    },
-    {
-      "id": "tavern",
-      "name": "Таверна",
-      "description": "Найм новых героев",
-      "cost": { "gold": 500, "wood": 5 },
-      "requirements": ["citadel"]
-    },
-    {
-      "id": "fort",
-      "name": "Форт",
-      "description": "Укрепляет оборону города",
-      "cost": { "gold": 3000, "ore": 15 },
-      "requirements": ["citadel"],
-      "provides": ["walls"]
+      "faction": "common",
+      "category": "core",
+      "tier": 0,
+      "cost": { "gold": 1000, "wood": 5, "ore": 5 },
+      "description": "+50% к приросту всех существ, укрепляет город",
+      "requires": [],
+      "effects": { "growthMultiplier": 1.5, "defenseBonus": 2 }
     },
     {
       "id": "castle",
       "name": "Замок",
-      "description": "Мощная крепость с башнями",
-      "cost": { "gold": 10000, "ore": 30 },
-      "requirements": ["fort"],
-      "provides": ["towers", "moat"]
-    }
-  ],
-  "necropolis": [
-    {
-      "id": "citadel",
-      "name": "Цитадель",
-      "description": "Центр города",
-      "cost": {},
-      "requirements": [],
-      "provides": ["base"]
+      "faction": "common",
+      "category": "core",
+      "tier": 0,
+      "cost": { "gold": 2000, "wood": 10, "ore": 10 },
+      "description": "Полностью укрепляет город, +100% прирост",
+      "requires": ["citadel"],
+      "effects": { "growthMultiplier": 2.0, "defenseBonus": 5 }
     },
     {
-      "id": "cursed_temple",
+      "id": "marketplace",
+      "name": "Рынок",
+      "faction": "common",
+      "category": "economy",
+      "tier": 0,
+      "cost": { "gold": 500, "wood": 5 },
+      "description": "Позволяет обменивать ресурсы",
+      "requires": [],
+      "effects": { "market": true }
+    },
+    {
+      "id": "blacksmith",
+      "name": "Кузница",
+      "faction": "common",
+      "category": "economy",
+      "tier": 0,
+      "cost": { "gold": 1000, "wood": 5, "ore": 5 },
+      "description": "Позволяет покупать артефакты",
+      "requires": ["marketplace"],
+      "effects": { "blacksmith": true }
+    },
+    {
+      "id": "tavern",
+      "name": "Таверна",
+      "faction": "common",
+      "category": "core",
+      "tier": 0,
+      "cost": { "gold": 500, "wood": 5 },
+      "description": "Позволяет нанимать новых героев",
+      "requires": [],
+      "effects": { "tavern": true }
+    },
+    {
+      "id": "mage_guild_1",
+      "name": "Гильдия магов 1 уровня",
+      "faction": "common",
+      "category": "magic",
+      "tier": 0,
+      "cost": { "gold": 2000, "wood": 5, "ore": 5 },
+      "description": "Даёт доступ к заклинаниям 1 уровня",
+      "requires": [],
+      "effects": { "mageGuildLevel": 1 }
+    },
+    {
+      "id": "mage_guild_2",
+      "name": "Гильдия магов 2 уровня",
+      "faction": "common",
+      "category": "magic",
+      "tier": 0,
+      "cost": { "gold": 3000, "wood": 5, "ore": 5, "mercury": 2 },
+      "description": "Даёт доступ к заклинаниям 2 уровня",
+      "requires": ["mage_guild_1"],
+      "effects": { "mageGuildLevel": 2 }
+    },
+    {
+      "id": "mage_guild_3",
+      "name": "Гильдия магов 3 уровня",
+      "faction": "common",
+      "category": "magic",
+      "tier": 0,
+      "cost": { "gold": 5000, "wood": 10, "ore": 10, "mercury": 4 },
+      "description": "Даёт доступ к заклинаниям 3 уровня",
+      "requires": ["mage_guild_2"],
+      "effects": { "mageGuildLevel": 3 }
+    },
+    {
+      "id": "mage_guild_4",
+      "name": "Гильдия магов 4 уровня",
+      "faction": "common",
+      "category": "magic",
+      "tier": 0,
+      "cost": { "gold": 8000, "wood": 10, "ore": 10, "mercury": 6 },
+      "description": "Даёт доступ к заклинаниям 4 уровня",
+      "requires": ["mage_guild_3"],
+      "effects": { "mageGuildLevel": 4 }
+    },
+
+    {
+      "id": "haven_barracks",
+      "name": "Казармы",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 500, "wood": 5 },
+      "description": "Позволяет нанимать Ополченцев",
+      "requires": [],
+      "creatureId": "pikeman",
+      "upgradeTo": "haven_guardhouse"
+    },
+    {
+      "id": "haven_guardhouse",
+      "name": "Улучшенные казармы",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 1000, "wood": 5, "ore": 5 },
+      "description": "Позволяет нанимать Алебардщиков",
+      "requires": ["haven_barracks"],
+      "creatureId": "halberdier"
+    },
+    {
+      "id": "haven_archery",
+      "name": "Стрельбище",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 1000, "wood": 10 },
+      "description": "Позволяет нанимать Лучников",
+      "requires": ["haven_barracks"],
+      "creatureId": "archer",
+      "upgradeTo": "haven_crossbow"
+    },
+    {
+      "id": "haven_crossbow",
+      "name": "Амбразурная башня",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 1500, "wood": 10, "ore": 5 },
+      "description": "Позволяет нанимать Арбалетчиков",
+      "requires": ["haven_archery"],
+      "creatureId": "crossbowman"
+    },
+    {
+      "id": "haven_griffin_tower",
+      "name": "Башня грифонов",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 3,
+      "cost": { "gold": 2000, "wood": 5, "ore": 5 },
+      "description": "Позволяет нанимать Грифонов",
+      "requires": ["haven_archery"],
+      "creatureId": "griffin",
+      "upgradeTo": "haven_royal_griffin_tower"
+    },
+    {
+      "id": "haven_royal_griffin_tower",
+      "name": "Башня королевских грифонов",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 3,
+      "cost": { "gold": 3000, "wood": 10, "ore": 5 },
+      "description": "Позволяет нанимать Королевских грифонов",
+      "requires": ["haven_griffin_tower"],
+      "creatureId": "royal_griffin"
+    },
+    {
+      "id": "haven_swordsmith",
+      "name": "Оружейная",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 4,
+      "cost": { "gold": 3000, "ore": 10 },
+      "description": "Позволяет нанимать Мечников",
+      "requires": ["haven_barracks"],
+      "creatureId": "swordsman",
+      "upgradeTo": "haven_crusader_keep"
+    },
+    {
+      "id": "haven_crusader_keep",
+      "name": "Цитадель крестоносцев",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 4,
+      "cost": { "gold": 4000, "wood": 5, "ore": 10 },
+      "description": "Позволяет нанимать Крестоносцев",
+      "requires": ["haven_swordsmith"],
+      "creatureId": "crusader"
+    },
+    {
+      "id": "haven_monastery",
+      "name": "Монастырь",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 4000, "wood": 5, "ore": 5 },
+      "description": "Позволяет нанимать Монахов",
+      "requires": ["haven_swordsmith"],
+      "creatureId": "monk",
+      "upgradeTo": "haven_cathedral"
+    },
+    {
+      "id": "haven_cathedral",
+      "name": "Собор",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 5500, "wood": 10, "ore": 5 },
+      "description": "Позволяет нанимать Фанатиков",
+      "requires": ["haven_monastery"],
+      "creatureId": "zealot"
+    },
+    {
+      "id": "haven_jousting_arena",
+      "name": "Ристалище",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 6,
+      "cost": { "gold": 6000, "wood": 10, "ore": 10 },
+      "description": "Позволяет нанимать Кавалеристов",
+      "requires": ["haven_swordsmith"],
+      "creatureId": "cavalier",
+      "upgradeTo": "haven_champion_stables"
+    },
+    {
+      "id": "haven_champion_stables",
+      "name": "Конюшни чемпионов",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 6,
+      "cost": { "gold": 8000, "wood": 10, "ore": 15 },
+      "description": "Позволяет нанимать Чемпионов",
+      "requires": ["haven_jousting_arena"],
+      "creatureId": "champion"
+    },
+    {
+      "id": "haven_portal_of_glory",
+      "name": "Портал славы",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 7,
+      "cost": { "gold": 20000, "wood": 10, "ore": 10, "crystals": 10 },
+      "description": "Позволяет нанимать Ангелов",
+      "requires": ["haven_champion_stables"],
+      "creatureId": "angel",
+      "upgradeTo": "haven_portal_of_divinity"
+    },
+    {
+      "id": "haven_portal_of_divinity",
+      "name": "Портал божественности",
+      "faction": "haven",
+      "category": "dwelling",
+      "tier": 7,
+      "cost": { "gold": 30000, "wood": 10, "ore": 10, "crystals": 20 },
+      "description": "Позволяет нанимать Архангелов",
+      "requires": ["haven_portal_of_glory"],
+      "creatureId": "archangel"
+    },
+
+    {
+      "id": "necropolis_cursed_temple",
       "name": "Проклятый храм",
-      "description": "Позволяет нанимать скелетов",
-      "cost": { "gold": 800, "ore": 5 },
-      "requirements": ["citadel"],
-      "creatureGrowth": { "creatureId": "skeleton", "amount": 15 }
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 500, "ore": 5 },
+      "description": "Позволяет нанимать Скелетов",
+      "requires": [],
+      "creatureId": "skeleton",
+      "upgradeTo": "necropolis_cursed_temple_upg"
+    },
+    {
+      "id": "necropolis_cursed_temple_upg",
+      "name": "Улучшенный проклятый храм",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 1000, "ore": 5 },
+      "description": "Позволяет нанимать Скелетов-воинов",
+      "requires": ["necropolis_cursed_temple"],
+      "creatureId": "skeleton_warrior"
+    },
+    {
+      "id": "necropolis_graveyard",
+      "name": "Кладбище",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 1000, "wood": 5 },
+      "description": "Позволяет нанимать Зомби",
+      "requires": ["necropolis_cursed_temple"],
+      "creatureId": "zombie",
+      "upgradeTo": "necropolis_plague_graveyard"
+    },
+    {
+      "id": "necropolis_plague_graveyard",
+      "name": "Чумное кладбище",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 1500, "wood": 5, "mercury": 2 },
+      "description": "Позволяет нанимать Чумных зомби",
+      "requires": ["necropolis_graveyard"],
+      "creatureId": "plague_zombie"
+    },
+    {
+      "id": "necropolis_estate_of_ancestors",
+      "name": "Усыпальница предков",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 4,
+      "cost": { "gold": 4000, "wood": 5, "ore": 5 },
+      "description": "Позволяет нанимать Вампиров",
+      "requires": ["necropolis_graveyard"],
+      "creatureId": "vampire",
+      "upgradeTo": "necropolis_tower_of_terror"
+    },
+    {
+      "id": "necropolis_tower_of_terror",
+      "name": "Башня ужаса",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 4,
+      "cost": { "gold": 6000, "wood": 10, "mercury": 5 },
+      "description": "Позволяет нанимать Вампиров-лордов",
+      "requires": ["necropolis_estate_of_ancestors"],
+      "creatureId": "vampire_lord"
+    },
+    {
+      "id": "necropolis_mausoleum",
+      "name": "Мавзолей",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 5000, "wood": 5, "ore": 5 },
+      "description": "Позволяет нанимать Личей",
+      "requires": ["necropolis_estate_of_ancestors"],
+      "creatureId": "lich",
+      "upgradeTo": "necropolis_mausoleum_upg"
+    },
+    {
+      "id": "necropolis_mausoleum_upg",
+      "name": "Мавзолей ужаса",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 7500, "wood": 10, "mercury": 5 },
+      "description": "Позволяет нанимать Могущественных личей",
+      "requires": ["necropolis_mausoleum"],
+      "creatureId": "power_lich"
+    },
+    {
+      "id": "necropolis_hall_of_darkness",
+      "name": "Зал тьмы",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 6,
+      "cost": { "gold": 8000, "wood": 10, "ore": 10 },
+      "description": "Позволяет нанимать Чёрных рыцарей",
+      "requires": ["necropolis_mausoleum"],
+      "creatureId": "black_knight",
+      "upgradeTo": "necropolis_hall_of_dread"
+    },
+    {
+      "id": "necropolis_hall_of_dread",
+      "name": "Зал страха",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 6,
+      "cost": { "gold": 12000, "wood": 10, "ore": 15, "sulfur": 5 },
+      "description": "Позволяет нанимать Рыцарей ужаса",
+      "requires": ["necropolis_hall_of_darkness"],
+      "creatureId": "dread_knight"
+    },
+    {
+      "id": "necropolis_dragon_vault",
+      "name": "Склеп драконов",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 7,
+      "cost": { "gold": 15000, "wood": 10, "ore": 10, "mercury": 10 },
+      "description": "Позволяет нанимать Костяных драконов",
+      "requires": ["necropolis_hall_of_darkness"],
+      "creatureId": "bone_dragon",
+      "upgradeTo": "necropolis_ghost_dragon_vault"
+    },
+    {
+      "id": "necropolis_ghost_dragon_vault",
+      "name": "Склеп призрачных драконов",
+      "faction": "necropolis",
+      "category": "dwelling",
+      "tier": 7,
+      "cost": { "gold": 25000, "wood": 15, "ore": 15, "mercury": 15 },
+      "description": "Позволяет нанимать Призрачных драконов",
+      "requires": ["necropolis_dragon_vault"],
+      "creatureId": "ghost_dragon"
+    },
+
+    {
+      "id": "preserve_wolf_den",
+      "name": "Логово волков",
+      "faction": "preserve",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 500, "wood": 5 },
+      "description": "Позволяет нанимать Волков",
+      "requires": [],
+      "creatureId": "wolf",
+      "upgradeTo": "preserve_dire_wolf_den"
+    },
+    {
+      "id": "preserve_dire_wolf_den",
+      "name": "Логово лютых волков",
+      "faction": "preserve",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 900, "wood": 10 },
+      "description": "Позволяет нанимать Лютых волков",
+      "requires": ["preserve_wolf_den"],
+      "creatureId": "dire_wolf"
+    },
+    {
+      "id": "preserve_elven_tree",
+      "name": "Древо эльфов",
+      "faction": "preserve",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 1000, "wood": 10 },
+      "description": "Позволяет нанимать Эльфов",
+      "requires": ["preserve_wolf_den"],
+      "creatureId": "elf",
+      "upgradeTo": "preserve_grand_elven_tree"
+    },
+    {
+      "id": "preserve_grand_elven_tree",
+      "name": "Великое древо эльфов",
+      "faction": "preserve",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 1500, "wood": 15 },
+      "description": "Позволяет нанимать Великих эльфов",
+      "requires": ["preserve_elven_tree"],
+      "creatureId": "grand_elf"
+    },
+    {
+      "id": "preserve_unicorn_glade",
+      "name": "Поляна единорогов",
+      "faction": "preserve",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 6000, "wood": 10, "crystals": 5 },
+      "description": "Позволяет нанимать Единорогов",
+      "requires": [],
+      "creatureId": "unicorn",
+      "upgradeTo": "preserve_war_unicorn_glade"
+    },
+    {
+      "id": "preserve_war_unicorn_glade",
+      "name": "Поляна боевых единорогов",
+      "faction": "preserve",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 8000, "wood": 15, "crystals": 10 },
+      "description": "Позволяет нанимать Боевых единорогов",
+      "requires": ["preserve_unicorn_glade"],
+      "creatureId": "war_unicorn"
+    },
+    {
+      "id": "preserve_phoenix_nest",
+      "name": "Гнездо феникса",
+      "faction": "preserve",
+      "category": "dwelling",
+      "tier": 7,
+      "cost": { "gold": 20000, "sulfur": 20 },
+      "description": "Позволяет нанимать Фениксов",
+      "requires": [],
+      "creatureId": "phoenix"
+    },
+
+    {
+      "id": "asylum_imp_crucible",
+      "name": "Тигель бесов",
+      "faction": "asylum",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 500, "sulfur": 2 },
+      "description": "Позволяет нанимать Бесов",
+      "requires": [],
+      "creatureId": "imp",
+      "upgradeTo": "asylum_familiar_crucible"
+    },
+    {
+      "id": "asylum_familiar_crucible",
+      "name": "Тигель фамильяров",
+      "faction": "asylum",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 800, "sulfur": 5 },
+      "description": "Позволяет нанимать Фамильяров",
+      "requires": ["asylum_imp_crucible"],
+      "creatureId": "familiar"
+    },
+    {
+      "id": "asylum_hovel",
+      "name": "Трущобы",
+      "faction": "asylum",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 700, "wood": 5 },
+      "description": "Позволяет нанимать Гоблинов",
+      "requires": ["asylum_imp_crucible"],
+      "creatureId": "goblin",
+      "upgradeTo": "asylum_hovel_upg"
+    },
+    {
+      "id": "asylum_hovel_upg",
+      "name": "Улучшенные трущобы",
+      "faction": "asylum",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 1000, "wood": 5 },
+      "description": "Позволяет нанимать Хобгоблинов",
+      "requires": ["asylum_hovel"],
+      "creatureId": "hobgoblin"
+    },
+    {
+      "id": "asylum_hall_of_war",
+      "name": "Зал войны",
+      "faction": "asylum",
+      "category": "dwelling",
+      "tier": 3,
+      "cost": { "gold": 2000, "wood": 5, "ore": 5 },
+      "description": "Позволяет нанимать Орков",
+      "requires": ["asylum_hovel"],
+      "creatureId": "orc",
+      "upgradeTo": "asylum_hall_of_chaos"
+    },
+    {
+      "id": "asylum_hall_of_chaos",
+      "name": "Зал хаоса",
+      "faction": "asylum",
+      "category": "dwelling",
+      "tier": 3,
+      "cost": { "gold": 3000, "wood": 10, "ore": 5 },
+      "description": "Позволяет нанимать Орков-вождей",
+      "requires": ["asylum_hall_of_war"],
+      "creatureId": "orc_chieftain"
+    },
+    {
+      "id": "asylum_ogre_fort",
+      "name": "Форт огров",
+      "faction": "asylum",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 6000, "wood": 10, "ore": 10 },
+      "description": "Позволяет нанимать Огров",
+      "requires": ["asylum_hall_of_war"],
+      "creatureId": "ogre",
+      "upgradeTo": "asylum_ogre_mage_fort"
+    },
+    {
+      "id": "asylum_ogre_mage_fort",
+      "name": "Форт огров-магов",
+      "faction": "asylum",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 8000, "wood": 15, "ore": 10, "mercury": 5 },
+      "description": "Позволяет нанимать Огров-магов",
+      "requires": ["asylum_ogre_fort"],
+      "creatureId": "ogre_mage"
+    },
+    {
+      "id": "asylum_cyclops_cave",
+      "name": "Пещера циклопов",
+      "faction": "asylum",
+      "category": "dwelling",
+      "tier": 7,
+      "cost": { "gold": 15000, "wood": 10, "ore": 10, "gems": 10 },
+      "description": "Позволяет нанимать Циклопов",
+      "requires": ["asylum_ogre_fort"],
+      "creatureId": "cyclops"
+    },
+
+    {
+      "id": "academy_workshop",
+      "name": "Мастерская",
+      "faction": "academy",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 300, "wood": 5, "ore": 5 },
+      "description": "Позволяет нанимать Гремлинов",
+      "requires": [],
+      "creatureId": "gremlin",
+      "upgradeTo": "academy_master_workshop"
+    },
+    {
+      "id": "academy_master_workshop",
+      "name": "Главная мастерская",
+      "faction": "academy",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 500, "wood": 5, "ore": 10 },
+      "description": "Позволяет нанимать Мастер-гремлинов",
+      "requires": ["academy_workshop"],
+      "creatureId": "master_gremlin"
+    },
+    {
+      "id": "academy_golem_factory",
+      "name": "Фабрика големов",
+      "faction": "academy",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 1500, "ore": 10 },
+      "description": "Позволяет нанимать Каменных големов",
+      "requires": ["academy_workshop"],
+      "creatureId": "stone_golem",
+      "upgradeTo": "academy_golem_factory_upg"
+    },
+    {
+      "id": "academy_golem_factory_upg",
+      "name": "Улучшенная фабрика големов",
+      "faction": "academy",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 2500, "ore": 15, "gems": 2 },
+      "description": "Позволяет нанимать Железных големов",
+      "requires": ["academy_golem_factory"],
+      "creatureId": "iron_golem"
+    },
+    {
+      "id": "academy_mage_tower",
+      "name": "Башня мага",
+      "faction": "academy",
+      "category": "dwelling",
+      "tier": 4,
+      "cost": { "gold": 4000, "wood": 5, "ore": 5, "mercury": 5 },
+      "description": "Позволяет нанимать Магов",
+      "requires": ["academy_golem_factory"],
+      "creatureId": "mage",
+      "upgradeTo": "academy_archmage_tower"
+    },
+    {
+      "id": "academy_archmage_tower",
+      "name": "Башня архимага",
+      "faction": "academy",
+      "category": "dwelling",
+      "tier": 4,
+      "cost": { "gold": 6000, "wood": 10, "ore": 10, "mercury": 10 },
+      "description": "Позволяет нанимать Архимагов",
+      "requires": ["academy_mage_tower"],
+      "creatureId": "archmage"
+    },
+    {
+      "id": "academy_altar",
+      "name": "Алтарь желаний",
+      "faction": "academy",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 6000, "wood": 5, "gems": 5 },
+      "description": "Позволяет нанимать Джиннов",
+      "requires": ["academy_mage_tower"],
+      "creatureId": "genie",
+      "upgradeTo": "academy_altar_upg"
+    },
+    {
+      "id": "academy_altar_upg",
+      "name": "Алтарь чудес",
+      "faction": "academy",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 8000, "wood": 10, "gems": 10 },
+      "description": "Позволяет нанимать Мастер-джиннов",
+      "requires": ["academy_altar"],
+      "creatureId": "master_genie"
+    },
+    {
+      "id": "academy_titan_spire",
+      "name": "Шпиль титанов",
+      "faction": "academy",
+      "category": "dwelling",
+      "tier": 7,
+      "cost": { "gold": 40000, "wood": 15, "ore": 15, "gems": 20 },
+      "description": "Позволяет нанимать Титанов",
+      "requires": ["academy_altar"],
+      "creatureId": "titan"
+    },
+
+    {
+      "id": "stronghold_warren",
+      "name": "Логово",
+      "faction": "stronghold",
+      "category": "dwelling",
+      "tier": 1,
+      "cost": { "gold": 500, "wood": 5 },
+      "description": "Позволяет нанимать Гоблинов-налётчиков",
+      "requires": [],
+      "creatureId": "goblin_raider"
+    },
+    {
+      "id": "stronghold_kennels",
+      "name": "Псарни",
+      "faction": "stronghold",
+      "category": "dwelling",
+      "tier": 2,
+      "cost": { "gold": 1400, "wood": 5, "ore": 5 },
+      "description": "Позволяет нанимать Наездников на волках",
+      "requires": ["stronghold_warren"],
+      "creatureId": "wolf_rider"
+    },
+    {
+      "id": "stronghold_ogre_fort",
+      "name": "Форт огров-шаманов",
+      "faction": "stronghold",
+      "category": "dwelling",
+      "tier": 3,
+      "cost": { "gold": 3000, "wood": 5, "ore": 5 },
+      "description": "Позволяет нанимать Огров-шаманов",
+      "requires": ["stronghold_kennels"],
+      "creatureId": "ogre_shaman"
+    },
+    {
+      "id": "stronghold_roc_cliff",
+      "name": "Утёс птиц грома",
+      "faction": "stronghold",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 7500, "wood": 5, "ore": 10 },
+      "description": "Позволяет нанимать Птиц грома",
+      "requires": ["stronghold_ogre_fort"],
+      "creatureId": "roc",
+      "upgradeTo": "stronghold_thunderbird_cliff"
+    },
+    {
+      "id": "stronghold_thunderbird_cliff",
+      "name": "Утёс громовых птиц",
+      "faction": "stronghold",
+      "category": "dwelling",
+      "tier": 5,
+      "cost": { "gold": 10000, "wood": 10, "ore": 15 },
+      "description": "Позволяет нанимать Громовых птиц",
+      "requires": ["stronghold_roc_cliff"],
+      "creatureId": "thunderbird"
+    },
+    {
+      "id": "stronghold_behemoth_lair",
+      "name": "Логово бехемотов",
+      "faction": "stronghold",
+      "category": "dwelling",
+      "tier": 7,
+      "cost": { "gold": 20000, "wood": 10, "ore": 10, "sulfur": 15 },
+      "description": "Позволяет нанимать Бехемотов",
+      "requires": ["stronghold_roc_cliff"],
+      "creatureId": "behemoth",
+      "upgradeTo": "stronghold_ancient_behemoth_lair"
+    },
+    {
+      "id": "stronghold_ancient_behemoth_lair",
+      "name": "Логово древних бехемотов",
+      "faction": "stronghold",
+      "category": "dwelling",
+      "tier": 7,
+      "cost": { "gold": 30000, "wood": 15, "ore": 15, "sulfur": 25 },
+      "description": "Позволяет нанимать Древних бехемотов",
+      "requires": ["stronghold_behemoth_lair"],
+      "creatureId": "ancient_behemoth"
     }
   ]
 }

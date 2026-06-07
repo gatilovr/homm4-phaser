@@ -282,4 +282,36 @@ export class VictorySystem {
     }
     return income;
   }
+
+  /**
+   * Получить все шахты (для ИИ)
+   */
+  getAllMines(): MineOwnership[] {
+    return [...this.mines.values()];
+  }
+
+  /**
+   * Получить все города (для ИИ)
+   */
+  getAllTownsList(): TownOwnership[] {
+    return [...this.towns.values()];
+  }
+
+  /**
+   * Получить героя по ID (для ИИ)
+   */
+  getHeroState(heroId: string): HeroState | undefined {
+    return this.heroes.get(heroId);
+  }
+
+  /**
+   * Обновить позицию героя
+   */
+  updateHeroPosition(heroId: string, x: number, y: number): void {
+    const hero = this.heroes.get(heroId);
+    if (hero) {
+      hero.x = x;
+      hero.y = y;
+    }
+  }
 }

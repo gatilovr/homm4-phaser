@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
+import { SaveLoadUI } from '../ui/SaveLoadUI';
+import { SaveSystem } from '../systems/SaveSystem';
 
 export class MenuScene extends Phaser.Scene {
   private titleText!: Phaser.GameObjects.Text;
@@ -148,7 +150,7 @@ export class MenuScene extends Phaser.Scene {
   private createVersionInfo(): void {
     const { width, height } = this.scale;
     
-    this.add.text(width - 20, height - 20, 'v2.0.0-alpha', {
+    this.add.text(width - 20, height - 20, 'v2.3.0 — Save/Load', {
       fontSize: '14px',
       color: '#666',
       fontFamily: 'Segoe UI'
@@ -180,7 +182,17 @@ export class MenuScene extends Phaser.Scene {
 
   private loadGame(): void {
     console.log('Load game clicked');
-    this.showNotification('Функция в разработке');
+    
+    const saveSystem = SaveSystem.getInstance();
+    const hasAnySave = saveSystem.hasSave(1) || saveSystem.hasSave(2) || saveSystem.hasSave(3) || saveSystem.hasAutoSave();
+    
+    if (!hasAnySave) {
+      this.showNotification('💭 Нет сохранённых игр');
+      return;
+    }
+    
+    const ui = new SaveLoadUI(this, 'load');
+    ui.show();
   }
 
   private showSettings(): void {

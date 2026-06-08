@@ -30,6 +30,10 @@ export interface MineOwnership {
   owner: OwnerType;
   resourceType: keyof Resources;
   dailyIncome: number;
+  /** Название шахты (Лесопилка, Рудник и т.д.) */
+  mineName?: string;
+  /** Иконка шахты */
+  icon?: string;
 }
 
 export interface HeroState {
@@ -259,6 +263,21 @@ export class VictorySystem {
     return [...this.towns.values()];
   }
 
+  getAllMinesList(): MineOwnership[] {
+    return [...this.mines.values()];
+  }
+
+  getAllHeroes(): HeroState[] {
+    return [...this.heroes.values()];
+  }
+
+  updateHero(id: string, patch: Partial<HeroState>): boolean {
+    const hero = this.heroes.get(id);
+    if (!hero) return false;
+    Object.assign(hero, patch);
+    return true;
+  }
+
   getAITowns(): TownOwnership[] {
     return [...this.towns.values()].filter(t => t.owner === 'ai');
   }
@@ -269,6 +288,33 @@ export class VictorySystem {
 
   getPlayerMines(): MineOwnership[] {
     return [...this.mines.values()].filter(m => m.owner === 'player');
+  }
+
+  /**
+   * Получить шахту по ID (для SaveSystem)
+   */
+  getMine(id: string): MineOwnership | undefined {
+    return this.mines.get(id);
+  }
+
+  /**
+   * Обновить состояние города из внешних данных (для SaveSystem)
+   */
+  updateTown(id: string, patch: Partial<TownOwnership>): boolean {
+    const town = this.towns.get(id);
+    if (!town) return false;
+    Object.assign(town, patch);
+    return true;
+  }
+
+  /**
+   * Обновить состояние шахты из внешних данных (для SaveSystem)
+   */
+  updateMine(id: string, patch: Partial<MineOwnership>): boolean {
+    const mine = this.mines.get(id);
+    if (!mine) return false;
+    Object.assign(mine, patch);
+    return true;
   }
 
   // === ДОХОД ===

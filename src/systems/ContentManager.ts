@@ -3,7 +3,7 @@
  * Загружает и кэширует все данные из JSON файлов
  */
 
-import type { Creature, Building, Artifact, Spell, Faction } from '../types';
+import type { Creature, Building, Artifact, Spell, Faction, CreatureStats } from '../types';
 
 interface CreaturesData {
   creatures: Creature[];
@@ -160,6 +160,88 @@ export class ContentManager {
     return this.creatures.get(id);
   }
 
+  /**
+   * Получить нормализованные боевые статы существа.
+   * 
+   * Унифицирует различия между форматами:
+   * - JSON: health, damageMin/damageMax
+   * - Fallback: hp, damage: [min, max]
+   * 
+   * Обрабатывает специальные ID (hero, wall, tower) для осадного боя.
+   * Если существо не найдено — возвращает дефолтные статы (fallback), 
+   * чтобы бой не упал при отсутствии данных.
+   */
+  public getCreatureStats(id: string): CreatureStats {
+    const creature = this.creatures.get(id);
+
+    if (creature) {
+      // Нормализация HP: в JSON это 'health', в fallback 'hp'
+      const hp = creature.health ?? creature.hp ?? 10;
+
+      // Нормализация урона: в JSON damageMin/damageMax, в fallback damage: [min, max]
+      let damageMin: number;
+      let damageMax: number;
+      if (creature.damageMin !== undefined && creature.damageMax !== undefined) {
+        damageMin = creature.damageMin;
+        damageMax = creature.damageMax;
+      } else if (Array.isArray(creature.damage) && creature.damage.length === 2) {
+        damageMin = creature.damage[0];
+        damageMax = creature.damage[1];
+      } else if (typeof creature.damage === 'object' && creature.damage !== null) {
+        const dmg = creature.damage as any;
+        damageMin = dmg.min ?? 1;
+        damageMax = dmg.max ?? 3;
+      } else {
+        damageMin = 1;
+        damageMax = 3;
+      }
+
+      return {
+        hp,
+        attack: creature.attack ?? 5,
+        defense: creature.defense ?? 3,
+        speed: creature.speed ?? 4,
+        damage: { min: damageMin, max: damageMax },
+        shots: creature.shots ?? 0,
+        abilities: creature.abilities ?? [],
+        faction: creature.faction ?? 'neutral',
+        type: creature.type ?? 'infantry',
+        tier: creature.tier ?? 1
+      };
+    }
+
+    // Специальные ID для осадного боя и героя
+    const specialStats: Record<string, CreatureStats> = {
+      hero: {
+        hp: 100, attack: 10, defense: 8, speed: 6,
+        damage: { min: 5, max: 10 }, shots: 0, abilities: [],
+        faction: 'neutral', type: 'hero', tier: 0
+      },
+      wall: {
+        hp: 200, attack: 0, defense: 5, speed: 0,
+        damage: { min: 0, max: 0 }, shots: 0, abilities: ['structure'],
+        faction: 'neutral', type: 'wall', tier: 0
+      },
+      tower: {
+        hp: 150, attack: 15, defense: 8, speed: 0,
+        damage: { min: 20, max: 40 }, shots: 24, abilities: ['shooter', 'structure'],
+        faction: 'neutral', type: 'tower', tier: 0
+      }
+    };
+
+    if (specialStats[id]) {
+      return specialStats[id];
+    }
+
+    // Последний fallback — дефолтные статы чтобы бой не упал
+    console.warn(`⚠️ ContentManager: существо '${id}' не найдено, используются дефолтные статы`);
+    return {
+      hp: 10, attack: 5, defense: 3, speed: 4,
+      damage: { min: 1, max: 3 }, shots: 0, abilities: [],
+      faction: 'neutral', type: 'infantry', tier: 1
+    };
+  }
+
   public getCreaturesByFaction(faction: string): Creature[] {
     return this.creaturesByFaction.get(faction) || [];
   }
@@ -197,7 +279,7 @@ export class ContentManager {
   public getRandomArtifacts(count: number, tier?: 'minor' | 'major' | 'relic'): Artifact[] {
     let available = this.getAllArtifacts();
     if (tier) {
-      available = available.filter(a => a.tier === tier);
+      available = available.filter(a => (a as any).tier === tier);
     }
     const shuffled = [...available].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, count);
@@ -278,7 +360,7 @@ export class ContentManager {
 
   private loadFallbackCreatures(): void {
     const fallback: Creature[] = [
-      { id: 'pikeman', name: 'Ополченец', faction: 'haven', tier: 1, attack: 4, defense: 5, damageMin: 1, damageMax: 3, health: 10, speed: 4, shots: 0, growth: 14, cost: { gold: 60 }, abilities: [], type: 'infantry' }
+      { id: 'pikeman', name: 'Ополченец', faction: 'haven', tier: 1, attack: 4, defense: 5, hp: 10, damage: [1, 3], speed: 4, shots: 0, growth: 14, cost: { gold: 60 }, abilities: [], type: 'infantry' }
     ];
     fallback.forEach(c => this.creatures.set(c.id, c));
   }

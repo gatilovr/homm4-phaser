@@ -59,6 +59,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.json('artifacts', 'assets/data/artifacts.json');
     this.load.json('buildings', 'assets/data/buildings.json');
     this.load.json('creatures', 'assets/data/creatures.json');
+    this.load.json('skills', 'assets/data/skills.json');
 
     console.log('[PreloadScene] JSON files queued for loading');
 
@@ -79,6 +80,7 @@ export class PreloadScene extends Phaser.Scene {
     let artifacts = this.cache.json.get('artifacts');
     let buildings = this.cache.json.get('buildings');
     let creatures = this.cache.json.get('creatures');
+    let skills = this.cache.json.get('skills');
 
     // Fallback если что-то не загрузилось
     if (!factions) {
@@ -101,6 +103,10 @@ export class PreloadScene extends Phaser.Scene {
       console.warn('[PreloadScene] creatures.json не загрузился, используем fallback');
       creatures = this.getFallbackCreatures();
     }
+    if (!skills) {
+      console.warn('[PreloadScene] skills.json не загрузился, используем fallback');
+      skills = this.getFallbackSkills();
+    }
 
     // Сохраняем в registry для доступа из других сцен
     this.registry.set('factions', factions);
@@ -108,6 +114,7 @@ export class PreloadScene extends Phaser.Scene {
     this.registry.set('artifacts', artifacts);
     this.registry.set('buildings', buildings);
     this.registry.set('creatures', creatures);
+    this.registry.set('skills', skills);
 
     console.log('[PreloadScene] ✓ Данные загружены в registry:');
     console.log('[PreloadScene]   factions:', factions ? `${factions.factions?.length || 0} фракций` : 'MISSING');
@@ -115,6 +122,7 @@ export class PreloadScene extends Phaser.Scene {
     console.log('[PreloadScene]   artifacts:', artifacts?.artifacts ? `${artifacts.artifacts.length} артефактов` : 'MISSING');
     console.log('[PreloadScene]   buildings:', buildings?.buildings ? `${buildings.buildings.length} зданий` : 'MISSING');
     console.log('[PreloadScene]   creatures:', creatures?.creatures ? `${creatures.creatures.length} существ` : 'MISSING');
+    console.log('[PreloadScene]   skills:', skills?.skills ? `${skills.skills.length} навыков` : 'MISSING');
 
     // === ИНИЦИАЛИЗАЦИЯ CONTENT MANAGER ===
     // ContentManager будет использовать данные из fetch, а fallback возьмёт из registry
@@ -241,6 +249,93 @@ export class PreloadScene extends Phaser.Scene {
         { id: 'marketplace', name: 'Рынок', cost: { gold: 500, wood: 5 }, requirements: ['citadel'] },
         { id: 'blacksmith', name: 'Кузница', cost: { gold: 1000, ore: 5 }, requirements: ['citadel'] },
         { id: 'tavern', name: 'Таверна', cost: { gold: 500, wood: 5 }, requirements: ['citadel'] }
+      ]
+    };
+  }
+
+  private getFallbackSkills(): any {
+    return {
+      skills: [
+        { id: 'offense', name: 'Наступление', category: 'combat', icon: '⚔️', maxLevel: 3, description: '+урон ближнего боя', effects: [
+          { level: 1, type: 'melee_damage_bonus', value: 10, description: '+10% урон ближнего боя' },
+          { level: 2, type: 'melee_damage_bonus', value: 20, description: '+20% урон ближнего боя' },
+          { level: 3, type: 'melee_damage_bonus', value: 30, description: '+30% урон ближнего боя' }
+        ]},
+        { id: 'defense_skill', name: 'Оборона', category: 'combat', icon: '🛡️', maxLevel: 3, description: '-получаемый урон', effects: [
+          { level: 1, type: 'damage_reduction', value: 10, description: '-10% урона' },
+          { level: 2, type: 'damage_reduction', value: 20, description: '-20% урона' },
+          { level: 3, type: 'damage_reduction', value: 30, description: '-30% урона' }
+        ]},
+        { id: 'archery', name: 'Стрельба', category: 'combat', icon: '🏹', maxLevel: 3, description: '+урон стрелков', effects: [
+          { level: 1, type: 'ranged_damage_bonus', value: 10, description: '+10% урон стрелков' },
+          { level: 2, type: 'ranged_damage_bonus', value: 25, description: '+25% урон стрелков' },
+          { level: 3, type: 'ranged_damage_bonus', value: 50, description: '+50% урон стрелков' }
+        ]},
+        { id: 'leadership', name: 'Лидерство', category: 'combat', icon: '👑', maxLevel: 3, description: '+мораль', effects: [
+          { level: 1, type: 'morale_bonus', value: 1, description: '+1 мораль' },
+          { level: 2, type: 'morale_bonus', value: 2, description: '+2 мораль' },
+          { level: 3, type: 'morale_bonus', value: 3, description: '+3 мораль' }
+        ]},
+        { id: 'luck', name: 'Удача', category: 'combat', icon: '🍀', maxLevel: 3, description: '+удача', effects: [
+          { level: 1, type: 'luck_bonus', value: 1, description: '+1 удача' },
+          { level: 2, type: 'luck_bonus', value: 2, description: '+2 удача' },
+          { level: 3, type: 'luck_bonus', value: 3, description: '+3 удача' }
+        ]},
+        { id: 'wisdom', name: 'Мудрость', category: 'magic', icon: '📖', maxLevel: 3, description: 'доступ к заклинаниям', effects: [
+          { level: 1, type: 'spell_level_access', value: 3, description: 'Заклинания 3 уровня' },
+          { level: 2, type: 'spell_level_access', value: 4, description: 'Заклинания 4 уровня' },
+          { level: 3, type: 'spell_level_access', value: 5, description: 'Заклинания 5 уровня' }
+        ]},
+        { id: 'intelligence', name: 'Интеллект', category: 'magic', icon: '🧠', maxLevel: 3, description: '+мана', effects: [
+          { level: 1, type: 'mana_bonus_percent', value: 25, description: '+25% маны' },
+          { level: 2, type: 'mana_bonus_percent', value: 50, description: '+50% маны' },
+          { level: 3, type: 'mana_bonus_percent', value: 100, description: '+100% маны' }
+        ]},
+        { id: 'sorcery', name: 'Колдовство', category: 'magic', icon: '✨', maxLevel: 3, description: '+урон заклинаний', effects: [
+          { level: 1, type: 'spell_damage_bonus', value: 10, description: '+10% урон' },
+          { level: 2, type: 'spell_damage_bonus', value: 20, description: '+20% урон' },
+          { level: 3, type: 'spell_damage_bonus', value: 30, description: '+30% урон' }
+        ]},
+        { id: 'mysticism', name: 'Мистицизм', category: 'magic', icon: '🔮', maxLevel: 3, description: '+реген маны', effects: [
+          { level: 1, type: 'mana_regen_per_turn', value: 2, description: '+2 маны/ход' },
+          { level: 2, type: 'mana_regen_per_turn', value: 3, description: '+3 маны/ход' },
+          { level: 3, type: 'mana_regen_per_turn', value: 4, description: '+4 маны/ход' }
+        ]},
+        { id: 'magic_school', name: 'Школа магии', category: 'magic', icon: '🎓', maxLevel: 3, description: 'эффективность заклинаний', effects: [
+          { level: 1, type: 'spell_effectiveness', value: 1, description: 'Базовый' },
+          { level: 2, type: 'spell_effectiveness', value: 2, description: 'Продвинутый' },
+          { level: 3, type: 'spell_effectiveness', value: 3, description: 'Эксперт' }
+        ]},
+        { id: 'logistics', name: 'Логистика', category: 'adventure', icon: '🏃', maxLevel: 3, description: '+очки движения', effects: [
+          { level: 1, type: 'movement_bonus_percent', value: 10, description: '+10% движения' },
+          { level: 2, type: 'movement_bonus_percent', value: 20, description: '+20% движения' },
+          { level: 3, type: 'movement_bonus_percent', value: 30, description: '+30% движения' }
+        ]},
+        { id: 'pathfinding', name: 'Следопыт', category: 'adventure', icon: '🗺️', maxLevel: 3, description: '-штраф местности', effects: [
+          { level: 1, type: 'terrain_penalty_reduction', value: 25, description: '-25% штраф' },
+          { level: 2, type: 'terrain_penalty_reduction', value: 50, description: '-50% штраф' },
+          { level: 3, type: 'terrain_penalty_reduction', value: 75, description: '-75% штраф' }
+        ]},
+        { id: 'scouting', name: 'Разведка', category: 'adventure', icon: '👁️', maxLevel: 3, description: '+радиус обзора', effects: [
+          { level: 1, type: 'vision_radius_bonus', value: 1, description: '+1 обзор' },
+          { level: 2, type: 'vision_radius_bonus', value: 2, description: '+2 обзор' },
+          { level: 3, type: 'vision_radius_bonus', value: 3, description: '+3 обзор' }
+        ]},
+        { id: 'navigation', name: 'Навигация', category: 'adventure', icon: '⚓', maxLevel: 3, description: '+скорость по воде', effects: [
+          { level: 1, type: 'water_movement_bonus', value: 25, description: '+25%' },
+          { level: 2, type: 'water_movement_bonus', value: 50, description: '+50%' },
+          { level: 3, type: 'water_movement_bonus', value: 100, description: '+100%' }
+        ]},
+        { id: 'estates', name: 'Поместье', category: 'economy', icon: '🏠', maxLevel: 3, description: '+золото/день', effects: [
+          { level: 1, type: 'daily_gold_income', value: 100, description: '+100 золота' },
+          { level: 2, type: 'daily_gold_income', value: 250, description: '+250 золота' },
+          { level: 3, type: 'daily_gold_income', value: 500, description: '+500 золота' }
+        ]},
+        { id: 'diplomacy', name: 'Дипломатия', category: 'economy', icon: '🤝', maxLevel: 3, description: 'шанс присоединить', effects: [
+          { level: 1, type: 'join_chance_percent', value: 10, description: '10% шанс' },
+          { level: 2, type: 'join_chance_percent', value: 20, description: '20% шанс' },
+          { level: 3, type: 'join_chance_percent', value: 30, description: '30% шанс' }
+        ]}
       ]
     };
   }

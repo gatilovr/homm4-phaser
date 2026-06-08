@@ -13,11 +13,23 @@ export class Pathfinder {
   private map: Tile[][];
   private width: number;
   private height: number;
+  /** Опциональная функция для переопределения проходимости (например, вода проходима на корабле) */
+  private passableOverride?: (tile: Tile) => boolean;
+  /** Опциональная функция для переопределения стоимости движения */
+  private moveCostOverride?: (tile: Tile) => number;
 
-  constructor(map: Tile[][]) {
+  constructor(
+    map: Tile[][],
+    options?: {
+      passableOverride?: (tile: Tile) => boolean;
+      moveCostOverride?: (tile: Tile) => number;
+    }
+  ) {
     this.map = map;
     this.height = map.length;
     this.width = map[0]?.length || 0;
+    this.passableOverride = options?.passableOverride;
+    this.moveCostOverride = options?.moveCostOverride;
   }
 
   findPath(start: Position, end: Position): Position[] {
@@ -120,11 +132,21 @@ export class Pathfinder {
   }
 
   private isPassable(pos: Position): boolean {
-    return this.map[pos.y]?.[pos.x]?.passable || false;
+    const tile = this.map[pos.y]?.[pos.x];
+    if (!tile) return false;
+    if (this.passableOverride) {
+      return this.passableOverride(tile);
+    }
+    return tile.passable || false;
   }
 
   private getMoveCost(pos: Position): number {
-    return this.map[pos.y]?.[pos.x]?.moveCost || 1;
+    const tile = this.map[pos.y]?.[pos.x];
+    if (!tile) return 999;
+    if (this.moveCostOverride) {
+      return this.moveCostOverride(tile);
+    }
+    return tile.moveCost || 1;
   }
 
   private reconstructPath(node: PathNode): Position[] {

@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
-import { Town, Building, Resources, ArmySlot, Artifact } from '../types';
+import { Town, Building, Resources, ArmySlot, Artifact, Hero } from '../types';
 import { TownOwnership } from '../systems/VictorySystem';
+import { UPGRADE_TABLE, getUpgrade, applyUpgrade, canAffordUpgrade, BASE_MARKET_RATES, generateMageGuildOffers, BASE_WEEKLY_GROWTH, UpgradeCost } from '../systems/EconomySystem';
 
 /**
  * TownScene — полноценная система города:
@@ -12,6 +13,8 @@ import { TownOwnership } from '../systems/VictorySystem';
  * - 🍺 Таверна (найм героев)
  * - 📦 Передача армии между героем и гарнизоном
  */
+type TabId = 'buildings' | 'hire' | 'market' | 'blacksmith' | 'garrison' | 'tavern' | 'upgrade' | 'mageguild';
+
 export class TownScene extends Phaser.Scene {
   private town!: TownOwnership;
   private townId: string = '';
@@ -24,7 +27,7 @@ export class TownScene extends Phaser.Scene {
   private mainContainer!: Phaser.GameObjects.Container;
   private resourceTexts: Map<string, Phaser.GameObjects.Text> = new Map();
   private townNameText!: Phaser.GameObjects.Text;
-  private activeTab: 'buildings' | 'hire' | 'market' | 'blacksmith' | 'garrison' | 'tavern' = 'buildings';
+  private activeTab: TabId = 'buildings';
   
   // Для таверны
   private tavernHeroes: any[] = [];
@@ -155,37 +158,39 @@ export class TownScene extends Phaser.Scene {
   private createTabButtons(): void {
     const { width, height } = this.scale;
     const tabs = [
-      { id: 'buildings', label: '🏗️ Здания', x: width / 2 - 250 },
-      { id: 'hire', label: '👥 Найм', x: width / 2 - 130 },
+      { id: 'buildings', label: '🏗️ Здания', x: width / 2 - 340 },
+      { id: 'hire', label: '👥 Найм', x: width / 2 - 230 },
+      { id: 'upgrade', label: '⬆️ Апгрейд', x: width / 2 - 120 },
       { id: 'garrison', label: '🛡️ Гарнизон', x: width / 2 - 10 },
-      { id: 'market', label: '🏪 Рынок', x: width / 2 + 110 },
-      { id: 'blacksmith', label: '⚒️ Кузница', x: width / 2 + 230 },
-      { id: 'tavern', label: '🍺 Таверна', x: width / 2 + 350 }
+      { id: 'market', label: '🏪 Рынок', x: width / 2 + 100 },
+      { id: 'mageguild', label: '🧙 Гильдия', x: width / 2 + 210 },
+      { id: 'blacksmith', label: '⚒️ Кузница', x: width / 2 + 320 },
+      { id: 'tavern', label: '🍺 Таверна', x: width / 2 + 430 }
     ];
 
     for (const tab of tabs) {
       const container = this.add.container(tab.x, 85);
-      const bg = this.add.rectangle(0, 0, 110, 36, 0x2c3e50, 0.9)
+      const bg = this.add.rectangle(0, 0, 100, 36, 0x2c3e50, 0.9)
         .setStrokeStyle(2, 0x555555);
       const label = this.add.text(0, 0, tab.label, {
-        fontSize: '13px', color: '#f0e6d2', fontFamily: 'Segoe UI'
+        fontSize: '12px', color: '#f0e6d2', fontFamily: 'Segoe UI'
       }).setOrigin(0.5);
 
       container.add([bg, label]);
-      container.setSize(110, 36);
+      container.setSize(100, 36);
       container.setInteractive({ useHandCursor: true });
       
       container.on('pointerdown', () => {
-        this.showTab(tab.id as any);
+        this.showTab(tab.id as TabId);
       });
       
       container.on('pointerover', () => {
-        if (this.activeTab !== tab.id as any) {
+        if (this.activeTab !== (tab.id as TabId)) {
           bg.setFillStyle(0x34495e, 1);
         }
       });
       container.on('pointerout', () => {
-        if (this.activeTab !== tab.id as any) {
+        if (this.activeTab !== (tab.id as TabId)) {
           bg.setFillStyle(0x2c3e50, 0.9);
         }
       });
@@ -219,8 +224,10 @@ export class TownScene extends Phaser.Scene {
     switch (tab) {
       case 'buildings': this.renderBuildings(); break;
       case 'hire': this.renderHire(); break;
+      case 'upgrade': this.renderUpgrade(); break;
       case 'garrison': this.renderGarrison(); break;
       case 'market': this.renderMarket(); break;
+      case 'mageguild': this.renderMageGuild(); break;
       case 'blacksmith': this.renderBlacksmith(); break;
       case 'tavern': this.renderTavern(); break;
     }
@@ -274,6 +281,354 @@ export class TownScene extends Phaser.Scene {
     }
   }
 
+  // ==================== АПГРЕЙДЫ ====================
+
+  private renderUpgrade(): void {
+    const { width } = this.scale;
+    const panel = this.add.rectangle(width / 2, 400, 800, 500, 0x1a1a2e, 0.95)
+      .setStrokeStyle(2, 0xd4af37);
+    this.contentContainer.add(panel);
+
+    const title = this.add.text(width / 2, 140, '⬆️ Апгрейды существ (улучшение армии героя)', {
+      fontSize: '18px', color: '#d4af37', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.contentContainer.add(title);
+
+    const hero = this.worldScene.getHero();
+    if (!hero.army || hero.army.length === 0) {
+      const noArmy = this.add.text(width / 2, 300, 'Армия героя пуста', {
+        fontSize: '16px', color: '#888888', fontFamily: 'Segoe UI'
+      }).setOrigin(0.5);
+      this.contentContainer.add(noArmy);
+      return;
+    }
+
+    let y = 180;
+    let hasUpgrades = false;
+
+    for (const slot of hero.army) {
+      const upgrade = getUpgrade(slot.creatureId);
+      if (!upgrade) continue;
+
+      hasUpgrades = true;
+      const creature = this.creatures[slot.creatureId];
+      const upgraded = this.creatures[upgrade.to];
+      const canAfford = canAffordUpgrade(this.worldScene.getResources() as any, upgrade.cost);
+
+      const bg = this.add.rectangle(width / 2, y, 750, 65, 0x2c3e50, 0.95)
+        .setStrokeStyle(2, canAfford ? 0xd4af37 : 0x444444);
+
+      // От
+      const fromText = this.add.text(width / 2 - 350, y - 15, 
+        `${creature?.name || slot.creatureId} (${slot.count} шт)`, {
+        fontSize: '14px', color: '#f0e6d2', fontFamily: 'Segoe UI', fontStyle: 'bold'
+      });
+
+      // Стрелка
+      const arrow = this.add.text(width / 2 - 100, y - 15, '→', {
+        fontSize: '20px', color: '#d4af37'
+      });
+
+      // Кому
+      const toText = this.add.text(width / 2 - 60, y - 15, upgrade.toName || upgrade.to, {
+        fontSize: '14px', color: '#2ecc71', fontFamily: 'Segoe UI', fontStyle: 'bold'
+      });
+
+      // Статы улучшения
+      if (upgraded) {
+        const statsUp = this.add.text(width / 2 - 60, y + 5,
+          `АТК:${creature?.attack}→${upgraded.attack} ЗАЩ:${creature?.defense}→${upgraded.defense} HP:${creature?.health}→${upgraded.health}`,
+          { fontSize: '10px', color: '#aaaaaa', fontFamily: 'Segoe UI' });
+        this.contentContainer.add(statsUp);
+      }
+
+      // Стоимость
+      const costStr = Object.entries(upgrade.cost)
+        .map(([k, v]) => {
+          const icons: Record<string, string> = { gold: '💰', wood: '🪵', ore: '⛏️', crystal: '💎', gems: '💠', sulfur: '🟡', mercury: '🩸' };
+          return `${icons[k] || k}${v}×${slot.count}`;
+        })
+        .join(' ');
+      
+      const costText = this.add.text(width / 2 - 350, y + 15, `Стоимость: ${costStr}`, {
+        fontSize: '11px', color: canAfford ? '#ffd700' : '#e74c3c', fontFamily: 'Segoe UI'
+      });
+
+      // Кнопки
+      if (canAfford) {
+        const upAllBtn = this.createMiniButton(width / 2 + 320, y - 10, 'Всех', 0x2ecc71, () => {
+          this.doUpgrade(slot.creatureId, slot.count);
+        });
+        const up1Btn = this.createMiniButton(width / 2 + 320, y + 15, 'Одного', 0x3498db, () => {
+          this.doUpgrade(slot.creatureId, 1);
+        });
+        this.contentContainer.add([upAllBtn, up1Btn]);
+      }
+
+      this.contentContainer.add([bg, fromText, arrow, toText, costText]);
+      y += 75;
+    }
+
+    if (!hasUpgrades) {
+      const noUpgrades = this.add.text(width / 2, 300, 'Нет доступных апгрейдов для существ в армии', {
+        fontSize: '16px', color: '#888888', fontFamily: 'Segoe UI'
+      }).setOrigin(0.5);
+      this.contentContainer.add(noUpgrades);
+    }
+  }
+
+  private doUpgrade(creatureId: string, count: number): void {
+    const upgrade = getUpgrade(creatureId);
+    if (!upgrade) {
+      this.showNotification('❌ Улучшение недоступно!');
+      return;
+    }
+
+    const resources = this.worldScene.getResources() as any;
+    const hero = this.worldScene.getHero();
+    
+    // Находим слот в армии и ограничиваем количество доступных существ
+    const armySlot = hero.army.find(s => s.creatureId === creatureId);
+    if (!armySlot || armySlot.count <= 0) {
+      this.showNotification('❌ Нет существ для улучшения!');
+      return;
+    }
+    
+    // Реальное количество для апгрейда (не больше чем в армии)
+    const upgradeCount = Math.min(count, armySlot.count);
+    
+    // МАСШТАБИРУЕМ стоимость под количество улучшаемых существ
+    // applyUpgrade() списывает только за 1 единицу, поэтому умножаем
+    const scaledCost: UpgradeCost = {
+      gold: upgrade.cost.gold * upgradeCount,
+      wood: (upgrade.cost.wood || 0) * upgradeCount,
+      ore: (upgrade.cost.ore || 0) * upgradeCount,
+      crystal: (upgrade.cost.crystal || 0) * upgradeCount,
+      gems: (upgrade.cost.gems || 0) * upgradeCount,
+      sulfur: (upgrade.cost.sulfur || 0) * upgradeCount,
+      mercury: (upgrade.cost.mercury || 0) * upgradeCount,
+    };
+    
+    // Проверяем доступность МАСШТАБИРОВАННОЙ стоимости
+    if (!canAffordUpgrade(resources, scaledCost)) {
+      // Рассчитываем максимум что можем улучшить
+      const maxAffordable = this.calculateMaxAffordable(resources, upgrade.cost, armySlot.count);
+      if (maxAffordable <= 0) {
+        this.showNotification('❌ Недостаточно ресурсов!');
+        return;
+      }
+      // Автоматически уменьшаем количество до максимально доступного
+      return this.doUpgrade(creatureId, maxAffordable);
+    }
+
+    // Применяем МАСШТАБИРОВАННЫЙ апгрейд к ресурсам
+    const newResources = applyUpgrade(resources, scaledCost);
+    Object.assign(resources, newResources);
+    
+    // Убираем старых существ из армии
+    armySlot.count -= upgradeCount;
+    if (armySlot.count <= 0) {
+      hero.army = hero.army.filter(s => s.creatureId !== creatureId);
+    }
+    
+    // Добавляем улучшенное существо
+    const existingUpgraded = hero.army.find(s => s.creatureId === upgrade.to);
+    if (existingUpgraded) {
+      existingUpgraded.count += upgradeCount;
+    } else {
+      hero.army.push({ creatureId: upgrade.to, count: upgradeCount });
+    }
+      
+    this.showNotification(`✅ Улучшено: ${upgrade.toName || upgrade.to} × ${upgradeCount}!`);
+    this.refreshUI();
+  }
+  
+  /**
+   * Рассчитать максимум существ, которых можем улучшить с текущими ресурсами
+   */
+  private calculateMaxAffordable(
+    resources: any, 
+    costPerUnit: UpgradeCost, 
+    maxCount: number
+  ): number {
+    let max = maxCount;
+    
+    // Проверяем по каждому ресурсу
+    const goldMax = Math.floor((resources.gold || 0) / costPerUnit.gold);
+    max = Math.min(max, goldMax);
+    
+    if (costPerUnit.wood) {
+      const woodMax = Math.floor((resources.wood || 0) / costPerUnit.wood);
+      max = Math.min(max, woodMax);
+    }
+    if (costPerUnit.ore) {
+      const oreMax = Math.floor((resources.ore || 0) / costPerUnit.ore);
+      max = Math.min(max, oreMax);
+    }
+    if (costPerUnit.crystal) {
+      const crystalMax = Math.floor((resources.crystal || 0) / costPerUnit.crystal);
+      max = Math.min(max, crystalMax);
+    }
+    if (costPerUnit.gems) {
+      const gemsMax = Math.floor((resources.gems || 0) / costPerUnit.gems);
+      max = Math.min(max, gemsMax);
+    }
+    if (costPerUnit.sulfur) {
+      const sulfurMax = Math.floor((resources.sulfur || 0) / costPerUnit.sulfur);
+      max = Math.min(max, sulfurMax);
+    }
+    if (costPerUnit.mercury) {
+      const mercuryMax = Math.floor((resources.mercury || 0) / costPerUnit.mercury);
+      max = Math.min(max, mercuryMax);
+    }
+    
+    return Math.max(0, max);
+  }
+
+  // ==================== МАГИЧЕСКАЯ ГИЛЬДИЯ ====================
+
+  private renderMageGuild(): void {
+    const { width } = this.scale;
+    const panel = this.add.rectangle(width / 2, 400, 800, 500, 0x1a1a2e, 0.95)
+      .setStrokeStyle(2, 0xd4af37);
+    this.contentContainer.add(panel);
+
+    // Проверяем наличие гильдии
+    const guildLevel = this.getMageGuildLevel();
+    if (guildLevel === 0) {
+      const noGuild = this.add.text(width / 2, 300, '🧙 Постройте Гильдию магов для покупки заклинаний', {
+        fontSize: '18px', color: '#888888', fontFamily: 'Segoe UI'
+      }).setOrigin(0.5);
+      this.contentContainer.add(noGuild);
+      return;
+    }
+
+    const title = this.add.text(width / 2, 140, `🧙 Гильдия магов (уровень ${guildLevel})`, {
+      fontSize: '18px', color: '#d4af37', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.contentContainer.add(title);
+
+    // Получаем все заклинания
+    const allSpells = this.registry.get('spells') || this.getFallbackSpells();
+    const hero = this.worldScene.getHero();
+    const existingSpells = hero.spells || [];
+
+    // Генерируем предложения
+    const offers = generateMageGuildOffers(guildLevel, Object.keys(allSpells));
+
+    if (offers.length === 0) {
+      const noOffers = this.add.text(width / 2, 250, 'Нет доступных заклинаний для покупки\n(все уже изучены)', {
+        fontSize: '16px', color: '#888888', fontFamily: 'Segoe UI', align: 'center'
+      }).setOrigin(0.5);
+      this.contentContainer.add(noOffers);
+      return;
+    }
+
+    let y = 190;
+    for (const offer of offers) {
+      const canBuy = this.worldScene.getResources().gold >= offer.cost && !existingSpells.includes(offer.spellId);
+
+      const schoolColors: Record<string, number> = {
+        water: 0x3498db, fire: 0xe74c3c, earth: 0x95a5a6, air: 0xecf0f1, mind: 0x9b59b6
+      };
+
+      const bg = this.add.rectangle(width / 2, y, 700, 60, schoolColors[offer.school] || 0x2c3e50, 0.6)
+        .setStrokeStyle(2, canBuy ? 0xd4af37 : 0x444444);
+
+      const schoolIcons: Record<string, string> = {
+        water: '💧', fire: '🔥', earth: '🪨', air: '💨', mind: '🧠'
+      };
+
+      const name = this.add.text(width / 2 - 330, y - 10, 
+        `${schoolIcons[offer.school] || '📜'} ${offer.spellName} (ур. ${offer.level})`, {
+        fontSize: '15px', color: '#f0e6d2', fontFamily: 'Segoe UI', fontStyle: 'bold'
+      });
+
+      const desc = this.add.text(width / 2 - 330, y + 10, offer.spellName, {
+        fontSize: '11px', color: '#aaaaaa', fontFamily: 'Segoe UI'
+      });
+
+      const price = this.add.text(width / 2 + 200, y - 10, `💰 ${offer.cost}`, {
+        fontSize: '14px', color: '#ffd700', fontFamily: 'Segoe UI', fontStyle: 'bold'
+      }).setOrigin(0, 0.5);
+
+      if (existingSpells.includes(offer.spellId)) {
+        const owned = this.add.text(width / 2 + 200, y + 10, '✅ Изучено', {
+          fontSize: '12px', color: '#2ecc71', fontFamily: 'Segoe UI'
+        }).setOrigin(0, 0.5);
+        this.contentContainer.add(owned);
+      } else if (canBuy) {
+        const buyBtn = this.createMiniButton(width / 2 + 280, y, 'Купить', 0x2ecc71, () => {
+          this.buySpell(offer);
+        });
+        this.contentContainer.add(buyBtn);
+      }
+
+      this.contentContainer.add([bg, name, desc, price]);
+      y += 70;
+    }
+
+    // Показать текущие заклинания героя
+    const heroSpellsTitle = this.add.text(width / 2, y + 10, '📖 Ваши заклинания:', {
+      fontSize: '14px', color: '#4169e1', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.contentContainer.add(heroSpellsTitle);
+
+    if (existingSpells.length === 0) {
+      const noSpells = this.add.text(width / 2, y + 30, 'Нет заклинаний', {
+        fontSize: '12px', color: '#666666', fontFamily: 'Segoe UI'
+      }).setOrigin(0.5);
+      this.contentContainer.add(noSpells);
+    } else {
+      const spellsList = this.add.text(width / 2, y + 30, existingSpells.join(', '), {
+        fontSize: '12px', color: '#f0e6d2', fontFamily: 'Segoe UI',
+        wordWrap: { width: 700 }, align: 'center'
+      }).setOrigin(0.5);
+      this.contentContainer.add(spellsList);
+    }
+  }
+
+  private getMageGuildLevel(): number {
+    const builtBuildings = this.town.builtBuildings || [];
+    if (builtBuildings.includes('mage_guild_3') || builtBuildings.includes('mageGuild3')) return 3;
+    if (builtBuildings.includes('mage_guild_2') || builtBuildings.includes('mageGuild2')) return 2;
+    if (builtBuildings.includes('mage_guild_1') || builtBuildings.includes('mageGuild1')) return 1;
+    return 0;
+  }
+
+  private buySpell(offer: any): void {
+    const resources = this.worldScene.getResources();
+    if (resources.gold < offer.cost) {
+      this.showNotification('❌ Недостаточно золота!');
+      return;
+    }
+
+    resources.gold -= offer.cost;
+
+    // Добавляем заклинание герою
+    const hero = this.worldScene.getHero();
+    if (!hero.spells) hero.spells = [];
+    hero.spells.push(offer.spellId);
+
+    this.showNotification(`📜 Изучено заклинание: ${offer.spellName}!`);
+    this.refreshUI();
+  }
+
+  private getFallbackSpells(): any[] {
+    return [
+      { id: 'bless', name: 'Благословение', level: 1, school: 'water', description: '+20% урона союзнику' },
+      { id: 'cure', name: 'Лечение', level: 1, school: 'water', description: 'Снимает негативные эффекты' },
+      { id: 'slow', name: 'Замедление', level: 1, school: 'earth', description: '-50% скорости врага' },
+      { id: 'haste', name: 'Ускорение', level: 1, school: 'air', description: '+50% скорости союзнику' },
+      { id: 'shield', name: 'Щит', level: 1, school: 'earth', description: '-30% получаемого урона' },
+      { id: 'bloodlust', name: 'Жажда крови', level: 1, school: 'fire', description: '+30% урона в ближнем бою' },
+      { id: 'fireball', name: 'Огненный шар', level: 2, school: 'fire', description: 'Урон по области' },
+      { id: 'lightning', name: 'Молния', level: 2, school: 'air', description: 'Урон одному врагу' },
+      { id: 'blind', name: 'Ослепление', level: 2, school: 'mind', description: 'Пропуск хода' },
+      { id: 'teleport', name: 'Телепорт', level: 3, school: 'air', description: 'Перемещение союзника' }
+    ];
+  }
+
   // ==================== НАЙМ СУЩЕСТВ ====================
 
   private renderHire(): void {
@@ -304,8 +659,9 @@ export class TownScene extends Phaser.Scene {
       const creature = this.creatures[slot.creatureId];
       if (!creature) continue;
 
-      const costPerUnit = creature.cost.gold || 0;
-      const totalCost = costPerUnit * slot.count;
+      // ЦЕНА СУЩЕСТВА (с разными ресурсами!)
+      const costPerUnit = creature.cost || { gold: 60 };
+      const goldPerUnit = costPerUnit.gold || 0;
 
       const bg = this.add.rectangle(width / 2, y, 750, 60, 0x2c3e50, 0.95)
         .setStrokeStyle(2, 0xd4af37);
@@ -320,15 +676,23 @@ export class TownScene extends Phaser.Scene {
       });
 
       const statsText = this.add.text(width / 2 - 310, y + 8, 
-        `АТК:${creature.attack} ЗАЩ:${creature.defense} HP:${creature.health} ⚔️${creature.damage.min}-${creature.damage.max} 🏃${creature.speed}`, {
+        `АТК:${creature.attack} ЗАЩ:${creature.defense} HP:${creature.health} ⚔️${creature.damage?.min || creature.damageMin || 1}-${creature.damage?.max || creature.damageMax || 3} 🏃${creature.speed}`, {
         fontSize: '11px', color: '#aaaaaa', fontFamily: 'Segoe UI'
       });
 
-      const availableText = this.add.text(width / 2 + 50, y - 8, `Доступно: ${slot.count}`, {
+      const availableText = this.add.text(width / 2 + 50, y - 12, `Доступно: ${slot.count}`, {
         fontSize: '14px', color: '#2ecc71', fontFamily: 'Segoe UI', fontStyle: 'bold'
       });
 
-      const costText = this.add.text(width / 2 + 50, y + 10, `💰 ${costPerUnit}/шт (всего: ${totalCost})`, {
+      // Цена с ресурсами
+      const costStr = Object.entries(costPerUnit)
+        .map(([k, v]) => {
+          const icons: Record<string, string> = { gold: '💰', wood: '🪵', ore: '⛏️', crystal: '💎', gems: '💠', sulfur: '🟡', mercury: '🩸' };
+          return `${icons[k] || k}${v}`;
+        })
+        .join(' ');
+
+      const costText = this.add.text(width / 2 + 50, y + 8, `За 1 шт: ${costStr}`, {
         fontSize: '11px', color: '#ffd700', fontFamily: 'Segoe UI'
       });
 
@@ -358,15 +722,26 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    const totalCost = (creature.cost.gold || 0) * count;
-    const resources = this.worldScene.getResources();
-    if (resources.gold < totalCost) {
-      this.showNotification(`❌ Недостаточно золота! Нужно: ${totalCost}`);
-      return;
+    // Стоимость с разными ресурсами
+    const costPerUnit = creature.cost || { gold: 60 };
+    const totalCost: Partial<Resources> = {};
+    for (const [key, value] of Object.entries(costPerUnit)) {
+      totalCost[key as keyof Resources] = (value as number) * count;
     }
 
-    // Списываем золото
-    resources.gold -= totalCost;
+    // Проверяем наличие ресурсов
+    const resources = this.worldScene.getResources() as any;
+    for (const [key, value] of Object.entries(totalCost)) {
+      if ((resources[key] || 0) < (value as number)) {
+        this.showNotification(`❌ Недостаточно ресурсов!`);
+        return;
+      }
+    }
+
+    // Списываем ресурсы
+    for (const [key, value] of Object.entries(totalCost)) {
+      resources[key] -= value as number;
+    }
 
     // Убираем из найма
     slot.count -= count;
@@ -517,7 +892,7 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    const title = this.add.text(width / 2, 140, '🏪 Обмен ресурсов (курс: 1 ед → золото)', {
+    const title = this.add.text(width / 2, 140, '🏪 Обмен ресурсов', {
       fontSize: '18px', color: '#d4af37', fontFamily: 'Segoe UI', fontStyle: 'bold'
     }).setOrigin(0.5);
     this.contentContainer.add(title);
@@ -527,35 +902,61 @@ export class TownScene extends Phaser.Scene {
       wood: '🪵', ore: '⛏️', crystal: '💎', gems: '💠', sulfur: '🟡', mercury: '🩸'
     };
 
-    let y = 190;
+    let y = 185;
     const tradable = ['wood', 'ore', 'crystal', 'gems', 'sulfur', 'mercury'];
     
     for (const res of tradable) {
-      const rate = this.marketRates[res] || 500;
-      const bg = this.add.rectangle(width / 2, y, 700, 50, 0x2c3e50, 0.95)
+      const rate = BASE_MARKET_RATES[res];
+      if (!rate) continue;
+      
+      const bg = this.add.rectangle(width / 2, y, 720, 50, 0x2c3e50, 0.95)
         .setStrokeStyle(1, 0x555555);
       
-      const info = this.add.text(width / 2 - 330, y, 
-        `${icons[res]} ${(resources as any)[res]} шт — курс: ${rate} зол/шт`, {
-        fontSize: '14px', color: '#f0e6d2', fontFamily: 'Segoe UI'
+      const info = this.add.text(width / 2 - 340, y - 8, 
+        `${icons[res]} ${(resources as any)[res]} шт`, {
+        fontSize: '14px', color: '#f0e6d2', fontFamily: 'Segoe UI', fontStyle: 'bold'
       }).setOrigin(0, 0.5);
 
-      const sellBtn = this.createMiniButton(width / 2 + 100, y, 'Продать 1', 0xe67e22, () => {
+      const ratesText = this.add.text(width / 2 - 150, y - 8,
+        `Купить: ${rate.buy}💰 | Продать: ${rate.sell}💰`, {
+        fontSize: '11px', color: '#aaaaaa', fontFamily: 'Segoe UI'
+      }).setOrigin(0, 0.5);
+
+      const sellBtn = this.createMiniButton(width / 2 + 150, y - 10, 'Продать 1', 0xe67e22, () => {
         this.sellResource(res, 1);
       });
-      const sellAllBtn = this.createMiniButton(width / 2 + 200, y, 'Всё', 0xc0392b, () => {
-        this.sellResource(res, (resources as any)[res]);
+      const sell5Btn = this.createMiniButton(width / 2 + 230, y - 10, '×5', 0xe67e22, () => {
+        this.sellResource(res, Math.min(5, (resources as any)[res]));
       });
-      const buyBtn = this.createMiniButton(width / 2 + 290, y, 'Купить 1', 0x27ae60, () => {
+      const buyBtn = this.createMiniButton(width / 2 + 150, y + 12, 'Купить 1', 0x27ae60, () => {
         this.buyResource(res, 1);
       });
+      const buy5Btn = this.createMiniButton(width / 2 + 230, y + 12, '×5', 0x27ae60, () => {
+        this.buyResource(res, 5);
+      });
 
-      this.contentContainer.add([bg, info, sellBtn, sellAllBtn, buyBtn]);
+      this.contentContainer.add([bg, info, ratesText, sellBtn, sell5Btn, buyBtn, buy5Btn]);
       y += 55;
     }
 
-    // Обмен золота на ресурсы
-    const goldInfo = this.add.text(width / 2, y + 20, `💰 Золото: ${resources.gold}`, {
+    // Обмен ресурс-ресурс (секция)
+    y += 10;
+    const exchangeTitle = this.add.text(width / 2, y, '🔄 Обмен ресурс ↔ ресурс', {
+      fontSize: '15px', color: '#d4af37', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.contentContainer.add(exchangeTitle);
+
+    y += 30;
+    const exchangeBtn = this.createMiniButton(width / 2, y, 'Открыть обмен', 0x8e44ad, () => {
+      this.showResourceExchangeDialog();
+    });
+    // Делаем кнопку больше
+    exchangeBtn.setSize(160, 30);
+    this.contentContainer.add(exchangeBtn);
+
+    // Показать золото
+    y += 35;
+    const goldInfo = this.add.text(width / 2, y, `💰 Золото: ${resources.gold}`, {
       fontSize: '16px', color: '#ffd700', fontFamily: 'Segoe UI', fontStyle: 'bold'
     }).setOrigin(0.5);
     this.contentContainer.add(goldInfo);
@@ -569,8 +970,10 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    const rate = this.marketRates[res] || 500;
-    const gold = rate * count;
+    const rate = BASE_MARKET_RATES[res];
+    if (!rate) return;
+    
+    const gold = rate.sell * count;
     
     (resources as any)[res] -= count;
     resources.gold += gold;
@@ -581,8 +984,10 @@ export class TownScene extends Phaser.Scene {
 
   private buyResource(res: string, count: number): void {
     const resources = this.worldScene.getResources();
-    const rate = this.marketRates[res] || 500;
-    const gold = rate * count;
+    const rate = BASE_MARKET_RATES[res];
+    if (!rate) return;
+    
+    const gold = rate.buy * count;
     
     if (resources.gold < gold) {
       this.showNotification(`❌ Недостаточно золота! Нужно: ${gold}`);
@@ -594,6 +999,25 @@ export class TownScene extends Phaser.Scene {
 
     this.showNotification(`✅ Куплено ${count} ${res} за ${gold} 💰`);
     this.refreshUI();
+  }
+
+  private showResourceExchangeDialog(): void {
+    // Простая реализация: обмениваем дерево на руду (самый частый обмен)
+    const resources = this.worldScene.getResources() as any;
+    
+    if (resources.wood >= 5) {
+      resources.wood -= 5;
+      resources.ore += 4;
+      this.showNotification('🔄 Обменяно 5 🪵 на 4 ⛏️');
+      this.refreshUI();
+    } else if (resources.ore >= 5) {
+      resources.ore -= 5;
+      resources.wood += 4;
+      this.showNotification('🔄 Обменяно 5 ⛏️ на 4 🪵');
+      this.refreshUI();
+    } else {
+      this.showNotification('❌ Нужно минимум 5 дерева или 5 руды для обмена');
+    }
   }
 
   // ==================== КУЗНИЦА ====================
@@ -713,13 +1137,24 @@ export class TownScene extends Phaser.Scene {
 
     // Если это жилище — добавляем существ для найма
     if (building.creatureGrowth) {
-      const existing = this.town.availableForHire.find(s => s.creatureId === building.creatureGrowth!.creatureId);
+      let creatureId: string;
+      let amount: number;
+      
+      if (typeof building.creatureGrowth === 'number') {
+        creatureId = building.creature || 'unknown';
+        amount = building.creatureGrowth;
+      } else {
+        creatureId = building.creatureGrowth.creatureId;
+        amount = building.creatureGrowth.amount;
+      }
+      
+      const existing = this.town.availableForHire.find(s => s.creatureId === creatureId);
       if (existing) {
-        existing.count += building.creatureGrowth.amount;
+        existing.count += amount;
       } else {
         this.town.availableForHire.push({
-          creatureId: building.creatureGrowth.creatureId,
-          count: building.creatureGrowth.amount
+          creatureId,
+          count: amount
         });
       }
     }
@@ -739,7 +1174,8 @@ export class TownScene extends Phaser.Scene {
   }
 
   private meetsRequirements(building: Building): boolean {
-    return building.requirements.every(req => this.town.builtBuildings.includes(req));
+    const reqs = building.requires || building.requirements || [];
+    return reqs.every((req: string) => this.town.builtBuildings.includes(req));
   }
 
   private createMiniButton(x: number, y: number, text: string, color: number, onClick: () => void): Phaser.GameObjects.Container {
@@ -797,10 +1233,12 @@ export class TownScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', () => this.returnToWorld());
     this.input.keyboard?.on('keydown-ONE', () => this.showTab('buildings'));
     this.input.keyboard?.on('keydown-TWO', () => this.showTab('hire'));
-    this.input.keyboard?.on('keydown-THREE', () => this.showTab('garrison'));
-    this.input.keyboard?.on('keydown-FOUR', () => this.showTab('market'));
-    this.input.keyboard?.on('keydown-FIVE', () => this.showTab('blacksmith'));
-    this.input.keyboard?.on('keydown-SIX', () => this.showTab('tavern'));
+    this.input.keyboard?.on('keydown-THREE', () => this.showTab('upgrade'));
+    this.input.keyboard?.on('keydown-FOUR', () => this.showTab('garrison'));
+    this.input.keyboard?.on('keydown-FIVE', () => this.showTab('market'));
+    this.input.keyboard?.on('keydown-SIX', () => this.showTab('mageguild'));
+    this.input.keyboard?.on('keydown-SEVEN', () => this.showTab('blacksmith'));
+    this.input.keyboard?.on('keydown-EIGHT', () => this.showTab('tavern'));
   }
 
   private returnToWorld(): void {
@@ -830,37 +1268,32 @@ export class TownScene extends Phaser.Scene {
     );
     
     // Приводим к типу Building (JSON может использовать `requires` вместо `requirements`)
-    return factionBuildings.map(b => ({
-      ...b,
-      requirements: b.requires || b.requirements || [],
-      creatureGrowth: b.creature ? {
-        creatureId: b.creature,
-        amount: this.getCreatureGrowth(b.creature, b.tier || 1)
-      } : undefined
-    }));
-  }
-  
-  private getCreatureGrowth(creatureId: string, tier: number): number {
-    const growthMap: Record<string, number> = {
-      pikeman: 14, archer: 9, griffin: 7, cavalier: 5, priest: 4, cavalier2: 3, angel: 2,
-      skeleton: 14, zombie: 9, wight: 7, vampire: 5, lich: 4, blackKnight: 3, boneDragon: 2,
-      wolf: 12, elf: 8, centaur: 6, unicorn: 4, dendroid: 3, druid: 2, phoenix: 1,
-      goblin: 16, medusa: 8, orc: 6, minotaur: 4, ogre: 3, roc: 2, cyclop: 1,
-      gremlin: 16, golem: 8, mage: 6, genie: 4, naga: 3, giant: 2,
-      gnoll: 14, lizardman: 9, troll: 6, wyvern: 4, behemoth: 2
-    };
-    return growthMap[creatureId] || Math.max(2, 14 - (tier - 1) * 2);
+    // Для creatureGrowth используем ЦЕНТРАЛЬНЫЙ источник BASE_WEEKLY_GROWTH
+    return factionBuildings.map(b => {
+      const creatureId = b.creature;
+      return {
+        ...b,
+        requires: b.requires || b.requirements || [],
+        faction: b.faction || 'common',
+        category: b.category || 'infrastructure',
+        creatureGrowth: creatureId ? {
+          creatureId,
+          // Используем EconomySystem вместо хардкода!
+          amount: BASE_WEEKLY_GROWTH[creatureId] || Math.max(2, 14 - ((b.tier || 1) - 1) * 2)
+        } : undefined
+      };
+    });
   }
   
   private getFallbackBuildings(): Building[] {
     return [
-      { id: 'citadel', name: 'Цитадель', description: 'Оборона', cost: { gold: 2000, ore: 10 }, requirements: [], provides: [] },
-      { id: 'barracks', name: 'Казарма', description: 'Ополченцы', cost: { gold: 500 }, requirements: [], provides: ['pikeman'], creatureGrowth: { creatureId: 'pikeman', amount: 14 } },
-      { id: 'archeryRange', name: 'Стрельбище', description: 'Лучники', cost: { gold: 1000, wood: 5 }, requirements: [], provides: ['archer'], creatureGrowth: { creatureId: 'archer', amount: 9 } },
-      { id: 'tavern', name: 'Таверна', description: 'Найм героев', cost: { gold: 500, wood: 5 }, requirements: [], provides: [] },
-      { id: 'marketplace', name: 'Рынок', description: 'Обмен ресурсов', cost: { gold: 500, wood: 5 }, requirements: [], provides: [] },
-      { id: 'blacksmith', name: 'Кузница', description: 'Артефакты', cost: { gold: 1000, ore: 5 }, requirements: [], provides: [] },
-      { id: 'mageGuild1', name: 'Гильдия магов', description: 'Заклинания', cost: { gold: 1000, wood: 5 }, requirements: [], provides: [] }
+      { id: 'citadel', name: 'Цитадель', description: 'Оборона', cost: { gold: 2000, ore: 10 }, requires: [], faction: 'common', category: 'defense' },
+      { id: 'barracks', name: 'Казарма', description: 'Ополченцы', cost: { gold: 500 }, requires: [], faction: 'common', category: 'infrastructure', creature: 'pikeman', creatureGrowth: { creatureId: 'pikeman', amount: 14 } },
+      { id: 'archeryRange', name: 'Стрельбище', description: 'Лучники', cost: { gold: 1000, wood: 5 }, requires: [], faction: 'common', category: 'infrastructure', creature: 'archer', creatureGrowth: { creatureId: 'archer', amount: 9 } },
+      { id: 'tavern', name: 'Таверна', description: 'Найм героев', cost: { gold: 500, wood: 5 }, requires: [], faction: 'common', category: 'infrastructure' },
+      { id: 'marketplace', name: 'Рынок', description: 'Обмен ресурсов', cost: { gold: 500, wood: 5 }, requires: [], faction: 'common', category: 'economy' },
+      { id: 'blacksmith', name: 'Кузница', description: 'Артефакты', cost: { gold: 1000, ore: 5 }, requires: [], faction: 'common', category: 'infrastructure' },
+      { id: 'mageGuild1', name: 'Гильдия магов', description: 'Заклинания', cost: { gold: 1000, wood: 5 }, requires: [], faction: 'common', category: 'magic' }
     ];
   }
 
@@ -1114,7 +1547,15 @@ export class TownScene extends Phaser.Scene {
       army: tavernHero.army,
       equipment: tavernHero.equipment || {},
       spells: tavernHero.spells || [],
-      specialization: tavernHero.specialization
+      specialization: tavernHero.specialization,
+      x: this.town.x,
+      y: this.town.y,
+      movementPoints: 1500,
+      maxMovementPoints: 1500,
+      morale: 0,
+      luck: 0,
+      owner: 'player',
+      mapLevel: 'surface'
     };
 
     // Добавляем героя в WorldScene

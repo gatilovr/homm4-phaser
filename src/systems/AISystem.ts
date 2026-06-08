@@ -276,13 +276,12 @@ export class AISystem {
       faction: town.faction || 'necropolis',
       level: 1,
       experience: 0,
+      owner: 'enemy',
       stats: {
         attack: 2,
         defense: 2,
         spellPower: isNecro ? 3 : 1,
-        knowledge: isNecro ? 3 : 1,
-        morale: 0,
-        luck: 0
+        knowledge: isNecro ? 3 : 1
       },
       skills: [],
       mana: 20,
@@ -300,7 +299,11 @@ export class AISystem {
       spells: [],
       x: town.x,
       y: town.y,
-      movementPoints: 1500
+      movementPoints: 1500,
+      maxMovementPoints: 1500,
+      morale: 0,
+      luck: 0,
+      mapLevel: 'surface'
     };
   }
 

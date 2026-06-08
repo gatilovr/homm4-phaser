@@ -1,0 +1,240 @@
+{
+  "skills": [
+    {
+      "id": "offense",
+      "name": "Наступление",
+      "nameEn": "Offense",
+      "category": "combat",
+      "icon": "⚔️",
+      "description": "Увеличивает урон существ ближнего боя",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "melee_damage_bonus", "value": 10, "description": "+10% урон ближнего боя" },
+        { "level": 2, "type": "melee_damage_bonus", "value": 20, "description": "+20% урон ближнего боя" },
+        { "level": 3, "type": "melee_damage_bonus", "value": 30, "description": "+30% урон ближнего боя" }
+      ]
+    },
+    {
+      "id": "defense_skill",
+      "name": "Оборона",
+      "nameEn": "Defense",
+      "category": "combat",
+      "icon": "🛡️",
+      "description": "Уменьшает получаемый урон существами",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "damage_reduction", "value": 10, "description": "-10% получаемый урон" },
+        { "level": 2, "type": "damage_reduction", "value": 20, "description": "-20% получаемый урон" },
+        { "level": 3, "type": "damage_reduction", "value": 30, "description": "-30% получаемый урон" }
+      ]
+    },
+    {
+      "id": "archery",
+      "name": "Стрельба",
+      "nameEn": "Archery",
+      "category": "combat",
+      "icon": "🏹",
+      "description": "Увеличивает урон стрелков",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "ranged_damage_bonus", "value": 10, "description": "+10% урон стрелков" },
+        { "level": 2, "type": "ranged_damage_bonus", "value": 25, "description": "+25% урон стрелков" },
+        { "level": 3, "type": "ranged_damage_bonus", "value": 50, "description": "+50% урон стрелков" }
+      ]
+    },
+    {
+      "id": "leadership",
+      "name": "Лидерство",
+      "nameEn": "Leadership",
+      "category": "combat",
+      "icon": "👑",
+      "description": "Увеличивает мораль союзников",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "morale_bonus", "value": 1, "description": "+1 мораль" },
+        { "level": 2, "type": "morale_bonus", "value": 2, "description": "+2 мораль" },
+        { "level": 3, "type": "morale_bonus", "value": 3, "description": "+3 мораль" }
+      ]
+    },
+    {
+      "id": "luck",
+      "name": "Удача",
+      "nameEn": "Luck",
+      "category": "combat",
+      "icon": "🍀",
+      "description": "Увеличивает удачу героев",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "luck_bonus", "value": 1, "description": "+1 удача" },
+        { "level": 2, "type": "luck_bonus", "value": 2, "description": "+2 удача" },
+        { "level": 3, "type": "luck_bonus", "value": 3, "description": "+3 удача" }
+      ]
+    },
+    {
+      "id": "wisdom",
+      "name": "Мудрость",
+      "nameEn": "Wisdom",
+      "category": "magic",
+      "icon": "📖",
+      "description": "Позволяет изучать заклинания высокого уровня",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "spell_level_access", "value": 3, "description": "Доступ к заклинаниям 3 уровня" },
+        { "level": 2, "type": "spell_level_access", "value": 4, "description": "Доступ к заклинаниям 4 уровня" },
+        { "level": 3, "type": "spell_level_access", "value": 5, "description": "Доступ к заклинаниям 5 уровня" }
+      ]
+    },
+    {
+      "id": "intelligence",
+      "name": "Интеллект",
+      "nameEn": "Intelligence",
+      "category": "magic",
+      "icon": "🧠",
+      "description": "Увеличивает максимальный запас маны",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "mana_bonus_percent", "value": 25, "description": "+25% максимальной маны" },
+        { "level": 2, "type": "mana_bonus_percent", "value": 50, "description": "+50% максимальной маны" },
+        { "level": 3, "type": "mana_bonus_percent", "value": 100, "description": "+100% максимальной маны" }
+      ]
+    },
+    {
+      "id": "sorcery",
+      "name": "Колдовство",
+      "nameEn": "Sorcery",
+      "category": "magic",
+      "icon": "✨",
+      "description": "Увеличивает урон заклинаний",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "spell_damage_bonus", "value": 10, "description": "+10% урон заклинаний" },
+        { "level": 2, "type": "spell_damage_bonus", "value": 20, "description": "+20% урон заклинаний" },
+        { "level": 3, "type": "spell_damage_bonus", "value": 30, "description": "+30% урон заклинаний" }
+      ]
+    },
+    {
+      "id": "mysticism",
+      "name": "Мистицизм",
+      "nameEn": "Mysticism",
+      "category": "magic",
+      "icon": "🔮",
+      "description": "Восстанавливает ману каждый ход",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "mana_regen_per_turn", "value": 2, "description": "+2 маны за ход в бою" },
+        { "level": 2, "type": "mana_regen_per_turn", "value": 3, "description": "+3 маны за ход в бою" },
+        { "level": 3, "type": "mana_regen_per_turn", "value": 4, "description": "+4 маны за ход в бою" }
+      ]
+    },
+    {
+      "id": "magic_school",
+      "name": "Школа магии",
+      "nameEn": "Magic School",
+      "category": "magic",
+      "icon": "🎓",
+      "description": "Улучшает эффективность заклинаний",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "spell_effectiveness", "value": 1, "description": "Базовый уровень школы" },
+        { "level": 2, "type": "spell_effectiveness", "value": 2, "description": "Продвинутый уровень школы" },
+        { "level": 3, "type": "spell_effectiveness", "value": 3, "description": "Экспертный уровень школы" }
+      ]
+    },
+    {
+      "id": "logistics",
+      "name": "Логистика",
+      "nameEn": "Logistics",
+      "category": "adventure",
+      "icon": "🏃",
+      "description": "Увеличивает очки движения героя",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "movement_bonus_percent", "value": 10, "description": "+10% очков движения" },
+        { "level": 2, "type": "movement_bonus_percent", "value": 20, "description": "+20% очков движения" },
+        { "level": 3, "type": "movement_bonus_percent", "value": 30, "description": "+30% очков движения" }
+      ]
+    },
+    {
+      "id": "pathfinding",
+      "name": "Следопыт",
+      "nameEn": "Pathfinding",
+      "category": "adventure",
+      "icon": "🗺️",
+      "description": "Уменьшает штраф за сложную местность",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "terrain_penalty_reduction", "value": 25, "description": "-25% штраф за местность" },
+        { "level": 2, "type": "terrain_penalty_reduction", "value": 50, "description": "-50% штраф за местность" },
+        { "level": 3, "type": "terrain_penalty_reduction", "value": 75, "description": "-75% штраф за местность" }
+      ]
+    },
+    {
+      "id": "scouting",
+      "name": "Разведка",
+      "nameEn": "Scouting",
+      "category": "adventure",
+      "icon": "👁️",
+      "description": "Увеличивает радиус обзора героя",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "vision_radius_bonus", "value": 1, "description": "+1 к радиусу обзора" },
+        { "level": 2, "type": "vision_radius_bonus", "value": 2, "description": "+2 к радиусу обзора" },
+        { "level": 3, "type": "vision_radius_bonus", "value": 3, "description": "+3 к радиусу обзора" }
+      ]
+    },
+    {
+      "id": "navigation",
+      "name": "Навигация",
+      "nameEn": "Navigation",
+      "category": "adventure",
+      "icon": "⚓",
+      "description": "Увеличивает скорость движения по воде",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "water_movement_bonus", "value": 25, "description": "+25% скорость по воде" },
+        { "level": 2, "type": "water_movement_bonus", "value": 50, "description": "+50% скорость по воде" },
+        { "level": 3, "type": "water_movement_bonus", "value": 100, "description": "+100% скорость по воде" }
+      ]
+    },
+    {
+      "id": "estates",
+      "name": "Поместье",
+      "nameEn": "Estates",
+      "category": "economy",
+      "icon": "🏠",
+      "description": "Герой приносит золото каждый день",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "daily_gold_income", "value": 100, "description": "+100 золота в день" },
+        { "level": 2, "type": "daily_gold_income", "value": 250, "description": "+250 золота в день" },
+        { "level": 3, "type": "daily_gold_income", "value": 500, "description": "+500 золота в день" }
+      ]
+    },
+    {
+      "id": "diplomacy",
+      "name": "Дипломатия",
+      "nameEn": "Diplomacy",
+      "category": "economy",
+      "icon": "🤝",
+      "description": "Шанс присоединить нейтральных существ",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "join_chance_percent", "value": 10, "description": "10% шанс присоединить нейтралов" },
+        { "level": 2, "type": "join_chance_percent", "value": 20, "description": "20% шанс присоединить нейтралов" },
+        { "level": 3, "type": "join_chance_percent", "value": 30, "description": "30% шанс присоединить нейтралов" }
+      ]
+    }
+  ],
+  "categoryColors": {
+    "combat": "#ff4444",
+    "magic": "#4488ff",
+    "adventure": "#44aa44",
+    "economy": "#ffaa00"
+  },
+  "categoryNames": {
+    "combat": "Боевые",
+    "magic": "Магические",
+    "adventure": "Приключенческие",
+    "economy": "Экономические"
+  }
+}

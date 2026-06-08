@@ -100,6 +100,67 @@ export class BootScene extends Phaser.Scene {
       g.fillCircle(TS * 0.5, TS * 0.7, 10);
     });
 
+    // === ПОДЗЕМНЫЕ ТАЙЛЫ (Underground) ===
+    
+    // Пол пещеры (тёмно-серый с камешками)
+    this.makeTexture('tile_cave_floor', TS, TS, (g) => {
+      g.fillStyle(0x3a3a3a, 1);
+      g.fillRect(0, 0, TS, TS);
+      g.fillStyle(0x2a2a2a, 0.5);
+      for (let i = 0; i < 6; i++) {
+        g.fillCircle(Phaser.Math.Between(4, TS - 4), Phaser.Math.Between(4, TS - 4), 2);
+      }
+      g.lineStyle(1, 0x1a1a1a, 0.3);
+      g.strokeRect(0, 0, TS, TS);
+    });
+
+    // Скала в пещере (непроходимая, тёмная)
+    this.makeTexture('tile_cave_rock', TS, TS, (g) => {
+      g.fillStyle(0x1a1a1a, 1);
+      g.fillRect(0, 0, TS, TS);
+      g.fillStyle(0x0a0a0a, 0.8);
+      g.fillTriangle(TS * 0.2, TS * 0.8, TS * 0.5, TS * 0.15, TS * 0.8, TS * 0.8);
+      g.fillStyle(0x2a2a2a, 0.5);
+      g.fillCircle(TS * 0.3, TS * 0.4, 6);
+      g.fillCircle(TS * 0.7, TS * 0.6, 8);
+    });
+
+    // Подземное озеро (тёмно-синее, светящееся)
+    this.makeTexture('tile_underground_lake', TS, TS, (g) => {
+      g.fillStyle(0x0a2a4a, 1);
+      g.fillRect(0, 0, TS, TS);
+      g.fillStyle(0x1a4a7a, 0.6);
+      g.fillCircle(TS * 0.5, TS * 0.5, TS * 0.4);
+      g.lineStyle(2, 0x3a8acb, 0.4);
+      for (let i = 0; i < 3; i++) {
+        const y = 12 + i * 14;
+        g.lineBetween(8, y, TS - 8, y);
+      }
+      g.fillStyle(0x6ab8ff, 0.3);
+      g.fillCircle(TS * 0.3, TS * 0.4, 4);
+      g.fillCircle(TS * 0.7, TS * 0.6, 3);
+    });
+
+    // Грибная роща (фиолетово-зелёные грибы)
+    this.makeTexture('tile_mushroom_grove', TS, TS, (g) => {
+      g.fillStyle(0x2a3a2a, 1);
+      g.fillRect(0, 0, TS, TS);
+      // Грибы
+      const drawMushroom = (x: number, y: number, color: number) => {
+        g.fillStyle(0xddddcc, 1);
+        g.fillRect(x - 2, y, 4, 10);
+        g.fillStyle(color, 1);
+        g.fillCircle(x, y, 8);
+        g.fillStyle(0xffffff, 0.6);
+        g.fillCircle(x - 2, y - 2, 2);
+        g.fillCircle(x + 3, y + 1, 1);
+      };
+      drawMushroom(TS * 0.3, TS * 0.4, 0x9b59b6);
+      drawMushroom(TS * 0.7, TS * 0.3, 0xe74c3c);
+      drawMushroom(TS * 0.5, TS * 0.7, 0xf39c12);
+      drawMushroom(TS * 0.2, TS * 0.8, 0x3498db);
+    });
+
     // === Объекты карты (64×64) ===
     const S = 64;
 
@@ -201,6 +262,317 @@ export class BootScene extends Phaser.Scene {
       g.fillCircle(32, 32, 6);
     });
 
+    // === НОВЫЕ ОБЪЕКТЫ КАРТЫ ===
+    
+    // Школа магии (башня с свечением)
+    this.makeTexture('school', S, S, (g) => {
+      g.fillStyle(0x4a4a8a, 1);
+      g.fillRect(20, 20, 24, 40);
+      g.fillStyle(0x6a6aaa, 1);
+      g.fillTriangle(32, 8, 16, 24, 48, 24);
+      g.fillStyle(0xffd700, 0.8);
+      g.fillCircle(32, 32, 6);
+    });
+
+    // Святилище (светящийся алтарь)
+    this.makeTexture('shrine', S, S, (g) => {
+      g.fillStyle(0x8b7355, 1);
+      g.fillRect(16, 40, 32, 16);
+      g.fillStyle(0x5a4a30, 1);
+      g.fillRect(20, 24, 24, 20);
+      g.fillStyle(0xffffff, 0.9);
+      g.fillCircle(32, 32, 8);
+    });
+
+    // Алтарь (каменный круг)
+    this.makeTexture('altar', S, S, (g) => {
+      g.fillStyle(0x6b6b6b, 1);
+      g.fillCircle(32, 32, 20);
+      g.fillStyle(0x8b8b8b, 0.8);
+      g.fillCircle(32, 32, 14);
+      g.fillStyle(0xffd700, 1);
+      g.fillCircle(32, 32, 6);
+    });
+
+    // Обелиск (высокая колонна)
+    this.makeTexture('obelisk', S, S, (g) => {
+      g.fillStyle(0x5a5a5a, 1);
+      g.fillRect(24, 12, 16, 48);
+      g.fillStyle(0x8b8b8b, 0.8);
+      g.fillTriangle(32, 4, 20, 16, 44, 16);
+      g.fillStyle(0x9b59b6, 0.6);
+      g.fillCircle(32, 32, 4);
+    });
+
+    // Таверна (дом с вывеской)
+    this.makeTexture('tavern', S, S, (g) => {
+      g.fillStyle(0x8b4513, 1);
+      g.fillRect(16, 28, 32, 28);
+      g.fillStyle(0xd4af37, 1);
+      g.fillTriangle(32, 12, 8, 32, 56, 32);
+      g.fillStyle(0x5a3a0e, 1);
+      g.fillRect(28, 40, 8, 16);
+      g.fillStyle(0xffd700, 1);
+      g.fillRect(40, 32, 6, 6);
+    });
+
+    // Хижина ведьмы (тёмный дом)
+    this.makeTexture('witch_hut', S, S, (g) => {
+      g.fillStyle(0x2a2a2a, 1);
+      g.fillRect(16, 28, 32, 28);
+      g.fillStyle(0x4a1a4a, 1);
+      g.fillTriangle(32, 12, 8, 32, 56, 32);
+      g.fillStyle(0x9b59b6, 0.8);
+      g.fillCircle(32, 32, 5);
+    });
+
+    // Сундук с сокровищами
+    this.makeTexture('treasure_chest', S, S, (g) => {
+      g.fillStyle(0x8b4513, 1);
+      g.fillRect(16, 24, 32, 28);
+      g.fillStyle(0x5a3a0e, 1);
+      g.fillRect(16, 24, 32, 8);
+      g.fillStyle(0xffd700, 1);
+      g.fillRect(28, 32, 8, 8);
+    });
+
+    // Лагерь беженцев (палатки)
+    this.makeTexture('refugee_camp', S, S, (g) => {
+      g.fillStyle(0xc2b280, 1);
+      g.fillTriangle(32, 16, 12, 48, 52, 48);
+      g.fillStyle(0x8b7355, 0.8);
+      g.fillTriangle(24, 24, 8, 48, 40, 48);
+      g.fillStyle(0x5a4a30, 1);
+      g.fillRect(28, 40, 8, 8);
+    });
+
+    // Гарнизон (крепость)
+    this.makeTexture('garrison', S, S, (g) => {
+      g.fillStyle(0x6b6b6b, 1);
+      g.fillRect(12, 20, 40, 36);
+      g.fillStyle(0x8b8b8b, 1);
+      g.fillRect(16, 12, 8, 12);
+      g.fillRect(40, 12, 8, 12);
+      g.fillStyle(0x5a5a5a, 1);
+      g.fillRect(26, 36, 12, 20);
+    });
+
+    // Библиотека (здание с книгами)
+    this.makeTexture('library', S, S, (g) => {
+      g.fillStyle(0x8b4513, 1);
+      g.fillRect(16, 24, 32, 32);
+      g.fillStyle(0xd4af37, 1);
+      g.fillTriangle(32, 8, 12, 28, 52, 28);
+      g.fillStyle(0x5a3a0e, 1);
+      g.fillRect(20, 32, 8, 8);
+      g.fillRect(36, 32, 8, 8);
+      g.fillRect(28, 44, 8, 12);
+    });
+
+    // Волшебный колодец (колодец с свечением)
+    this.makeTexture('magic_well', S, S, (g) => {
+      g.fillStyle(0x6b6b6b, 1);
+      g.fillCircle(32, 32, 20);
+      g.fillStyle(0x3498db, 0.8);
+      g.fillCircle(32, 32, 14);
+      g.fillStyle(0xffffff, 0.6);
+      g.fillCircle(32, 32, 6);
+    });
+
+    // Оазис (вода с пальмами)
+    this.makeTexture('oasis', S, S, (g) => {
+      g.fillStyle(0x2e5a7c, 1);
+      g.fillCircle(32, 32, 18);
+      g.fillStyle(0x8b4513, 1);
+      g.fillRect(30, 8, 4, 20);
+      g.fillStyle(0x4a7c2e, 1);
+      g.fillCircle(32, 12, 8);
+    });
+
+    // Ветряная мельница (мельница с лопастями)
+    this.makeTexture('windmill', S, S, (g) => {
+      g.fillStyle(0x8b4513, 1);
+      g.fillRect(24, 28, 16, 28);
+      g.fillStyle(0xd4af37, 1);
+      g.fillTriangle(32, 12, 20, 32, 44, 32);
+      g.fillStyle(0x5a3a0e, 1);
+      g.fillRect(30, 40, 4, 16);
+    });
+
+    // Водяное колесо (колесо в воде)
+    this.makeTexture('water_wheel', S, S, (g) => {
+      g.fillStyle(0x2e5a7c, 1);
+      g.fillCircle(32, 32, 20);
+      g.fillStyle(0x8b4513, 1);
+      g.fillCircle(32, 32, 16);
+      g.fillStyle(0x5a3a0e, 1);
+      g.fillRect(30, 16, 4, 32);
+      g.fillRect(16, 30, 32, 4);
+    });
+
+    // === ПОДЗЕМНЫЙ ПОРТАЛ (Subterranean Gate) — канон HoMM4 ===
+    // Связывает поверхность с подземельем
+    this.makeTexture('subterranean_gate', S, S, (g) => {
+      // Каменный круг
+      g.fillStyle(0x4a4a4a, 1);
+      g.fillCircle(32, 32, 28);
+      g.fillStyle(0x2a2a2a, 1);
+      g.fillCircle(32, 32, 22);
+      // Светящийся вихрь
+      g.fillStyle(0x9b59b6, 0.9);
+      g.fillCircle(32, 32, 18);
+      g.fillStyle(0x6a3a9b, 0.8);
+      g.fillCircle(32, 32, 13);
+      g.fillStyle(0xe74c3c, 0.6);
+      g.fillCircle(32, 32, 8);
+      g.fillStyle(0xffffff, 0.8);
+      g.fillCircle(32, 32, 3);
+      // Колонны по бокам
+      g.fillStyle(0x5a5a5a, 1);
+      g.fillRect(4, 20, 6, 24);
+      g.fillRect(54, 20, 6, 24);
+      g.fillStyle(0x8b8b8b, 0.7);
+      g.fillRect(4, 18, 6, 4);
+      g.fillRect(54, 18, 6, 4);
+    });
+
+    // === КОРАБЛИ (Naval System — канон HoMM4) ===
+    
+    // Корабль (boat) — деревянная лодка с парусом
+    this.makeTexture('boat', S, S, (g) => {
+      // Корпус лодки (коричневый)
+      g.fillStyle(0x8b4513, 1);
+      g.fillRect(8, 36, 48, 16);
+      g.fillStyle(0x654321, 1);
+      g.fillTriangle(8, 36, 16, 28, 56, 28);
+      g.fillTriangle(56, 36, 48, 28, 8, 28);
+      // Мачта
+      g.fillStyle(0x5a3a0e, 1);
+      g.fillRect(30, 8, 4, 24);
+      // Парус (белый)
+      g.fillStyle(0xffffff, 0.9);
+      g.fillTriangle(32, 10, 32, 28, 52, 20);
+      g.fillStyle(0xeeeeee, 0.7);
+      g.fillTriangle(32, 10, 32, 28, 12, 20);
+      // Флаг
+      g.fillStyle(0xe74c3c, 1);
+      g.fillRect(30, 6, 8, 4);
+    });
+
+    // Верфь (shipyard) — док с кораблями
+    this.makeTexture('shipyard', S, S, (g) => {
+      // Основание дока (серое)
+      g.fillStyle(0x6b6b6b, 1);
+      g.fillRect(8, 40, 48, 16);
+      // Столбы
+      g.fillStyle(0x8b4513, 1);
+      g.fillRect(12, 20, 6, 24);
+      g.fillRect(46, 20, 6, 24);
+      // Крыша
+      g.fillStyle(0xd4af37, 1);
+      g.fillTriangle(32, 8, 4, 24, 60, 24);
+      // Маленькая лодка внутри
+      g.fillStyle(0x5a3a0e, 1);
+      g.fillRect(20, 44, 24, 8);
+      g.fillStyle(0xffffff, 0.8);
+      g.fillTriangle(32, 36, 32, 44, 40, 40);
+    });
+
+    // Водоворот (whirlpool) — парный телепорт на воде
+    this.makeTexture('whirlpool', S, S, (g) => {
+      // Тёмно-синяя вода
+      g.fillStyle(0x0a2a4a, 1);
+      g.fillCircle(32, 32, 28);
+      // Спираль водоворота
+      g.fillStyle(0x1a4a7a, 0.9);
+      g.fillCircle(32, 32, 22);
+      g.fillStyle(0x2e5a8a, 0.8);
+      g.fillCircle(32, 32, 16);
+      g.fillStyle(0x3a8acb, 0.7);
+      g.fillCircle(32, 32, 10);
+      g.fillStyle(0x000000, 0.9);
+      g.fillCircle(32, 32, 4);
+      // Брызги
+      g.fillStyle(0xffffff, 0.6);
+      g.fillCircle(20, 20, 2);
+      g.fillCircle(44, 44, 2);
+      g.fillCircle(44, 20, 2);
+      g.fillCircle(20, 44, 2);
+    });
+
+    // Морской сундук (sea_chest) — плавающее сокровище
+    this.makeTexture('sea_chest', S, S, (g) => {
+      // Вода вокруг
+      g.fillStyle(0x2e5a7c, 0.6);
+      g.fillCircle(32, 32, 24);
+      // Сундук
+      g.fillStyle(0x8b4513, 1);
+      g.fillRect(16, 24, 32, 28);
+      g.fillStyle(0x5a3a0e, 1);
+      g.fillRect(16, 24, 32, 8);
+      g.fillStyle(0xffd700, 1);
+      g.fillRect(28, 32, 8, 8);
+    });
+
+    // Плавающий мусор (flotsam) — случайные ресурсы
+    this.makeTexture('flotsam', S, S, (g) => {
+      g.fillStyle(0x2e5a7c, 0.6);
+      g.fillCircle(32, 32, 24);
+      g.fillStyle(0x8b7355, 1);
+      g.fillRect(20, 28, 24, 16);
+      g.fillStyle(0x5a4a30, 1);
+      g.fillRect(24, 24, 16, 8);
+    });
+
+    // Бутылка с посланием (bottle)
+    this.makeTexture('bottle', S, S, (g) => {
+      g.fillStyle(0x2e5a7c, 0.6);
+      g.fillCircle(32, 32, 24);
+      g.fillStyle(0x5dade2, 0.8);
+      g.fillRect(26, 20, 12, 24);
+      g.fillStyle(0x8b4513, 1);
+      g.fillRect(28, 16, 8, 6);
+      g.fillStyle(0xffffff, 0.7);
+      g.fillRect(28, 28, 8, 12);
+    });
+
+    // Затонувший корабль (shipwreck) — с призраками
+    this.makeTexture('shipwreck', S, S, (g) => {
+      g.fillStyle(0x0a2a4a, 0.8);
+      g.fillCircle(32, 32, 28);
+      // Сломанный корпус
+      g.fillStyle(0x3a2a1a, 1);
+      g.fillRect(12, 36, 40, 12);
+      g.fillTriangle(12, 36, 20, 28, 52, 28);
+      // Сломанная мачта
+      g.fillStyle(0x2a1a0a, 1);
+      g.fillRect(28, 16, 4, 16);
+      // Призрак
+      g.fillStyle(0xffffff, 0.5);
+      g.fillCircle(40, 24, 6);
+      g.fillRect(36, 28, 8, 10);
+    });
+
+    // Морское чудовище (sea_monster)
+    this.makeTexture('sea_monster', S, S, (g) => {
+      g.fillStyle(0x0a2a4a, 0.8);
+      g.fillCircle(32, 32, 28);
+      // Тело чудовища (тёмно-зелёное)
+      g.fillStyle(0x1a5a3a, 1);
+      g.fillCircle(32, 32, 18);
+      // Щупальца
+      g.fillStyle(0x2a7a5a, 1);
+      g.fillRect(16, 40, 8, 12);
+      g.fillRect(40, 40, 8, 12);
+      // Глаза
+      g.fillStyle(0xffd700, 1);
+      g.fillCircle(26, 28, 4);
+      g.fillCircle(38, 28, 4);
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(26, 28, 2);
+      g.fillCircle(38, 28, 2);
+    });
+
     // === Тайлы боя ===
     const BTS = CONFIG.BATTLE_TILE_SIZE;
 
@@ -292,7 +664,7 @@ export class BootScene extends Phaser.Scene {
    */
   private makeTexture(key: string, width: number, height: number, drawFn: (g: Phaser.GameObjects.Graphics) => void): void {
     try {
-      const g = this.make.graphics({ add: false });
+      const g = this.make.graphics({} as any); // Phaser expects { add?: boolean } but types may differ
       drawFn(g);
       g.generateTexture(key, width, height);
       g.destroy();

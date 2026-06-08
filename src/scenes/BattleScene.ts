@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
-import { BattleUnit, BattleState, Hero, Spell, BattleResult, ArmyLoss, NecromancyResult } from '../types';
+import { BattleUnit, BattleState, Hero, Spell, BattleResult, ArmyLoss, NecromancyResult, CreatureStats } from '../types';
 import { GameRandom } from '../utils/Random';
 import { SpellSystem } from '../systems/SpellSystem';
 import { BattleEffects } from '../systems/BattleEffects';
@@ -10,6 +10,8 @@ import { CreatureAbilitiesSystem } from '../systems/CreatureAbilities';
 import { NecromancySystem } from '../systems/Necromancy';
 import { SiegeSystem } from '../systems/SiegeSystem';
 import { BattleQueue } from '../systems/BattleQueue';
+import { HeroManager } from '../systems/HeroManager';
+import { ContentManager } from '../systems/ContentManager';
 import { 
   getCreatureType, isRanged, isFlying, isCavalry, 
   hasAbility, getRetaliationCount 
@@ -48,6 +50,8 @@ export class BattleScene extends Phaser.Scene {
   private abilitiesSystem!: CreatureAbilitiesSystem;
   private queueLeft!: BattleQueue;
   private queueRight!: BattleQueue;
+  private heroManager!: HeroManager;
+  private contentManager!: ContentManager;
 
   // === СОСТОЯНИЕ БОЯ ===
   private battleState!: BattleState;
@@ -73,6 +77,11 @@ export class BattleScene extends Phaser.Scene {
   private spellPanel!: Phaser.GameObjects.Container;
   private spellButtons: Phaser.GameObjects.Text[] = [];
   private previewText!: Phaser.GameObjects.Text;
+
+  // === ОСАДА ===
+  private wallSprites: { graphics: Phaser.GameObjects.Graphics; segment: any }[] = [];
+  private wallHpBars: { graphics: Phaser.GameObjects.Graphics; segment: any; x: number; y: number }[] = [];
+  private towerSprites: { graphics: Phaser.GameObjects.Graphics; segment: any }[] = [];
 
   // === ДАННЫЕ ===
   private attackerHero!: Hero;
@@ -143,8 +152,23 @@ export class BattleScene extends Phaser.Scene {
     this.queueLeft = new BattleQueue(this, true);
     this.queueRight = new BattleQueue(this, false);
 
+    // Менеджер героев (навыки и специализации)
+    this.heroManager = HeroManager.getInstance();
+
+    // Менеджер контента (статы существ из JSON)
+    this.contentManager = ContentManager.getInstance();
+
+    // Обновляем максимальную ману с учётом Intelligence
+    if (this.attackerHero) {
+      this.attackerHero.maxMana = this.heroManager.calculateMaxMana(this.attackerHero);
+    }
+    if (this.defenderHero) {
+      this.defenderHero.maxMana = this.heroManager.calculateMaxMana(this.defenderHero);
+    }
+
     this.createBattlefield();
-    this.setupUnits();
+    this.setupUnits(); // Создаёт battleState с wallsState для siege
+    this.createSiegeVisuals(); // Обновляет визуал стен после setupUnits
     this.createUI();
     this.setupInput();
     this.startBattle();
@@ -211,33 +235,37 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
-    // Осадные стены
-    if (this.battleType === 'siege' && this.defenderTown) {
-      this.createSiegeElements();
-    }
+    // Осадные стены (только если siege и есть defenderTown)
+    // createSiegeElements теперь вызывается через createSiegeVisuals() после setupUnits
+    if (false) { /* отключено, используется createSiegeVisuals */ }
   }
 
-  private createSiegeElements(): void {
+  /**
+   * Создать визуальные элементы осады (стены, башни, ворота)
+   * Вызывается ПОСЛЕ setupUnits() чтобы battleState.wallsState был инициализирован
+   */
+  private createSiegeVisuals(): void {
+    if (this.battleType !== 'siege' || !this.battleState.wallsState) return;
+    
     const offsetX = this.getOffsetX();
     const offsetY = this.getOffsetY();
-
-    if (!this.battleState.wallsState) {
-      this.battleState.wallsState = SiegeSystem.createWallsState(this.defenderTown);
-    }
-
     const walls = this.battleState.wallsState;
+
+    // Стены и ворота (3 сегмента)
     const wallSegments = [walls.upperWall, walls.lowerWall, walls.mainGate];
+    this.wallSprites = [];
+    this.wallHpBars = [];
 
     for (const seg of wallSegments) {
       const g = this.add.graphics().setDepth(6);
-      g.fillStyle(0x8b4513, 1);
+      g.fillStyle(seg.type === 'gate' ? 0x8b4513 : 0x696969, 1);
       g.fillRect(
         offsetX + seg.x * CONFIG.BATTLE_TILE_SIZE,
         offsetY + seg.y * CONFIG.BATTLE_TILE_SIZE,
         CONFIG.BATTLE_TILE_SIZE,
         CONFIG.BATTLE_TILE_SIZE
       );
-      g.lineStyle(2, 0x5c2e0a, 1);
+      g.lineStyle(2, 0x2c2c2c, 1);
       g.strokeRect(
         offsetX + seg.x * CONFIG.BATTLE_TILE_SIZE,
         offsetY + seg.y * CONFIG.BATTLE_TILE_SIZE,
@@ -245,21 +273,37 @@ export class BattleScene extends Phaser.Scene {
         CONFIG.BATTLE_TILE_SIZE
       );
 
-      // Текст "Стена"
+      // Эмодзи для типа
+      const emoji = seg.type === 'gate' ? '🚪' : '🧱';
       this.add.text(
         offsetX + seg.x * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
         offsetY + seg.y * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE / 2,
-        '🧱',
+        emoji,
         { fontSize: '20px' }
       ).setOrigin(0.5).setDepth(7);
+
+      // HP бар
+      const hpBar = this.add.graphics().setDepth(8);
+      this.wallHpBars.push({ graphics: hpBar, segment: seg, x: seg.x, y: seg.y });
+      this.drawWallHpBar(hpBar, seg, seg.x, seg.y);
+      
+      this.wallSprites.push({ graphics: g, segment: seg });
     }
 
-    // Башни
+    // Башни (3 штуки)
+    this.towerSprites = [];
     const towers = [walls.upperTower, walls.lowerTower, walls.keepTower];
     for (const t of towers) {
       const g = this.add.graphics().setDepth(6);
       g.fillStyle(0x4a4a4a, 1);
       g.fillRect(
+        offsetX + t.x * CONFIG.BATTLE_TILE_SIZE,
+        offsetY + t.y * CONFIG.BATTLE_TILE_SIZE,
+        CONFIG.BATTLE_TILE_SIZE,
+        CONFIG.BATTLE_TILE_SIZE
+      );
+      g.lineStyle(2, 0xd4af37, 1);
+      g.strokeRect(
         offsetX + t.x * CONFIG.BATTLE_TILE_SIZE,
         offsetY + t.y * CONFIG.BATTLE_TILE_SIZE,
         CONFIG.BATTLE_TILE_SIZE,
@@ -272,9 +316,73 @@ export class BattleScene extends Phaser.Scene {
         '🗼',
         { fontSize: '20px' }
       ).setOrigin(0.5).setDepth(7);
+
+      // HP бар башни
+      const hpBar = this.add.graphics().setDepth(8);
+      this.wallHpBars.push({ graphics: hpBar, segment: t, x: t.x, y: t.y });
+      this.drawWallHpBar(hpBar, t, t.x, t.y);
+      
+      this.towerSprites.push({ graphics: g, segment: t });
     }
 
-    this.addLog('🏰 ОСАДА ГОРОДА! Стены защищают защитников.');
+    // Статус осады
+    const status = SiegeSystem.getSiegeStatus(walls);
+    this.addLog(`🏰 ОСАДА ГОРОДА!\n${status}`);
+  }
+
+  /**
+   * Нарисовать HP бар для стены/башни
+   */
+  private drawWallHpBar(graphics: Phaser.GameObjects.Graphics, segment: any, x: number, y: number): void {
+    const offsetX = this.getOffsetX();
+    const offsetY = this.getOffsetY();
+    const percent = SiegeSystem.getWallHpPercent(segment);
+    const color = SiegeSystem.getWallHpColor(percent);
+    
+    graphics.clear();
+    if (segment.isDestroyed) return;
+    
+    const barWidth = CONFIG.BATTLE_TILE_SIZE - 4;
+    const barHeight = 4;
+    const barX = offsetX + x * CONFIG.BATTLE_TILE_SIZE + 2;
+    const barY = offsetY + y * CONFIG.BATTLE_TILE_SIZE + CONFIG.BATTLE_TILE_SIZE + 2;
+    
+    // Фон
+    graphics.fillStyle(0x000000, 0.7);
+    graphics.fillRect(barX, barY, barWidth, barHeight);
+    
+    // HP
+    graphics.fillStyle(color, 1);
+    graphics.fillRect(barX, barY, Math.floor(barWidth * percent / 100), barHeight);
+  }
+
+  /**
+   * Обновить визуал стен при повреждении
+   */
+  private updateWallVisuals(): void {
+    if (!this.battleState.wallsState) return;
+    
+    for (const bar of this.wallHpBars || []) {
+      this.drawWallHpBar(bar.graphics, bar.segment, bar.x, bar.y);
+    }
+    
+    // Убираем спрайты разрушенных стен/башен
+    for (const wall of this.wallSprites || []) {
+      if (wall.segment.isDestroyed) {
+        wall.graphics.setAlpha(0.3); // Полупрозрачные после разрушения
+      }
+    }
+    for (const tower of this.towerSprites || []) {
+      if (tower.segment.isDestroyed) {
+        tower.graphics.setAlpha(0.3);
+      }
+    }
+  }
+
+  private createSiegeElements(): void {
+    // DEPRECATED: используйте createSiegeVisuals() после setupUnits()
+    // Этот метод оставлен для обратной совместимости
+    this.createSiegeVisuals();
   }
 
   private getOffsetX(): number {
@@ -321,13 +429,14 @@ export class BattleScene extends Phaser.Scene {
     }
 
     // Герой атакующего (как юнит)
+    const attackerHeroHp = this.getCreatureHealth('hero');
     attackerUnits.push({
       id: 'attacker_hero',
       creatureId: 'hero',
       count: 1,
       initialCount: 1,
-      currentHealth: 100,
-      maxHealth: 100,
+      currentHealth: attackerHeroHp,
+      maxHealth: attackerHeroHp,
       x: 1,
       y: 5,
       side: 'attacker',
@@ -370,13 +479,14 @@ export class BattleScene extends Phaser.Scene {
 
     // Герой защитника
     if (this.defenderHero) {
+      const defenderHeroHp = this.getCreatureHealth('hero');
       defenderUnits.push({
         id: 'defender_hero',
         creatureId: 'hero',
         count: 1,
         initialCount: 1,
-        currentHealth: 100,
-        maxHealth: 100,
+        currentHealth: defenderHeroHp,
+        maxHealth: defenderHeroHp,
         x: CONFIG.BATTLE_WIDTH - 2,
         y: 5,
         side: 'defender',
@@ -401,10 +511,10 @@ export class BattleScene extends Phaser.Scene {
       currentUnitIndex: 0,
       turn: 1,
       phase: 'action',
-      obstacles: [],
-      isSiege: this.battleType === 'siege',
       wallsState: wallsState,
-      battleType: this.battleType
+      attackerHero: this.attackerHero,
+      defenderHero: this.defenderHero,
+      currentTurn: 1
     };
 
     this.renderUnits();
@@ -419,139 +529,36 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ============================================================================
-  // СТАТЫ СУЩЕСТВ (единая база данных)
+  // СТАТЫ СУЩЕСТВ (централизованные через ContentManager + creatures.json)
   // ============================================================================
 
+  /**
+   * Получить нормализованные статы существа из ContentManager.
+   * Единая точка доступа — все статы берутся из creatures.json,
+   * что устраняет дублирование и хардкод.
+   */
+  private getCreatureStats(id: string): CreatureStats {
+    return this.contentManager.getCreatureStats(id);
+  }
+
   private getCreatureHealth(id: string): number {
-    const map: Record<string, number> = {
-      pikeman: 10, halberdier: 15, archer: 8, crossbowman: 10,
-      griffin: 25, royal_griffin: 35, swordsman: 30, champion: 45, cavalier: 50,
-      angel: 200, archangel: 250,
-      skeleton: 6, skeleton_warrior: 8, zombie: 20, plague_zombie: 25,
-      vampire: 30, vampire_lord: 40, lich: 30, power_lich: 40,
-      bone_dragon: 150, ghost_dragon: 200,
-      goblin: 5, hobgoblin: 8, wolf_rider: 10, wolf_raider: 15,
-      orc: 15, orc_chieftain: 20, ogre: 40, ogre_mage: 50,
-      roc: 40, thunderbird: 60, cyclop: 70, cyclop_king: 80,
-      behemoth: 160, ancient_behemoth: 300,
-      wolf: 10, dire_wolf: 15, elf: 9, grand_elf: 12,
-      unicorn: 50, silver_unicorn: 70, dwarf: 30, battle_dwarf: 40,
-      dendroid: 65, dendroid_soldier: 85, druid: 25, elder_druid: 35,
-      green_dragon: 180, gold_dragon: 250,
-      golem: 35, obsidian_golem: 50, mage: 25, archmage: 35,
-      genie: 40, master_genie: 55, naga: 75, naga_queen: 110,
-      titan: 150, storm_titan: 300,
-      hero: 100, wall: 200, tower: 150
-    };
-    return map[id] || 10;
+    return this.getCreatureStats(id).hp;
   }
 
   private getCreatureSpeed(id: string): number {
-    const map: Record<string, number> = {
-      pikeman: 4, halberdier: 5, archer: 4, crossbowman: 5,
-      griffin: 8, royal_griffin: 9, swordsman: 5, champion: 7, cavalier: 7,
-      angel: 12, archangel: 18,
-      skeleton: 4, skeleton_warrior: 5, zombie: 3, plague_zombie: 4,
-      vampire: 6, vampire_lord: 8, lich: 6, power_lich: 7,
-      bone_dragon: 9, ghost_dragon: 12,
-      goblin: 5, hobgoblin: 6, wolf_rider: 6, wolf_raider: 8,
-      orc: 4, orc_chieftain: 5, ogre: 3, ogre_mage: 4,
-      roc: 7, thunderbird: 9, cyclop: 5, cyclop_king: 6,
-      behemoth: 5, ancient_behemoth: 6,
-      wolf: 7, dire_wolf: 9, elf: 5, grand_elf: 6,
-      unicorn: 7, silver_unicorn: 9, dwarf: 3, battle_dwarf: 4,
-      dendroid: 3, dendroid_soldier: 4, druid: 5, elder_druid: 6,
-      green_dragon: 10, gold_dragon: 14,
-      golem: 3, obsidian_golem: 4, mage: 5, archmage: 6,
-      genie: 7, master_genie: 8, naga: 5, naga_queen: 7,
-      titan: 6, storm_titan: 8,
-      hero: 6, wall: 0, tower: 0
-    };
-    return map[id] || 4;
+    return this.getCreatureStats(id).speed;
   }
 
   private getCreatureAttack(id: string): number {
-    const map: Record<string, number> = {
-      pikeman: 4, halberdier: 6, archer: 6, crossbowman: 7,
-      griffin: 8, royal_griffin: 10, swordsman: 10, champion: 15, cavalier: 15,
-      angel: 20, archangel: 30,
-      skeleton: 5, skeleton_warrior: 7, zombie: 5, plague_zombie: 7,
-      vampire: 10, vampire_lord: 15, lich: 13, power_lich: 18,
-      bone_dragon: 17, ghost_dragon: 25,
-      goblin: 4, hobgoblin: 5, wolf_rider: 7, wolf_raider: 9,
-      orc: 8, orc_chieftain: 10, ogre: 13, ogre_mage: 17,
-      roc: 11, thunderbird: 15, cyclop: 15, cyclop_king: 19,
-      behemoth: 17, ancient_behemoth: 30,
-      wolf: 6, dire_wolf: 8, elf: 9, grand_elf: 11,
-      unicorn: 12, silver_unicorn: 15, dwarf: 8, battle_dwarf: 10,
-      dendroid: 10, dendroid_soldier: 13, druid: 8, elder_druid: 10,
-      green_dragon: 18, gold_dragon: 28,
-      golem: 9, obsidian_golem: 13, mage: 12, archmage: 16,
-      genie: 12, master_genie: 16, naga: 15, naga_queen: 20,
-      titan: 23, storm_titan: 35,
-      hero: 10, wall: 0, tower: 15
-    };
-    return map[id] || 5;
+    return this.getCreatureStats(id).attack;
   }
 
   private getCreatureDefense(id: string): number {
-    const map: Record<string, number> = {
-      pikeman: 4, halberdier: 6, archer: 3, crossbowman: 4,
-      griffin: 6, royal_griffin: 8, swordsman: 8, champion: 12, cavalier: 12,
-      angel: 20, archangel: 30,
-      skeleton: 3, skeleton_warrior: 5, zombie: 3, plague_zombie: 5,
-      vampire: 9, vampire_lord: 13, lich: 8, power_lich: 12,
-      bone_dragon: 15, ghost_dragon: 22,
-      goblin: 2, hobgoblin: 3, wolf_rider: 5, wolf_raider: 7,
-      orc: 5, orc_chieftain: 7, ogre: 7, ogre_mage: 10,
-      roc: 8, thunderbird: 11, cyclop: 12, cyclop_king: 15,
-      behemoth: 16, ancient_behemoth: 30,
-      wolf: 4, dire_wolf: 6, elf: 4, grand_elf: 6,
-      unicorn: 9, silver_unicorn: 12, dwarf: 9, battle_dwarf: 12,
-      dendroid: 9, dendroid_soldier: 12, druid: 5, elder_druid: 8,
-      green_dragon: 18, gold_dragon: 28,
-      golem: 10, obsidian_golem: 14, mage: 5, archmage: 8,
-      genie: 8, master_genie: 11, naga: 13, naga_queen: 18,
-      titan: 23, storm_titan: 35,
-      hero: 8, wall: 5, tower: 8
-    };
-    return map[id] || 3;
+    return this.getCreatureStats(id).defense;
   }
 
   private getCreatureDamage(id: string): { min: number; max: number } {
-    const map: Record<string, { min: number; max: number }> = {
-      pikeman: { min: 1, max: 3 }, halberdier: { min: 2, max: 5 },
-      archer: { min: 2, max: 4 }, crossbowman: { min: 3, max: 5 },
-      griffin: { min: 3, max: 7 }, royal_griffin: { min: 5, max: 9 },
-      swordsman: { min: 6, max: 9 }, champion: { min: 15, max: 25 }, cavalier: { min: 15, max: 25 },
-      angel: { min: 50, max: 50 }, archangel: { min: 60, max: 75 },
-      skeleton: { min: 1, max: 3 }, skeleton_warrior: { min: 2, max: 4 },
-      zombie: { min: 2, max: 3 }, plague_zombie: { min: 3, max: 5 },
-      vampire: { min: 5, max: 8 }, vampire_lord: { min: 7, max: 12 },
-      lich: { min: 11, max: 15 }, power_lich: { min: 15, max: 20 },
-      bone_dragon: { min: 25, max: 50 }, ghost_dragon: { min: 40, max: 60 },
-      goblin: { min: 1, max: 2 }, hobgoblin: { min: 2, max: 3 },
-      wolf_rider: { min: 2, max: 4 }, wolf_raider: { min: 3, max: 5 },
-      orc: { min: 3, max: 5 }, orc_chieftain: { min: 4, max: 7 },
-      ogre: { min: 8, max: 14 }, ogre_mage: { min: 12, max: 20 },
-      roc: { min: 8, max: 12 }, thunderbird: { min: 12, max: 18 },
-      cyclop: { min: 15, max: 25 }, cyclop_king: { min: 20, max: 30 },
-      behemoth: { min: 30, max: 50 }, ancient_behemoth: { min: 50, max: 80 },
-      wolf: { min: 2, max: 4 }, dire_wolf: { min: 3, max: 6 },
-      elf: { min: 3, max: 5 }, grand_elf: { min: 4, max: 7 },
-      unicorn: { min: 10, max: 18 }, silver_unicorn: { min: 15, max: 22 },
-      dwarf: { min: 5, max: 8 }, battle_dwarf: { min: 7, max: 11 },
-      dendroid: { min: 8, max: 12 }, dendroid_soldier: { min: 12, max: 18 },
-      druid: { min: 5, max: 8 }, elder_druid: { min: 8, max: 12 },
-      green_dragon: { min: 40, max: 50 }, gold_dragon: { min: 50, max: 80 },
-      golem: { min: 4, max: 6 }, obsidian_golem: { min: 6, max: 10 },
-      mage: { min: 7, max: 9 }, archmage: { min: 10, max: 14 },
-      genie: { min: 10, max: 15 }, master_genie: { min: 15, max: 20 },
-      naga: { min: 15, max: 25 }, naga_queen: { min: 20, max: 30 },
-      titan: { min: 40, max: 60 }, storm_titan: { min: 60, max: 80 },
-      hero: { min: 5, max: 10 }, wall: { min: 0, max: 0 }, tower: { min: 20, max: 40 }
-    };
-    return map[id] || { min: 1, max: 3 };
+    return this.getCreatureStats(id).damage;
   }
 
   /**
@@ -960,7 +967,12 @@ export class BattleScene extends Phaser.Scene {
 
     this.attackerHero.mana -= spell.manaCost;
 
-    const heroSpellPower = this.attackerHero.stats.spellPower;
+    // === НАВЫК КОЛДОВСТВО (Sorcery) + СПЕЦИАЛИЗАЦИЯ HERETIC ===
+    // Увеличиваем эффективную силу заклинания
+    const baseSpellPower = this.attackerHero.stats.spellPower;
+    const spellDamageMult = this.heroManager.getSpellDamageMultiplier(this.attackerHero);
+    const heroSpellPower = Math.floor(baseSpellPower * spellDamageMult);
+
     const result = this.spellSystem.applySpell(spell, this.selectedUnit, targets, targetPos, heroSpellPower);
 
     if (result.success) {
@@ -1037,6 +1049,12 @@ export class BattleScene extends Phaser.Scene {
     );
 
     if (enemy) {
+      // === ОСАДА: проверка canAttackDefenders ===
+      if (!this.canUnitAttackTarget(this.selectedUnit, enemy)) {
+        this.addLog(`🧱 ${this.selectedUnit.creatureId} не может атаковать через стены! Разрушите стены или используйте летающих/стрелков.`);
+        return;
+      }
+
       const dist = Math.max(Math.abs(enemy.x - this.selectedUnit.x), Math.abs(enemy.y - this.selectedUnit.y));
       const attackRange = isRanged(this.selectedUnit.creatureId) && 
                           (this.selectedUnit.shotsLeft === undefined || this.selectedUnit.shotsLeft > 0) ? 10 : 1;
@@ -1123,6 +1141,12 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (unit.side !== this.selectedUnit.side) {
+      // === ОСАДА: проверка canAttackDefenders ===
+      if (!this.canUnitAttackTarget(this.selectedUnit, unit)) {
+        this.addLog(`🧱 ${this.selectedUnit.creatureId} не может атаковать через стены!`);
+        return;
+      }
+
       const dist = Math.max(Math.abs(unit.x - this.selectedUnit.x), Math.abs(unit.y - this.selectedUnit.y));
       const attackRange = isRanged(this.selectedUnit.creatureId) ? 10 : 1;
       
@@ -1310,6 +1334,9 @@ export class BattleScene extends Phaser.Scene {
                         (unit.shotsLeft === undefined || unit.shotsLeft > 0) ? 10 : 1;
     for (const enemy of this.battleState.units) {
       if (enemy.side !== unit.side && enemy.count > 0) {
+        // === ОСАДА: проверяем canAttackDefenders перед подсветкой цели ===
+        if (!this.canUnitAttackTarget(unit, enemy)) continue;
+        
         const dist = Math.max(Math.abs(enemy.x - unit.x), Math.abs(enemy.y - unit.y));
         if (dist <= attackRange) {
           const t = this.add.rectangle(
@@ -1358,6 +1385,9 @@ export class BattleScene extends Phaser.Scene {
 
     for (const enemy of this.battleState.units) {
       if (enemy.side !== unit.side && enemy.count > 0) {
+        // === ОСАДА: проверяем canAttackDefenders ===
+        if (!this.canUnitAttackTarget(unit, enemy)) continue;
+        
         const dist = Math.max(Math.abs(enemy.x - unit.x), Math.abs(enemy.y - unit.y));
         if (dist <= attackRange) {
           const t = this.add.rectangle(
@@ -1387,6 +1417,33 @@ export class BattleScene extends Phaser.Scene {
   private attack(attacker: BattleUnit, defender: BattleUnit): void {
     this.isAnimating = true;
     this.clearHighlights();
+
+    // === ОСАДА: катапульта циклопов (двойной урон стенам) ===
+    if (defender.isWall || defender.isTower) {
+      if (attacker.creatureId === 'cyclop' || attacker.creatureId === 'cyclop_king') {
+        // Используем SiegeSystem.catapultAttack() — 100 урона для циклопов
+        const wallSegment = this.getWallSegmentById(defender.id);
+        if (wallSegment) {
+          const result = SiegeSystem.catapultAttack(attacker, wallSegment);
+          // Применяем урон к BattleUnit тоже (для визуализации)
+          defender.currentHealth = wallSegment.currentHp;
+          if (wallSegment.isDestroyed) defender.count = 0;
+
+          const defenderSprite = this.unitSprites.get(defender.id);
+          if (defenderSprite) {
+            this.effects.showDamageNumber(defenderSprite.x + 20, defenderSprite.y, result.damage, false);
+          }
+
+          this.addLog(`💥 Катапульта ${attacker.creatureId} наносит ${result.damage} урона ${defender.id}${result.destroyed ? ' (РАЗРУШЕНО!)' : ''}`);
+          this.syncWallState(defender);
+          this.renderUnits();
+          this.checkBattleEnd();
+          this.endUnitTurn();
+          this.isAnimating = false;
+          return;
+        }
+      }
+    }
 
     // Расчёт урона
     const damage = this.calculateDamage(attacker, defender);
@@ -1521,11 +1578,23 @@ export class BattleScene extends Phaser.Scene {
     const modifier = Math.max(0.3, 1 + (attackStat - defenseStat) * 0.05);
     baseDamage = Math.floor(baseDamage * modifier);
 
-    // Модификаторы атакующего
+    // === НАВЫКИ ГЕРОЯ: Наступление/Стрельба (атакующий) ===
+    const attackerHero = this.getUnitHero(attacker);
+    if (isRangedAttack) {
+      baseDamage = Math.floor(baseDamage * this.heroManager.getRangedDamageMultiplier(attackerHero));
+    } else {
+      baseDamage = Math.floor(baseDamage * this.heroManager.getMeleeDamageMultiplier(attackerHero));
+    }
+
+    // === НАВЫКИ ГЕРОЯ: Оборона (защитник) ===
+    const defenderHero = this.getUnitHero(defender);
+    baseDamage = Math.floor(baseDamage * this.heroManager.getIncomingDamageMultiplier(defenderHero));
+
+    // Модификаторы атакующего (заклинания и способности)
     baseDamage = Math.floor(baseDamage * this.spellSystem.getDamageModifier(attacker));
     baseDamage = Math.floor(baseDamage * this.abilitiesSystem.getDamageModifier(attacker));
 
-    // Модификаторы получаемого урона
+    // Модификаторы получаемого урона (заклинания и способности)
     baseDamage = Math.floor(baseDamage * this.spellSystem.getIncomingDamageModifier(defender));
     baseDamage = Math.floor(baseDamage * this.abilitiesSystem.getIncomingDamageModifier(defender));
 
@@ -1542,11 +1611,12 @@ export class BattleScene extends Phaser.Scene {
       baseDamage = Math.floor(baseDamage * 0.5);
     }
 
-    // Удача
+    // Удача (с учётом навыка Luck и специализаций)
     const hero = this.getUnitHero(attacker);
     const luckResult = this.moraleLuck.checkLuck(attacker, hero);
     const luckMultiplier = this.moraleLuck.getDamageMultiplier(luckResult);
     baseDamage = Math.floor(baseDamage * luckMultiplier);
+    // TODO: luck bonus from skills уже учитывается через hero.luck в MoraleLuckSystem
 
     if (luckResult === 'critical') {
       this.effects.showLuckBanner(true);
@@ -1560,6 +1630,17 @@ export class BattleScene extends Phaser.Scene {
   private applyDamage(unit: BattleUnit, damage: number): void {
     if (unit.count <= 0) return;
     unit.currentHealth -= damage;
+
+    // === ОСАДА: стены/башни — особый расчёт ===
+    if (unit.isWall || unit.isTower) {
+      if (unit.currentHealth <= 0) {
+        unit.currentHealth = 0;
+        unit.count = 0;
+      }
+      // Синхронизируем с wallsState для визуализации
+      this.syncWallState(unit);
+      return;
+    }
 
     const healthPerUnit = unit.maxHealth / (unit.initialCount || unit.count);
     const deadCount = Math.max(0, Math.floor(damage / healthPerUnit));
@@ -1925,12 +2006,17 @@ export class BattleScene extends Phaser.Scene {
 
   private endTurn(): void {
     if (this.battleEnded) return;
-    
+
     this.battleState.turn++;
     this.battleState.units.forEach(u => {
       u.hasActed = false;
       u.hasRetaliated = false;
     });
+
+    // === Регенерация маны героя (Мистицизм) ===
+    this.applyManaRegen(this.attackerHero);
+    this.applyManaRegen(this.defenderHero);
+
     this.addLog(`─── Ход ${this.battleState.turn} ───`);
     this.sortUnitsBySpeed();
     this.selectNextUnit();
@@ -1967,6 +2053,9 @@ export class BattleScene extends Phaser.Scene {
     const message = winner === 'attacker' ? '🏆 ПОБЕДА!' : '💀 ПОРАЖЕНИЕ!';
     this.addLog(message);
 
+    // === НЕКРОМАНТИЯ: результат вычисляется ОДИН раз и переиспользуется на финальном экране ===
+    let necroResult: NecromancyResult | undefined;
+
     // === РАСЧЁТ ОПЫТА ===
     let experience = 0;
     if (winner === 'attacker') {
@@ -1988,22 +2077,19 @@ export class BattleScene extends Phaser.Scene {
           const slot = this.attackerHero.army[unit.originalArmyIndex];
           const lost = (unit.initialCount || slot.count) - unit.count;
           slot.count = Math.max(0, unit.count);
-          losses.push({ creatureId: unit.creatureId, lost, remaining: unit.count });
+          losses.push({ creatureId: unit.creatureId, lost, lostCount: lost });
         }
       }
 
-      // Добавляем опыт
+      // Добавляем опыт и обрабатываем повышение уровня через HeroManager
       this.attackerHero.experience += experience;
-      const levelUp = Math.floor(this.attackerHero.experience / (1000 * this.attackerHero.level));
-      if (levelUp > this.attackerHero.level) {
-        this.attackerHero.level = levelUp;
-        this.attackerHero.stats.attack += 1;
-        this.attackerHero.stats.defense += 1;
+      let leveledUp = false;
+      while (this.heroManager.checkLevelUp(this.attackerHero)) {
+        leveledUp = true;
         this.addLog(`⭐ Уровень повышен до ${this.attackerHero.level}!`);
       }
 
       // === НЕКРОМАНТИЯ ===
-      let necroResult: NecromancyResult | undefined;
       if (NecromancySystem.canUseNecromancy(this.attackerHero)) {
         const deadEnemies = this.battleState.units.filter(u => u.side === 'defender');
         necroResult = NecromancySystem.applyNecromancy(deadEnemies, this.attackerHero);
@@ -2050,13 +2136,13 @@ export class BattleScene extends Phaser.Scene {
       .map(u => ({
         name: u.creatureId,
         lost: (u.initialCount || 1) - u.count,
-        remaining: u.count
+        lostCount: u.count
       }))
-      .filter(l => l.lost > 0 || l.remaining > 0);
+      .filter(l => l.lost > 0 || l.lostCount > 0);
 
     for (const loss of attackerLosses.slice(0, 4)) {
       const lossText = this.add.text(-200, infoY, 
-        `${loss.name}: -${loss.lost} (осталось: ${loss.remaining})`, {
+        `${loss.name}: -${loss.lost} (осталось: ${loss.lostCount})`, {
         fontSize: '13px', 
         color: loss.lost > 0 ? '#ff6b6b' : '#2ecc71',
         fontFamily: 'Segoe UI'
@@ -2065,19 +2151,14 @@ export class BattleScene extends Phaser.Scene {
       infoY += 20;
     }
 
-    // Некромантия
-    if (winner === 'attacker' && NecromancySystem.canUseNecromancy(this.attackerHero)) {
+    // Некромантия (отображение уже рассчитанного результата, без повторного вызова)
+    if (winner === 'attacker' && necroResult && necroResult.raisedUnits.length > 0) {
       infoY += 10;
-      const deadEnemies = this.battleState.units.filter(u => u.side === 'defender');
-      const necroResult = NecromancySystem.applyNecromancy(deadEnemies, this.attackerHero);
-      if (necroResult.raisedUnits.length > 0) {
-        const necroText = this.add.text(0, infoY, 
-          NecromancySystem.getResultDescription(necroResult), {
-          fontSize: '14px', color: '#9b59b6', fontFamily: 'Segoe UI', fontStyle: 'bold'
-        }).setOrigin(0.5);
-        container.add(necroText);
-        NecromancySystem.addRaisedUnitsToArmy(this.attackerHero, necroResult);
-      }
+      const necroText = this.add.text(0, infoY, 
+        NecromancySystem.getResultDescription(necroResult), {
+        fontSize: '14px', color: '#9b59b6', fontFamily: 'Segoe UI', fontStyle: 'bold'
+      }).setOrigin(0.5);
+      container.add(necroText);
     }
 
     // Кнопка продолжить
@@ -2094,11 +2175,27 @@ export class BattleScene extends Phaser.Scene {
           this.worldScene.captureTown?.(this.defenderTown.id);
         }
       }
-      
+
       this.queueLeft.destroy();
       this.queueRight.destroy();
       this.scene.stop(CONFIG.SCENES.BATTLE);
       this.scene.wake(CONFIG.SCENES.WORLD);
+
+      // === UI ВЫБОРА НАВЫКА при повышении уровня ===
+      if (winner === 'attacker' && this.attackerHero) {
+        const heroManager = HeroManager.getInstance();
+        const worldScene = this.scene.get(CONFIG.SCENES.WORLD) as any;
+        if (worldScene && this.attackerHero.experience >= this.attackerHero.level * 1000) {
+          // Есть ещё уровни — показываем UI выбора
+          this.time.delayedCall(500, () => {
+            heroManager.processLevelUp(
+              worldScene,
+              this.attackerHero,
+              (msg) => console.log('[Battle]', msg)
+            );
+          });
+        }
+      }
     });
     container.add(btn);
   }
@@ -2131,6 +2228,107 @@ HP: ${Math.max(0, Math.floor(unit.currentHealth))}/${unit.maxHealth}
 ${unit.shotsLeft !== undefined ? `🏹 Стрел: ${unit.shotsLeft}\n` : ''}${abilities ? `✨ ${abilities}\n` : ''}${effects ? `🔮 Эффекты: ${effects}` : ''}`;
 
     this.unitInfoText.setText(info);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // РЕГЕНЕРАЦИЯ МАНЫ (Мистицизм)
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Применить регенерацию маны героя за ход (Мистицизм навык)
+   */
+  private applyManaRegen(hero: Hero | null): void {
+    if (!hero) return;
+    const regen = this.heroManager.getManaRegenPerTurn(hero);
+    if (regen > 0 && hero.mana < hero.maxMana) {
+      hero.mana = Math.min(hero.maxMana, hero.mana + regen);
+      this.manaText.setText(`🔮 Мана: ${hero.mana}/${hero.maxMana}`);
+      if (regen >= 2) {
+        this.addLog(`🔮 Мистицизм: +${regen} маны`);
+      }
+    }
+  }
+
+  // ============================================================================
+  // ОСАДА: проверки и синхронизация
+  // ============================================================================
+
+  /**
+   * Может ли юнит атаковать цель с учётом осадных стен.
+   * 
+   * В режиме осады обычные юниты (не летающие, не стрелки) не могут
+   * атаковать защитников через стены — они должны сначала разрушить
+   * стены или пройти через разрушенные ворота.
+   * 
+   * Стены и башни атакуются напрямую (это и есть разрушение стен).
+   */
+  private canUnitAttackTarget(attacker: BattleUnit, target: BattleUnit): boolean {
+    // Не осадный бой — без ограничений
+    if (this.battleType !== 'siege' || !this.battleState.wallsState) return true;
+
+    // Стены и башни атакуются всегда (цель — разрушить их)
+    if (target.isWall || target.isTower) return true;
+
+    // Атакующий — защитник (внутри стен) — всегда может атаковать
+    if (attacker.side === 'defender') return true;
+
+    // Атакующий — атакующий (снаружи стен)
+    // Используем SiegeSystem.canAttackDefenders()
+    return SiegeSystem.canAttackDefenders(this.battleState.wallsState, attacker);
+  }
+
+  /**
+   * Получить WallSegment по ID BattleUnit (для катапульты циклопов).
+   */
+  private getWallSegmentById(unitId: string): any {
+    if (!this.battleState.wallsState) return null;
+    const walls = this.battleState.wallsState;
+    const segmentMap: Record<string, any> = {
+      'wall_main_gate': walls.mainGate,
+      'wall_upper_wall': walls.upperWall,
+      'wall_lower_wall': walls.lowerWall,
+      'tower_upper_tower': walls.upperTower,
+      'tower_lower_tower': walls.lowerTower,
+      'tower_keep_tower': walls.keepTower
+    };
+    return segmentMap[unitId] || null;
+  }
+
+  /**
+   * Синхронизировать состояние wallUnit с wallsState (для визуализации).
+   * Вызывается после нанесения урона стене/башне.
+   */
+  private syncWallState(wallUnit: BattleUnit): void {
+    if (!this.battleState.wallsState) return;
+    if (!wallUnit.isWall && !wallUnit.isTower) return;
+
+    // Находим соответствующий сегмент в wallsState
+    const walls = this.battleState.wallsState;
+    const segmentMap: Record<string, any> = {
+      'wall_main_gate': walls.mainGate,
+      'wall_upper_wall': walls.upperWall,
+      'wall_lower_wall': walls.lowerWall,
+      'tower_upper_tower': walls.upperTower,
+      'tower_lower_tower': walls.lowerTower,
+      'tower_keep_tower': walls.keepTower
+    };
+
+    const segment = segmentMap[wallUnit.id];
+    if (!segment) return;
+
+    // Синхронизируем HP
+    segment.currentHp = wallUnit.currentHealth;
+    if (wallUnit.currentHealth <= 0) {
+      segment.isDestroyed = true;
+      wallUnit.count = 0;
+      this.addLog(`💥 ${wallUnit.id.replace('wall_', '').replace('tower_', '').replace('_', ' ')} разрушена!`);
+      this.updateWallVisuals();
+
+      // Проверка: все стены разрушены?
+      if (SiegeSystem.areWallsDestroyed(walls)) {
+        this.addLog(`🏰🎉 Все стены разрушены! Защитники больше не защищены!`);
+      }
+    }
   }
 
   private addLog(message: string): void {

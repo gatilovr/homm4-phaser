@@ -40,14 +40,13 @@ const config: Phaser.Types.Core.GameConfig = {
   banner: {
     text: '#d4af37',
     background: ['#1a1a2e', '#0a0a0f'],
-    hidePhaser: true,
-    hideVersion: false
+    hidePhaser: true
   }
 };
 
 console.log('🎮 Starting Heroes IV - Phaser Edition...');
 console.log('📦 Phaser version:', Phaser.VERSION);
-console.log('📋 Scenes:', config.scene?.map((s: any) => s.prototype?.constructor?.name || 'unknown'));
+console.log('📋 Scenes:', (config.scene as any[]).map((s: any) => s.prototype?.constructor?.name || 'unknown'));
 
 try {
   const game = new Phaser.Game(config);

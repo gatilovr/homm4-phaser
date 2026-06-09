@@ -146,8 +146,8 @@ export interface Tile {
 export interface MapObject {
   id: string; type: MapObjectType; x: number; y: number;
   subtype?: string; owner?: string; data?: any;
-  /** Уровень карты, на котором находится объект (опционально для совместимости) */
-  level?: MapLevel;
+  /** Уровень карты, на котором находится объект (surface по умолчанию) */
+  level: MapLevel;
   /** Для subterranean_gate: id парного портала на другом уровне */
   pairedGateId?: string;
 }

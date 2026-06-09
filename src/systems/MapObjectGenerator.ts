@@ -3,7 +3,7 @@
  * Создаёт 50+ объектов с правильным зонированием
  */
 
-import { MapObject, MapObjectType } from '../types';
+import { MapObject, MapObjectType, MapLevel } from '../types';
 
 export interface GenerationConfig {
   mapWidth: number;
@@ -265,12 +265,12 @@ export class MapObjectGenerator {
     console.log(`[MapObjectGenerator] Создано ${this.objects.length} объектов`);
   }
 
-  private addObject(id: string, type: MapObjectType, x: number, y: number, data?: any, level: 'surface' | 'underground' = 'surface'): void {
+  private addObject(id: string, type: MapObjectType, x: number, y: number, data?: any): void {
     const key = `${x},${y}`;
     if (this.occupiedCells.has(key)) return;
     
     this.occupiedCells.add(key);
-    this.objects.push({ id, type, x, y, data, level });
+    this.objects.push({ id, type, x, y, data, level: 'surface' as MapLevel });
   }
 
   private findPosition(

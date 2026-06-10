@@ -161,7 +161,7 @@ export class SpellSystem {
   }
 
   // ============================================================================
-  // ШКОЛА ВОДЫ
+  // ШКОЛА ЖИЗНИ (Life Magic)
   // ============================================================================
 
   private applyBless(targets: BattleUnit[], spellPower: number): string {
@@ -220,7 +220,7 @@ export class SpellSystem {
   }
 
   // ============================================================================
-  // ШКОЛА ОГНЯ
+  // ШКОЛА ХАОСА (Chaos Magic)
   // ============================================================================
 
   private applyBloodlust(targets: BattleUnit[], spellPower: number): string {
@@ -274,7 +274,7 @@ export class SpellSystem {
   }
 
   // ============================================================================
-  // ШКОЛА ЗЕМЛИ
+  // ШКОЛА ПОРЯДКА (Order Magic) — защита
   // ============================================================================
 
   private applyShield(targets: BattleUnit[], spellPower: number): string {
@@ -332,7 +332,7 @@ export class SpellSystem {
   }
 
   // ============================================================================
-  // ШКОЛА ВОЗДУХА
+  // ШКОЛА ПОРЯДКА (Order Magic) — контроль
   // ============================================================================
 
   private applyHaste(targets: BattleUnit[], spellPower: number): string {
@@ -389,7 +389,7 @@ export class SpellSystem {
   }
 
   // ============================================================================
-  // ШКОЛА РАЗУМА
+  // ШКОЛА ПОРЯДКА (Order Magic) — разум
   // ============================================================================
 
   private applyBlind(targets: BattleUnit[], spellPower: number): string {
@@ -438,12 +438,14 @@ export class SpellSystem {
     targets: BattleUnit[],
     targetPosition?: { x: number; y: number }
   ): void {
+    // Цвета школ магии HoMM4 (канон)
     const colorMap: Record<string, number> = {
-      water: 0x00bfff,
-      fire: 0xff4500,
-      earth: 0x8b4513,
-      air: 0xffff00,
-      mind: 0xff00ff
+      life: 0xffd700,      // Золотой — Жизнь
+      death: 0x8b008b,     // Тёмно-фиолетовый — Смерть
+      order: 0x4169e1,     // Королевский синий — Порядок
+      chaos: 0xff4500,     // Оранжево-красный — Хаос
+      natural: 0x228b22,   // Лесной зелёный — Природа
+      tactics: 0xdc143c    // Багровый — Тактика
     };
 
     const color = colorMap[spell.school] || 0xffffff;

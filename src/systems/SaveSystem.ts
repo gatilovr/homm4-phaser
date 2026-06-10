@@ -60,6 +60,8 @@ export interface SaveHero {
     defense: number;
     spellPower: number;
     knowledge: number;
+    hp: number;
+    maxHp?: number;
   };
   skills: Array<{
     id: string;
@@ -382,7 +384,11 @@ export class SaveSystem {
       y: hero.y,
       movementPoints: hero.movementPoints,
       maxMovementPoints: hero.maxMovementPoints,
-      stats: { ...hero.stats },
+      stats: { 
+        ...hero.stats,
+        hp: hero.stats.hp,
+        maxHp: hero.stats.maxHp
+      },
       skills: hero.skills.map(s => ({
         id: s.id,
         name: s.name,
@@ -601,7 +607,11 @@ export class SaveSystem {
           y: heroData.y,
           movementPoints: heroData.movementPoints,
           maxMovementPoints: heroData.maxMovementPoints,
-          stats: { ...heroData.stats },
+          stats: { 
+            ...heroData.stats,
+            hp: heroData.stats.hp || 20,
+            maxHp: heroData.stats.maxHp || 20
+          },
           skills: heroData.skills.map(s => ({
             ...s,
             category: s.category as any,
@@ -709,7 +719,11 @@ export class SaveSystem {
         const heroData = aiData.heroes[0];
         existing.hero.level = heroData.level;
         existing.hero.experience = heroData.experience;
-        existing.hero.stats = { ...heroData.stats };
+        existing.hero.stats = { 
+          ...heroData.stats,
+          hp: heroData.stats.hp || 20,
+          maxHp: heroData.stats.maxHp || 20
+        };
         existing.hero.army = heroData.army.map(u => ({ ...u }));
         existing.hero.mana = heroData.mana;
         existing.hero.maxMana = heroData.maxMana;

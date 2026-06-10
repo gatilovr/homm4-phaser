@@ -56,6 +56,17 @@
       "effects": { "tavern": true }
     },
     {
+      "id": "shipyard",
+      "name": "Верфь",
+      "faction": "common",
+      "category": "infrastructure",
+      "tier": 0,
+      "cost": { "gold": 2000, "wood": 20 },
+      "description": "Позволяет строить корабли (1000 золота за лодку). Требует воду рядом с городом.",
+      "requires": [],
+      "effects": { "shipyard": true }
+    },
+    {
       "id": "mage_guild_1",
       "name": "Гильдия магов 1 уровня",
       "faction": "common",

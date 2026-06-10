@@ -187,26 +187,33 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   private getFallbackSpells(): any {
+    // Школы магии HoMM4 (канон): Life, Death, Order, Chaos, Natural
     return [
-      { id: 'bless', name: 'Благословение', school: 'water', level: 1, manaCost: 5, description: '+20% урона' },
-      { id: 'cure', name: 'Лечение', school: 'water', level: 1, manaCost: 6, description: 'Восстанавливает HP' },
-      { id: 'slow', name: 'Замедление', school: 'water', level: 2, manaCost: 8, description: '-25% скорости' },
-      { id: 'haste', name: 'Ускорение', school: 'air', level: 1, manaCost: 6, description: '+25% скорости' },
-      { id: 'lightning', name: 'Молния', school: 'air', level: 2, manaCost: 10, description: 'Удар молнией' },
-      { id: 'chain_lightning', name: 'Цепная молния', school: 'air', level: 3, manaCost: 15, description: 'По нескольким целям' },
-      { id: 'shield', name: 'Щит', school: 'earth', level: 1, manaCost: 5, description: '+20% защиты' },
-      { id: 'stone_skin', name: 'Каменная кожа', school: 'earth', level: 2, manaCost: 8, description: '+30% защиты' },
-      { id: 'meteor', name: 'Метеор', school: 'earth', level: 4, manaCost: 20, description: 'Область 3×3' },
-      { id: 'fireball', name: 'Огненный шар', school: 'fire', level: 3, manaCost: 15, description: 'Область 3×3' },
-      { id: 'armageddon', name: 'Армагеддон', school: 'fire', level: 5, manaCost: 30, description: 'По всему полю' },
-      { id: 'blind', name: 'Ослепление', school: 'mind', level: 2, manaCost: 10, description: 'Пропуск хода' },
-      { id: 'forget', name: 'Забывчивость', school: 'mind', level: 2, manaCost: 8, description: 'Стрелок не стреляет' },
-      { id: 'teleport', name: 'Телепорт', school: 'water', level: 3, manaCost: 12, description: 'Переместить юнита' },
-      { id: 'clone', name: 'Клон', school: 'mind', level: 4, manaCost: 20, description: 'Создать копию' },
-      { id: 'resurrect', name: 'Воскрешение', school: 'water', level: 4, manaCost: 20, description: 'Вернуть павших' },
-      { id: 'berserk', name: 'Берсерк', school: 'fire', level: 3, manaCost: 12, description: 'Атакует кого угодно' },
-      { id: 'dispel', name: 'Развеять', school: 'water', level: 1, manaCost: 5, description: 'Снять эффекты' },
-      { id: 'town_portal', name: 'Портал города', school: 'air', level: 5, manaCost: 25, description: 'На карту' }
+      // === LIFE (Жизнь) ===
+      { id: 'bless', name: 'Благословение', school: 'life', level: 1, manaCost: 5, description: '+20% урона' },
+      { id: 'heal', name: 'Исцеление', school: 'life', level: 2, manaCost: 8, description: 'Восстанавливает HP' },
+      { id: 'resurrect', name: 'Воскрешение', school: 'life', level: 4, manaCost: 25, description: 'Возрождает павших' },
+      // === ORDER (Порядок) ===
+      { id: 'haste', name: 'Ускорение', school: 'order', level: 1, manaCost: 6, description: '+50% скорости' },
+      { id: 'shield', name: 'Щит', school: 'order', level: 1, manaCost: 5, description: '+30% защиты' },
+      { id: 'teleport', name: 'Телепорт', school: 'order', level: 3, manaCost: 12, description: 'Переместить юнита' },
+      { id: 'blind', name: 'Ослепление', school: 'order', level: 2, manaCost: 8, description: 'Пропуск хода' },
+      { id: 'forget', name: 'Забывчивость', school: 'order', level: 2, manaCost: 8, description: 'Стрелок не стреляет' },
+      { id: 'clone', name: 'Клон', school: 'order', level: 4, manaCost: 20, description: 'Создать копию' },
+      { id: 'slow', name: 'Замедление', school: 'order', level: 1, manaCost: 6, description: '-50% скорости' },
+      // === CHAOS (Хаос) ===
+      { id: 'lightning', name: 'Молния', school: 'chaos', level: 2, manaCost: 10, description: 'Удар молнией' },
+      { id: 'chain_lightning', name: 'Цепная молния', school: 'chaos', level: 3, manaCost: 15, description: 'По нескольким целям' },
+      { id: 'fireball', name: 'Огненный шар', school: 'chaos', level: 3, manaCost: 12, description: 'Область 3×3' },
+      { id: 'meteor', name: 'Метеор', school: 'chaos', level: 4, manaCost: 20, description: 'Область 3×3' },
+      { id: 'armageddon', name: 'Армагеддон', school: 'chaos', level: 5, manaCost: 30, description: 'По всему полю' },
+      { id: 'berserk', name: 'Берсерк', school: 'chaos', level: 3, manaCost: 15, description: 'Атакует кого угодно' },
+      { id: 'bloodlust', name: 'Жажда крови', school: 'chaos', level: 1, manaCost: 6, description: '+атака ближний бой' },
+      // === NATURAL (Природа) ===
+      { id: 'stone_skin', name: 'Каменная кожа', school: 'natural', level: 1, manaCost: 7, description: '+5 защиты' },
+      { id: 'dispel', name: 'Развеять', school: 'natural', level: 1, manaCost: 5, description: 'Снять эффекты' },
+      { id: 'fly', name: 'Полёт', school: 'natural', level: 3, manaCost: 12, description: 'Летать 3 хода' },
+      { id: 'town_portal', name: 'Портал города', school: 'order', level: 5, manaCost: 20, description: 'На карту' }
     ];
   }
 
@@ -341,17 +348,38 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   private getFallbackCreatures(): any {
+    // Базовые существа всех 6 фракций (78 существ в creatures.json)
     return {
+      // === HAVEN ===
       pikeman: { id: 'pikeman', name: 'Ополченец', faction: 'haven', tier: 1, attack: 4, defense: 5, damage: { min: 1, max: 3 }, health: 10, speed: 5, growth: 14, cost: { gold: 60 }, abilities: [] },
+      halberdier: { id: 'halberdier', name: 'Алебардщик', faction: 'haven', tier: 1, attack: 6, defense: 7, damage: { min: 2, max: 5 }, health: 15, speed: 5, growth: 14, cost: { gold: 100 }, abilities: ['first_strike'] },
       archer: { id: 'archer', name: 'Лучник', faction: 'haven', tier: 2, attack: 6, defense: 3, damage: { min: 2, max: 4 }, health: 10, speed: 4, growth: 9, cost: { gold: 100 }, abilities: ['shooter'] },
-      griffin: { id: 'griffin', name: 'Грифон', faction: 'haven', tier: 3, attack: 8, defense: 8, damage: { min: 3, max: 6 }, health: 25, speed: 6, growth: 6, cost: { gold: 200 }, abilities: ['flying'] },
-      knight: { id: 'knight', name: 'Рыцарь', faction: 'haven', tier: 4, attack: 15, defense: 15, damage: { min: 7, max: 10 }, health: 50, speed: 7, growth: 4, cost: { gold: 500 }, abilities: ['charge'] },
-      angel: { id: 'angel', name: 'Ангел', faction: 'haven', tier: 5, attack: 20, defense: 20, damage: { min: 15, max: 25 }, health: 100, speed: 12, growth: 2, cost: { gold: 3000 }, abilities: ['flying'] },
+      crossbowman: { id: 'crossbowman', name: 'Арбалетчик', faction: 'haven', tier: 2, attack: 8, defense: 5, damage: { min: 3, max: 6 }, health: 15, speed: 4, growth: 9, cost: { gold: 150 }, abilities: ['shooter', 'double_shot'] },
+      griffin: { id: 'griffin', name: 'Грифон', faction: 'haven', tier: 3, attack: 8, defense: 8, damage: { min: 5, max: 9 }, health: 25, speed: 6, growth: 6, cost: { gold: 200 }, abilities: ['flying'] },
+      royal_griffin: { id: 'royal_griffin', name: 'Королевский грифон', faction: 'haven', tier: 3, attack: 10, defense: 9, damage: { min: 7, max: 11 }, health: 30, speed: 7, growth: 6, cost: { gold: 300 }, abilities: ['flying', 'unlimited_retaliation'] },
+      swordsman: { id: 'swordsman', name: 'Мечник', faction: 'haven', tier: 4, attack: 10, defense: 12, damage: { min: 6, max: 9 }, health: 35, speed: 5, growth: 4, cost: { gold: 300 }, abilities: [] },
+      crusader: { id: 'crusader', name: 'Крестоносец', faction: 'haven', tier: 4, attack: 12, defense: 12, damage: { min: 7, max: 10 }, health: 35, speed: 6, growth: 4, cost: { gold: 400 }, abilities: ['double_attack'] },
+      monk: { id: 'monk', name: 'Монах', faction: 'haven', tier: 5, attack: 12, defense: 7, damage: { min: 10, max: 12 }, health: 30, speed: 5, growth: 3, cost: { gold: 400 }, abilities: ['shooter'] },
+      zealot: { id: 'zealot', name: 'Фанатик', faction: 'haven', tier: 5, attack: 15, defense: 10, damage: { min: 13, max: 16 }, health: 30, speed: 7, growth: 3, cost: { gold: 550 }, abilities: [] },
+      cavalier: { id: 'cavalier', name: 'Кавалерист', faction: 'haven', tier: 6, attack: 15, defense: 15, damage: { min: 15, max: 25 }, health: 100, speed: 7, growth: 2, cost: { gold: 1000 }, abilities: ['charge'] },
+      champion: { id: 'champion', name: 'Чемпион', faction: 'haven', tier: 6, attack: 18, defense: 18, damage: { min: 20, max: 30 }, health: 110, speed: 9, growth: 2, cost: { gold: 1200 }, abilities: ['charge'] },
+      angel: { id: 'angel', name: 'Ангел', faction: 'haven', tier: 7, attack: 20, defense: 20, damage: { min: 50, max: 50 }, health: 200, speed: 12, growth: 1, cost: { gold: 3000 }, abilities: ['flying'] },
+      archangel: { id: 'archangel', name: 'Архангел', faction: 'haven', tier: 7, attack: 30, defense: 30, damage: { min: 50, max: 50 }, health: 250, speed: 18, growth: 1, cost: { gold: 5000 }, abilities: ['flying', 'resurrect'] },
+      // === NECROPOLIS ===
       skeleton: { id: 'skeleton', name: 'Скелет', faction: 'necropolis', tier: 1, attack: 5, defense: 4, damage: { min: 1, max: 3 }, health: 8, speed: 5, growth: 14, cost: { gold: 60 }, abilities: ['undead'] },
+      skeleton_warrior: { id: 'skeleton_warrior', name: 'Скелет-воин', faction: 'necropolis', tier: 1, attack: 6, defense: 6, damage: { min: 2, max: 4 }, health: 8, speed: 5, growth: 18, cost: { gold: 100 }, abilities: ['undead'] },
       zombie: { id: 'zombie', name: 'Зомби', faction: 'necropolis', tier: 2, attack: 5, defense: 5, damage: { min: 2, max: 3 }, health: 20, speed: 3, growth: 8, cost: { gold: 100 }, abilities: ['undead'] },
-      vampire: { id: 'vampire', name: 'Вампир', faction: 'necropolis', tier: 3, attack: 10, defense: 9, damage: { min: 4, max: 6 }, health: 30, speed: 6, growth: 5, cost: { gold: 360 }, abilities: ['flying', 'undead', 'life_drain'] },
-      lich: { id: 'lich', name: 'Лич', faction: 'necropolis', tier: 4, attack: 13, defense: 10, damage: { min: 7, max: 10 }, health: 40, speed: 7, growth: 4, cost: { gold: 550 }, abilities: ['undead', 'shooter'] },
-      bone_dragon: { id: 'bone_dragon', name: 'Костяной дракон', faction: 'necropolis', tier: 5, attack: 18, defense: 18, damage: { min: 15, max: 25 }, health: 150, speed: 9, growth: 2, cost: { gold: 1800 }, abilities: ['flying', 'undead'] }
+      plague_zombie: { id: 'plague_zombie', name: 'Чумной зомби', faction: 'necropolis', tier: 2, attack: 6, defense: 6, damage: { min: 3, max: 5 }, health: 25, speed: 4, growth: 10, cost: { gold: 150 }, abilities: ['undead', 'disease'] },
+      wight: { id: 'wight', name: 'Вайт', faction: 'necropolis', tier: 3, attack: 7, defense: 6, damage: { min: 3, max: 5 }, health: 18, speed: 5, growth: 8, cost: { gold: 180 }, abilities: ['undead', 'life_drain'] },
+      wraith: { id: 'wraith', name: 'Вейт', faction: 'necropolis', tier: 3, attack: 9, defense: 7, damage: { min: 4, max: 6 }, health: 22, speed: 6, growth: 8, cost: { gold: 250 }, abilities: ['undead', 'flying'] },
+      vampire: { id: 'vampire', name: 'Вампир', faction: 'necropolis', tier: 4, attack: 10, defense: 9, damage: { min: 5, max: 8 }, health: 30, speed: 6, growth: 5, cost: { gold: 360 }, abilities: ['flying', 'undead', 'life_drain'] },
+      vampire_lord: { id: 'vampire_lord', name: 'Вампир-лорд', faction: 'necropolis', tier: 4, attack: 12, defense: 10, damage: { min: 7, max: 10 }, health: 40, speed: 8, growth: 4, cost: { gold: 480 }, abilities: ['flying', 'undead'] },
+      lich: { id: 'lich', name: 'Лич', faction: 'necropolis', tier: 5, attack: 13, defense: 10, damage: { min: 11, max: 13 }, health: 40, speed: 7, growth: 4, cost: { gold: 550 }, abilities: ['undead', 'shooter'] },
+      power_lich: { id: 'power_lich', name: 'Могущественный лич', faction: 'necropolis', tier: 5, attack: 15, defense: 13, damage: { min: 13, max: 16 }, health: 40, speed: 8, growth: 3, cost: { gold: 750 }, abilities: ['undead', 'shooter'] },
+      black_knight: { id: 'black_knight', name: 'Чёрный рыцарь', faction: 'necropolis', tier: 6, attack: 16, defense: 16, damage: { min: 15, max: 30 }, health: 120, speed: 7, growth: 2, cost: { gold: 1200 }, abilities: ['undead'] },
+      dread_knight: { id: 'dread_knight', name: 'Рыцарь ужаса', faction: 'necropolis', tier: 6, attack: 18, defense: 18, damage: { min: 18, max: 32 }, health: 130, speed: 9, growth: 2, cost: { gold: 1500 }, abilities: ['undead'] },
+      bone_dragon: { id: 'bone_dragon', name: 'Костяной дракон', faction: 'necropolis', tier: 7, attack: 18, defense: 18, damage: { min: 15, max: 25 }, health: 150, speed: 9, growth: 2, cost: { gold: 1800 }, abilities: ['flying', 'undead'] },
+      ghost_dragon: { id: 'ghost_dragon', name: 'Призрачный дракон', faction: 'necropolis', tier: 7, attack: 19, defense: 17, damage: { min: 28, max: 55 }, health: 200, speed: 12, growth: 1, cost: { gold: 2200 }, abilities: ['flying', 'undead'] }
     };
   }
 }

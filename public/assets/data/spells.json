@@ -2,7 +2,8 @@
   "bless": {
     "id": "bless",
     "name": "Благословение",
-    "school": "water",
+    "nameEn": "Bless",
+    "school": "life",
     "manaCost": 5,
     "description": "Увеличивает урон юнита на 20% на 3 хода",
     "target": "single",
@@ -13,18 +14,193 @@
   "heal": {
     "id": "heal",
     "name": "Исцеление",
-    "school": "water",
+    "nameEn": "Cure",
+    "school": "life",
     "manaCost": 8,
-    "description": "Восстанавливает 30 HP юниту",
+    "description": "Восстанавливает 30 HP юниту и снимает негативные эффекты",
     "target": "single",
     "effects": [
       { "type": "heal", "value": 30 }
     ]
   },
+  "resurrect": {
+    "id": "resurrect",
+    "name": "Воскрешение",
+    "nameEn": "Resurrection",
+    "school": "life",
+    "manaCost": 25,
+    "description": "Воскрешает павших юнитов (до 50% HP)",
+    "target": "single",
+    "effects": [
+      { "type": "heal", "value": 50 }
+    ]
+  },
+  "guardian_angel": {
+    "id": "guardian_angel",
+    "name": "Ангел-хранитель",
+    "nameEn": "Guardian Angel",
+    "school": "life",
+    "manaCost": 15,
+    "description": "Блокирует смертельный урон одному юниту один раз",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "immortal", "duration": 999 }
+    ]
+  },
+  "regeneration": {
+    "id": "regeneration",
+    "name": "Регенерация",
+    "nameEn": "Regeneration",
+    "school": "life",
+    "manaCost": 10,
+    "description": "Восстанавливает 5 HP в начале хода на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "regeneration", "value": 5, "duration": 3 }
+    ]
+  },
+  "purify": {
+    "id": "purify",
+    "name": "Очищение",
+    "nameEn": "Purify",
+    "school": "life",
+    "manaCost": 8,
+    "description": "Снимает все негативные эффекты с юнита",
+    "target": "single",
+    "effects": [
+      { "type": "dispel" }
+    ]
+  },
+  "anti_magic": {
+    "id": "anti_magic",
+    "name": "Антимагия",
+    "nameEn": "Anti-Magic",
+    "school": "life",
+    "manaCost": 12,
+    "description": "Юнит immune ко всем заклинаниям на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "magic_immunity", "duration": 3 }
+    ]
+  },
+  "retaliation_free": {
+    "id": "retaliation_free",
+    "name": "Безответная атака",
+    "nameEn": "Retaliation Free",
+    "school": "life",
+    "manaCost": 6,
+    "description": "Юнит может атаковать без ответа на 1 ход",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "no_retaliation", "duration": 1 }
+    ]
+  },
+
+  "implosion": {
+    "id": "implosion",
+    "name": "Имплозия",
+    "nameEn": "Implosion",
+    "school": "death",
+    "manaCost": 12,
+    "description": "Наносит 30 урона одному юниту, снижает защиту на 5",
+    "target": "single",
+    "effects": [
+      { "type": "damage", "value": 30 },
+      { "type": "debuff", "stat": "defense", "value": 5, "duration": 3 }
+    ]
+  },
+  "animate_dead": {
+    "id": "animate_dead",
+    "name": "Оживление мертвых",
+    "nameEn": "Animate Dead",
+    "school": "death",
+    "manaCost": 25,
+    "description": "Превращает убитых юнитов в скелетов (до 10 единиц)",
+    "target": "area",
+    "effects": [
+      { "type": "summon_undead", "count": 10 }
+    ]
+  },
+  "drain_life": {
+    "id": "drain_life",
+    "name": "Пожирание жизни",
+    "nameEn": "Drain Life",
+    "school": "death",
+    "manaCost": 10,
+    "description": "Наносит 20 урона и лечит заклинателя на 50% урона",
+    "target": "single",
+    "effects": [
+      { "type": "damage_heal", "value": 20 }
+    ]
+  },
+  "weakness": {
+    "id": "weakness",
+    "name": "Слабость",
+    "nameEn": "Weakness",
+    "school": "death",
+    "manaCost": 6,
+    "description": "Снижает атаку юнита на 5 на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "debuff", "stat": "attack", "value": 5, "duration": 3 }
+    ]
+  },
+  "age": {
+    "id": "age",
+    "name": "Старение",
+    "nameEn": "Age",
+    "school": "death",
+    "manaCost": 15,
+    "description": "Снижает атаку и защиту на 5 на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "debuff", "stat": "attack", "value": 5, "duration": 3 },
+      { "type": "debuff", "stat": "defense", "value": 5, "duration": 3 }
+    ]
+  },
+  "soul_eater": {
+    "id": "soul_eater",
+    "name": "Пожиратель душ",
+    "nameEn": "Soul Eater",
+    "school": "death",
+    "manaCost": 20,
+    "description": "Наносит 40 урона и снижает мораль союзников на 2",
+    "target": "area",
+    "effects": [
+      { "type": "damage", "value": 40 },
+      { "type": "debuff", "stat": "morale", "value": 2, "duration": 3 }
+    ]
+  },
+  "curse": {
+    "id": "curse",
+    "name": "Проклятие",
+    "nameEn": "Curse",
+    "school": "death",
+    "manaCost": 5,
+    "description": "Юнит получает минимальный урон на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "debuff", "stat": "min_damage", "duration": 3 }
+    ]
+  },
+  "misery": {
+    "id": "misery",
+    "name": "Скорбь",
+    "nameEn": "Misery",
+    "school": "death",
+    "manaCost": 8,
+    "description": "Снижает мораль всех врагов на 3",
+    "target": "all_enemies",
+    "effects": [
+      { "type": "debuff", "stat": "morale", "value": 3, "duration": 999 }
+    ]
+  },
+
   "slow": {
     "id": "slow",
     "name": "Замедление",
-    "school": "water",
+    "nameEn": "Slow",
+    "school": "order",
     "manaCost": 6,
     "description": "Снижает скорость юнита на 50% на 3 хода",
     "target": "single",
@@ -35,7 +211,8 @@
   "teleport": {
     "id": "teleport",
     "name": "Телепорт",
-    "school": "water",
+    "nameEn": "Teleport",
+    "school": "order",
     "manaCost": 10,
     "description": "Перемещает юнита в любую свободную клетку",
     "target": "single",
@@ -43,8 +220,9 @@
   },
   "clone": {
     "id": "clone",
-    "name": "Клонирование",
-    "school": "water",
+    "name": "Зеркальный образ",
+    "nameEn": "Mirror Image",
+    "school": "order",
     "manaCost": 20,
     "description": "Создаёт копию юнита на 3 хода",
     "target": "single",
@@ -52,98 +230,11 @@
       { "type": "summon", "duration": 3 }
     ]
   },
-  "bloodlust": {
-    "id": "bloodlust",
-    "name": "Жажда крови",
-    "school": "fire",
-    "manaCost": 6,
-    "description": "Увеличивает атаку юнита на 5 на 3 хода",
-    "target": "single",
-    "effects": [
-      { "type": "buff", "stat": "attack", "value": 5, "duration": 3 }
-    ]
-  },
-  "fireball": {
-    "id": "fireball",
-    "name": "Огненный шар",
-    "school": "fire",
-    "manaCost": 12,
-    "description": "Наносит 25 урона в области 3x3",
-    "target": "area",
-    "effects": [
-      { "type": "damage", "value": 25 }
-    ]
-  },
-  "berserk": {
-    "id": "berserk",
-    "name": "Берсерк",
-    "school": "fire",
-    "manaCost": 15,
-    "description": "Юнит атакует ближайшую цель, теряя контроль",
-    "target": "single",
-    "effects": [
-      { "type": "debuff", "stat": "control", "duration": 2 }
-    ]
-  },
-  "armageddon": {
-    "id": "armageddon",
-    "name": "Армагеддон",
-    "school": "fire",
-    "manaCost": 30,
-    "description": "Наносит 100 урона всем юнитам на поле",
-    "target": "all",
-    "effects": [
-      { "type": "damage", "value": 100 }
-    ]
-  },
-  "shield": {
-    "id": "shield",
-    "name": "Щит",
-    "school": "earth",
-    "manaCost": 5,
-    "description": "Снижает получаемый урон на 30% на 3 хода",
-    "target": "single",
-    "effects": [
-      { "type": "buff", "stat": "defense", "value": 30, "duration": 3 }
-    ]
-  },
-  "stoneskin": {
-    "id": "stoneskin",
-    "name": "Каменная кожа",
-    "school": "earth",
-    "manaCost": 7,
-    "description": "Увеличивает защиту юнита на 5 на 3 хода",
-    "target": "single",
-    "effects": [
-      { "type": "buff", "stat": "defense", "value": 5, "duration": 3 }
-    ]
-  },
-  "meteor": {
-    "id": "meteor",
-    "name": "Метеор",
-    "school": "earth",
-    "manaCost": 15,
-    "description": "Наносит 50 урона одному юниту",
-    "target": "single",
-    "effects": [
-      { "type": "damage", "value": 50 }
-    ]
-  },
-  "resurrect": {
-    "id": "resurrect",
-    "name": "Воскрешение",
-    "school": "earth",
-    "manaCost": 25,
-    "description": "Воскрешает павших юнитов (до 50% HP)",
-    "target": "single",
-    "effects": [
-      { "type": "heal", "value": 50 }
-    ]
-  },
   "haste": {
     "id": "haste",
     "name": "Ускорение",
-    "school": "air",
+    "nameEn": "Haste",
+    "school": "order",
     "manaCost": 6,
     "description": "Увеличивает скорость юнита на 50% на 3 хода",
     "target": "single",
@@ -151,43 +242,23 @@
       { "type": "buff", "stat": "speed", "value": 50, "duration": 3 }
     ]
   },
-  "lightning": {
-    "id": "lightning",
-    "name": "Молния",
-    "school": "air",
-    "manaCost": 10,
-    "description": "Наносит 30 урона одному юниту",
+  "shield": {
+    "id": "shield",
+    "name": "Щит",
+    "nameEn": "Shield",
+    "school": "order",
+    "manaCost": 5,
+    "description": "Снижает получаемый урон на 30% на 3 хода",
     "target": "single",
     "effects": [
-      { "type": "damage", "value": 30 }
-    ]
-  },
-  "chain_lightning": {
-    "id": "chain_lightning",
-    "name": "Цепная молния",
-    "school": "air",
-    "manaCost": 18,
-    "description": "Наносит 25 урона, переходит на 3 цели (-25% за цель)",
-    "target": "area",
-    "effects": [
-      { "type": "damage", "value": 25 }
-    ]
-  },
-  "fly": {
-    "id": "fly",
-    "name": "Полёт",
-    "school": "air",
-    "manaCost": 12,
-    "description": "Юнит получает способность летать на 3 хода",
-    "target": "single",
-    "effects": [
-      { "type": "buff", "stat": "flying", "duration": 3 }
+      { "type": "buff", "stat": "defense", "value": 30, "duration": 3 }
     ]
   },
   "blind": {
     "id": "blind",
     "name": "Ослепление",
-    "school": "mind",
+    "nameEn": "Blind",
+    "school": "order",
     "manaCost": 8,
     "description": "Юнит пропускает ход",
     "target": "single",
@@ -198,12 +269,641 @@
   "forgetfulness": {
     "id": "forgetfulness",
     "name": "Забывчивость",
-    "school": "mind",
+    "nameEn": "Forgetfulness",
+    "school": "order",
     "manaCost": 10,
     "description": "Стрелок не может стрелять 3 хода",
     "target": "single",
     "effects": [
       { "type": "debuff", "stat": "ranged", "duration": 3 }
+    ]
+  },
+  "dispel": {
+    "id": "dispel",
+    "name": "Развеивание магии",
+    "nameEn": "Dispel",
+    "school": "order",
+    "manaCost": 8,
+    "description": "Снимает все эффекты (положительные и отрицательные)",
+    "target": "single",
+    "effects": [
+      { "type": "dispel_all" }
+    ]
+  },
+  "precision": {
+    "id": "precision",
+    "name": "Точность",
+    "nameEn": "Precision",
+    "school": "order",
+    "manaCost": 6,
+    "description": "Стрелки получают +50% урона на 3 хода",
+    "target": "all_allies",
+    "effects": [
+      { "type": "buff", "stat": "ranged_damage", "value": 50, "duration": 3 }
+    ]
+  },
+  "shield_wall": {
+    "id": "shield_wall",
+    "name": "Стена щитов",
+    "nameEn": "Shield Wall",
+    "school": "order",
+    "manaCost": 10,
+    "description": "Все союзники получают +10 защиты на 3 хода",
+    "target": "all_allies",
+    "effects": [
+      { "type": "buff", "stat": "defense", "value": 10, "duration": 3 }
+    ]
+  },
+  "precision_shot": {
+    "id": "precision_shot",
+    "name": "Прицельный выстрел",
+    "nameEn": "Precision Shot",
+    "school": "order",
+    "manaCost": 8,
+    "description": "Следующая атака стрелка критическая (+100% урон)",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "critical_chance", "value": 100, "duration": 1 }
+    ]
+  },
+  "time_warp": {
+    "id": "time_warp",
+    "name": "Искажение времени",
+    "nameEn": "Time Warp",
+    "school": "order",
+    "manaCost": 15,
+    "description": "Юнит получает дополнительный ход",
+    "target": "single",
+    "effects": [
+      { "type": "extra_turn" }
+    ]
+  },
+
+  "bloodlust": {
+    "id": "bloodlust",
+    "name": "Жажда крови",
+    "nameEn": "Bloodlust",
+    "school": "chaos",
+    "manaCost": 6,
+    "description": "Увеличивает атаку юнита на 5 на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "attack", "value": 5, "duration": 3 }
+    ]
+  },
+  "fireball": {
+    "id": "fireball",
+    "name": "Огненный шар",
+    "nameEn": "Fireball",
+    "school": "chaos",
+    "manaCost": 12,
+    "description": "Наносит 25 урона в области 3x3",
+    "target": "area",
+    "effects": [
+      { "type": "damage", "value": 25 }
+    ]
+  },
+  "berserk": {
+    "id": "berserk",
+    "name": "Берсерк",
+    "nameEn": "Berserk",
+    "school": "chaos",
+    "manaCost": 15,
+    "description": "Юнит атакует ближайшую цель, теряя контроль",
+    "target": "single",
+    "effects": [
+      { "type": "debuff", "stat": "control", "duration": 2 }
+    ]
+  },
+  "armageddon": {
+    "id": "armageddon",
+    "name": "Армагеддон",
+    "nameEn": "Armageddon",
+    "school": "chaos",
+    "manaCost": 30,
+    "description": "Наносит 100 урона всем юнитам на поле",
+    "target": "all",
+    "effects": [
+      { "type": "damage", "value": 100 }
+    ]
+  },
+  "lightning": {
+    "id": "lightning",
+    "name": "Молния",
+    "nameEn": "Lightning Bolt",
+    "school": "chaos",
+    "manaCost": 10,
+    "description": "Наносит 30 урона одному юниту",
+    "target": "single",
+    "effects": [
+      { "type": "damage", "value": 30 }
+    ]
+  },
+  "chain_lightning": {
+    "id": "chain_lightning",
+    "name": "Цепная молния",
+    "nameEn": "Chain Lightning",
+    "school": "chaos",
+    "manaCost": 18,
+    "description": "Наносит 25 урона, переходит на 3 цели (-25% за цель)",
+    "target": "area",
+    "effects": [
+      { "type": "damage", "value": 25 }
+    ]
+  },
+  "meteor": {
+    "id": "meteor",
+    "name": "Метеоритный дождь",
+    "nameEn": "Meteor Shower",
+    "school": "chaos",
+    "manaCost": 15,
+    "description": "Наносит 50 урона одному юниту",
+    "target": "single",
+    "effects": [
+      { "type": "damage", "value": 50 }
+    ]
+  },
+  "inferno": {
+    "id": "inferno",
+    "name": "Инферно",
+    "nameEn": "Inferno",
+    "school": "chaos",
+    "manaCost": 25,
+    "description": "Наносит 60 урона в области 5x5",
+    "target": "area",
+    "effects": [
+      { "type": "damage", "value": 60 }
+    ]
+  },
+  "poison": {
+    "id": "poison",
+    "name": "Отравление",
+    "nameEn": "Poison",
+    "school": "chaos",
+    "manaCost": 8,
+    "description": "Юнит теряет 5 HP в начале хода на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "debuff", "stat": "poison", "value": 5, "duration": 3 }
+    ]
+  },
+  "confusion": {
+    "id": "confusion",
+    "name": "Путаница",
+    "nameEn": "Confusion",
+    "school": "chaos",
+    "manaCost": 12,
+    "description": "Юнит атакует случайную цель на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "debuff", "stat": "confusion", "duration": 3 }
+    ]
+  },
+  "chaining": {
+    "id": "chaining",
+    "name": "Цепная реакция",
+    "nameEn": "Chaining",
+    "school": "chaos",
+    "manaCost": 15,
+    "description": "Заклинание поражает 3 цели подряд",
+    "target": "area",
+    "effects": [
+      { "type": "multi_target", "count": 3 }
+    ]
+  },
+  "rubber_band": {
+    "id": "rubber_band",
+    "name": "Резиновая лента",
+    "nameEn": "Rubber Band",
+    "school": "chaos",
+    "manaCost": 10,
+    "description": "Юнит отбрасывается назад при получении урона",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "knockback", "duration": 3 }
+    ]
+  },
+  "accident": {
+    "id": "accident",
+    "name": "Авария",
+    "nameEn": "Accident",
+    "school": "chaos",
+    "manaCost": 20,
+    "description": "Случайный мощный эффект (урон 50-100)",
+    "target": "random",
+    "effects": [
+      { "type": "random_damage", "min": 50, "max": 100 }
+    ]
+  },
+
+  "stoneskin": {
+    "id": "stoneskin",
+    "name": "Каменная кожа",
+    "nameEn": "Stoneskin",
+    "school": "natural",
+    "manaCost": 7,
+    "description": "Увеличивает защиту юнита на 5 на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "defense", "value": 5, "duration": 3 }
+    ]
+  },
+  "fly": {
+    "id": "fly",
+    "name": "Полёт",
+    "nameEn": "Fly",
+    "school": "natural",
+    "manaCost": 12,
+    "description": "Юнит получает способность летать на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "flying", "duration": 3 }
+    ]
+  },
+  "water_walk": {
+    "id": "water_walk",
+    "name": "Хождение по воде",
+    "nameEn": "Water Walk",
+    "school": "natural",
+    "manaCost": 10,
+    "description": "Герой может ходить по воде 1 день",
+    "target": "hero",
+    "effects": [
+      { "type": "buff", "stat": "water_walk", "duration": 1 }
+    ]
+  },
+  "earthquake": {
+    "id": "earthquake",
+    "name": "Землетрясение",
+    "nameEn": "Earthquake",
+    "school": "natural",
+    "manaCost": 20,
+    "description": "Разрушает стены города, наносит 40 урона",
+    "target": "area",
+    "effects": [
+      { "type": "damage", "value": 40 },
+      { "type": "destroy_walls" }
+    ]
+  },
+  "summon_elementals": {
+    "id": "summon_elementals",
+    "name": "Призыв элементалей",
+    "nameEn": "Summon Elementals",
+    "school": "natural",
+    "manaCost": 25,
+    "description": "Призывает 5 элементалей на 3 хода",
+    "target": "self",
+    "effects": [
+      { "type": "summon_elementals", "count": 5, "duration": 3 }
+    ]
+  },
+  "antidote": {
+    "id": "antidote",
+    "name": "Антидот",
+    "nameEn": "Antidote",
+    "school": "natural",
+    "manaCost": 6,
+    "description": "Снимает все яды и болезни",
+    "target": "single",
+    "effects": [
+      { "type": "cure_poison" }
+    ]
+  },
+  "strength": {
+    "id": "strength",
+    "name": "Сила",
+    "nameEn": "Strength",
+    "school": "natural",
+    "manaCost": 8,
+    "description": "Увеличивает атаку на 10 на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "attack", "value": 10, "duration": 3 }
+    ]
+  },
+  "eruption": {
+    "id": "eruption",
+    "name": "Извержение",
+    "nameEn": "Eruption",
+    "school": "natural",
+    "manaCost": 18,
+    "description": "Наносит 45 урона в области 3x3",
+    "target": "area",
+    "effects": [
+      { "type": "damage", "value": 45 }
+    ]
+  },
+  "mirage": {
+    "id": "mirage",
+    "name": "Мираж",
+    "nameEn": "Mirage",
+    "school": "natural",
+    "manaCost": 12,
+    "description": "Создаёт иллюзии врагов на поле боя",
+    "target": "area",
+    "effects": [
+      { "type": "summon_enemies", "count": 3 }
+    ]
+  },
+  "bark_skin": {
+    "id": "bark_skin",
+    "name": "Кора дерева",
+    "nameEn": "Bark Skin",
+    "school": "natural",
+    "manaCost": 9,
+    "description": "Превращает кожу в кору (+8 защиты) на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "defense", "value": 8, "duration": 3 }
+    ]
+  },
+  "thunderbolt": {
+    "id": "thunderbolt",
+    "name": "Громовой удар",
+    "nameEn": "Thunderbolt",
+    "school": "natural",
+    "manaCost": 14,
+    "description": "Наносит 35 урона и оглушает на 1 ход",
+    "target": "single",
+    "effects": [
+      { "type": "damage", "value": 35 },
+      { "type": "debuff", "stat": "stun", "duration": 1 }
+    ]
+  },
+  "mass_slow": {
+    "id": "mass_slow",
+    "name": "Массовое замедление",
+    "nameEn": "Mass Slow",
+    "school": "order",
+    "manaCost": 15,
+    "description": "Замедляет всех врагов на 3 хода",
+    "target": "all_enemies",
+    "effects": [
+      { "type": "debuff", "stat": "speed", "value": 50, "duration": 3 }
+    ]
+  },
+  "mass_haste": {
+    "id": "mass_haste",
+    "name": "Массовое ускорение",
+    "nameEn": "Mass Haste",
+    "school": "order",
+    "manaCost": 15,
+    "description": "Ускоряет всех союзников на 3 хода",
+    "target": "all_allies",
+    "effects": [
+      { "type": "buff", "stat": "speed", "value": 50, "duration": 3 }
+    ]
+  },
+  "mass_bless": {
+    "id": "mass_bless",
+    "name": "Массовое благословение",
+    "nameEn": "Mass Bless",
+    "school": "life",
+    "manaCost": 12,
+    "description": "Благословляет всех союзников на 3 хода",
+    "target": "all_allies",
+    "effects": [
+      { "type": "buff", "stat": "damage", "value": 20, "duration": 3 }
+    ]
+  },
+  "mass_curse": {
+    "id": "mass_curse",
+    "name": "Массовое проклятие",
+    "nameEn": "Mass Curse",
+    "school": "death",
+    "manaCost": 12,
+    "description": "Проклинает всех врагов на 3 хода",
+    "target": "all_enemies",
+    "effects": [
+      { "type": "debuff", "stat": "min_damage", "duration": 3 }
+    ]
+  },
+  "mass shield": {
+    "id": "mass_shield",
+    "name": "Массовый щит",
+    "nameEn": "Mass Shield",
+    "school": "order",
+    "manaCost": 15,
+    "description": "Снижает урон всем союзникам на 30% на 3 хода",
+    "target": "all_allies",
+    "effects": [
+      { "type": "buff", "stat": "defense", "value": 30, "duration": 3 }
+    ]
+  },
+  "mass_antimagic": {
+    "id": "mass_antimagic",
+    "name": "Массовая антимагия",
+    "nameEn": "Mass Anti-Magic",
+    "school": "life",
+    "manaCost": 18,
+    "description": "Все союзники immune к магии на 3 хода",
+    "target": "all_allies",
+    "effects": [
+      { "type": "buff", "stat": "magic_immunity", "duration": 3 }
+    ]
+  },
+  "resurrection_mass": {
+    "id": "resurrection_mass",
+    "name": "Массовое воскрешение",
+    "nameEn": "Mass Resurrection",
+    "school": "life",
+    "manaCost": 40,
+    "description": "Воскрешает всех павших союзников (до 50% HP)",
+    "target": "all_allies",
+    "effects": [
+      { "type": "heal", "value": 50 }
+    ]
+  },
+  "sacrifice": {
+    "id": "sacrifice",
+    "name": "Жертва",
+    "nameEn": "Sacrifice",
+    "school": "life",
+    "manaCost": 15,
+    "description": "Убивает юнита и лечит всех союзников на 50 HP",
+    "target": "single",
+    "effects": [
+      { "type": "kill_self", "heal_allies": 50 }
+    ]
+  },
+  "summon_daemons": {
+    "id": "summon_daemons",
+    "name": "Призыв демонов",
+    "nameEn": "Summon Daemons",
+    "school": "death",
+    "manaCost": 30,
+    "description": "Призывает 3 демона на 3 хода",
+    "target": "self",
+    "effects": [
+      { "type": "summon", "count": 3, "duration": 3 }
+    ]
+  },
+  "vampirism": {
+    "id": "vampirism",
+    "name": "Вампиризм",
+    "nameEn": "Vampirism",
+    "school": "death",
+    "manaCost": 15,
+    "description": "Все атаки лечат на 50% урона на 3 хода",
+    "target": "single",
+    "effects": [
+      { "type": "buff", "stat": "lifesteal", "value": 50, "duration": 3 }
+    ]
+  },
+  "destroy_unholy": {
+    "id": "destroy_unholy",
+    "name": "Разрушение нечисти",
+    "nameEn": "Destroy Unholy",
+    "school": "life",
+    "manaCost": 20,
+    "description": "Наносит двойной урон нежити",
+    "target": "all_allies",
+    "effects": [
+      { "type": "buff", "stat": "undead_damage", "value": 100, "duration": 3 }
+    ]
+  },
+  "holy_light": {
+    "id": "holy_light",
+    "name": "Святой свет",
+    "nameEn": "Holy Light",
+    "school": "life",
+    "manaCost": 18,
+    "description": "Наносит 30 урона всей нежити",
+    "target": "all_enemies_undead",
+    "effects": [
+      { "type": "damage", "value": 30 }
+    ]
+  },
+  "metamorphosis": {
+    "id": "metamorphosis",
+    "name": "Метаморфоз",
+    "nameEn": "Metamorphosis",
+    "school": "chaos",
+    "manaCost": 25,
+    "description": "Превращает всех существ в слабые копии на 2 хода",
+    "target": "all",
+    "effects": [
+      { "type": "transform", "duration": 2 }
+    ]
+  },
+  "hellfire": {
+    "id": "hellfire",
+    "name": "Адский огонь",
+    "nameEn": "Hellfire",
+    "school": "chaos",
+    "manaCost": 22,
+    "description": "Наносит 55 урона в области 4x4",
+    "target": "area",
+    "effects": [
+      { "type": "damage", "value": 55 }
+    ]
+  },
+  "thunder_storm": {
+    "id": "thunder_storm",
+    "name": "Грозовой шторм",
+    "nameEn": "Thunderstorm",
+    "school": "chaos",
+    "manaCost": 20,
+    "description": "Наносит 40 урона всем врагам",
+    "target": "all_enemies",
+    "effects": [
+      { "type": "damage", "value": 40 }
+    ]
+  },
+  "dimension_door": {
+    "id": "dimension_door",
+    "name": "Дверь измерений",
+    "nameEn": "Dimension Door",
+    "school": "order",
+    "manaCost": 15,
+    "description": "Мгновенно телепортирует героя на карту",
+    "target": "hero",
+    "effects": [
+      { "type": "teleport_hero" }
+    ]
+  },
+  "view_earth": {
+    "id": "view_earth",
+    "name": "Взгляд с высоты",
+    "nameEn": "View Earth",
+    "school": "order",
+    "manaCost": 20,
+    "description": "Открывает всю карту на 1 день",
+    "target": "hero",
+    "effects": [
+      { "type": "reveal_map", "duration": 1 }
+    ]
+  },
+  "view_air": {
+    "id": "view_air",
+    "name": "Взгляд с воздуха",
+    "nameEn": "View Air",
+    "school": "order",
+    "manaCost": 15,
+    "description": "Открывает карту вокруг героя",
+    "target": "hero",
+    "effects": [
+      { "type": "reveal_area", "radius": 10 }
+    ]
+  },
+  "pathfinding": {
+    "id": "pathfinding",
+    "name": "Сквозной путь",
+    "nameEn": "Pathfinding",
+    "school": "natural",
+    "manaCost": 8,
+    "description": "Герой игнорирует штраф от terrain на 1 день",
+    "target": "hero",
+    "effects": [
+      { "type": "buff", "stat": "no_terrain_penalty", "duration": 1 }
+    ]
+  },
+  "land_mine": {
+    "id": "land_mine",
+    "name": "Земляная мина",
+    "nameEn": "Land Mine",
+    "school": "natural",
+    "manaCost": 10,
+    "description": "Ставит мину, взрывающуюся при проходе врага (50 урона)",
+    "target": "area",
+    "effects": [
+      { "type": "trap", "damage": 50 }
+    ]
+  },
+  "force_field": {
+    "id": "force_field",
+    "name": "Силовое поле",
+    "nameEn": "Force Field",
+    "school": "natural",
+    "manaCost": 15,
+    "description": "Создаёт непроницаемую стену на 2 хода",
+    "target": "area",
+    "effects": [
+      { "type": "wall", "duration": 2 }
+    ]
+  },
+  "transmutation": {
+    "id": "transmutation",
+    "name": "Трансмутация",
+    "nameEn": "Transmutation",
+    "school": "order",
+    "manaCost": 18,
+    "description": "Превращает врага в слабое существо на 2 хода",
+    "target": "single",
+    "effects": [
+      { "type": "transform_enemy", "duration": 2 }
+    ]
+  },
+  "portal": {
+    "id": "portal",
+    "name": "Портал",
+    "nameEn": "Portal",
+    "school": "order",
+    "manaCost": 25,
+    "description": "Открывает портал для быстрой поездки на карту",
+    "target": "hero",
+    "effects": [
+      { "type": "create_portal" }
     ]
   }
 }

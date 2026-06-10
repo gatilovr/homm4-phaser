@@ -3,6 +3,7 @@ import { CONFIG } from '../config';
 import { Town, Building, Resources, ArmySlot, Artifact, Hero } from '../types';
 import { TownOwnership } from '../systems/VictorySystem';
 import { UPGRADE_TABLE, getUpgrade, applyUpgrade, canAffordUpgrade, BASE_MARKET_RATES, generateMageGuildOffers, BASE_WEEKLY_GROWTH, UpgradeCost } from '../systems/EconomySystem';
+import { SHIP_COSTS, canBuildShipyard, createShipObject } from '../systems/NavalSystem';
 
 /**
  * TownScene — полноценная система города:
@@ -13,7 +14,7 @@ import { UPGRADE_TABLE, getUpgrade, applyUpgrade, canAffordUpgrade, BASE_MARKET_
  * - 🍺 Таверна (найм героев)
  * - 📦 Передача армии между героем и гарнизоном
  */
-type TabId = 'buildings' | 'hire' | 'market' | 'blacksmith' | 'garrison' | 'tavern' | 'upgrade' | 'mageguild';
+type TabId = 'buildings' | 'hire' | 'market' | 'blacksmith' | 'garrison' | 'tavern' | 'upgrade' | 'mageguild' | 'shipyard';
 
 export class TownScene extends Phaser.Scene {
   private town!: TownOwnership;
@@ -165,7 +166,8 @@ export class TownScene extends Phaser.Scene {
       { id: 'market', label: '🏪 Рынок', x: width / 2 + 100 },
       { id: 'mageguild', label: '🧙 Гильдия', x: width / 2 + 210 },
       { id: 'blacksmith', label: '⚒️ Кузница', x: width / 2 + 320 },
-      { id: 'tavern', label: '🍺 Таверна', x: width / 2 + 430 }
+      { id: 'tavern', label: '🍺 Таверна', x: width / 2 + 430 },
+      { id: 'shipyard', label: '⚓ Верфь', x: width / 2 + 540 }
     ];
 
     for (const tab of tabs) {
@@ -230,6 +232,7 @@ export class TownScene extends Phaser.Scene {
       case 'mageguild': this.renderMageGuild(); break;
       case 'blacksmith': this.renderBlacksmith(); break;
       case 'tavern': this.renderTavern(); break;
+      case 'shipyard': this.renderShipyard(); break;
     }
   }
 
@@ -529,14 +532,19 @@ export class TownScene extends Phaser.Scene {
       const canBuy = this.worldScene.getResources().gold >= offer.cost && !existingSpells.includes(offer.spellId);
 
       const schoolColors: Record<string, number> = {
-        water: 0x3498db, fire: 0xe74c3c, earth: 0x95a5a6, air: 0xecf0f1, mind: 0x9b59b6
+        life: 0xffd700,      // Золотой — Жизнь
+        death: 0x8b008b,     // Тёмно-фиолетовый — Смерть
+        order: 0x4169e1,     // Королевский синий — Порядок
+        chaos: 0xff4500,     // Оранжево-красный — Хаос
+        natural: 0x228b22,   // Лесной зелёный — Природа
+        tactics: 0xdc143c    // Багровый — Тактика
       };
 
       const bg = this.add.rectangle(width / 2, y, 700, 60, schoolColors[offer.school] || 0x2c3e50, 0.6)
         .setStrokeStyle(2, canBuy ? 0xd4af37 : 0x444444);
 
       const schoolIcons: Record<string, string> = {
-        water: '💧', fire: '🔥', earth: '🪨', air: '💨', mind: '🧠'
+        life: '💛', death: '💀', order: '⚜️', chaos: '🔥', natural: '🌿', tactics: '⚔️'
       };
 
       const name = this.add.text(width / 2 - 330, y - 10, 
@@ -615,17 +623,30 @@ export class TownScene extends Phaser.Scene {
   }
 
   private getFallbackSpells(): any[] {
+    // Школы магии HoMM4 (канон): Life, Death, Order, Chaos, Natural
     return [
-      { id: 'bless', name: 'Благословение', level: 1, school: 'water', description: '+20% урона союзнику' },
-      { id: 'cure', name: 'Лечение', level: 1, school: 'water', description: 'Снимает негативные эффекты' },
-      { id: 'slow', name: 'Замедление', level: 1, school: 'earth', description: '-50% скорости врага' },
-      { id: 'haste', name: 'Ускорение', level: 1, school: 'air', description: '+50% скорости союзнику' },
-      { id: 'shield', name: 'Щит', level: 1, school: 'earth', description: '-30% получаемого урона' },
-      { id: 'bloodlust', name: 'Жажда крови', level: 1, school: 'fire', description: '+30% урона в ближнем бою' },
-      { id: 'fireball', name: 'Огненный шар', level: 2, school: 'fire', description: 'Урон по области' },
-      { id: 'lightning', name: 'Молния', level: 2, school: 'air', description: 'Урон одному врагу' },
-      { id: 'blind', name: 'Ослепление', level: 2, school: 'mind', description: 'Пропуск хода' },
-      { id: 'teleport', name: 'Телепорт', level: 3, school: 'air', description: 'Перемещение союзника' }
+      // === LIFE (Жизнь) ===
+      { id: 'bless', name: 'Благословение', level: 1, school: 'life', description: '+20% урона союзнику' },
+      { id: 'heal', name: 'Исцеление', level: 2, school: 'life', description: 'Восстанавливает HP и снимает негативные эффекты' },
+      { id: 'resurrect', name: 'Воскрешение', level: 4, school: 'life', description: 'Воскрешает павших существ' },
+      // === ORDER (Порядок) ===
+      { id: 'haste', name: 'Ускорение', level: 1, school: 'order', description: '+50% скорости союзнику' },
+      { id: 'slow', name: 'Замедление', level: 1, school: 'order', description: '-50% скорости врага' },
+      { id: 'shield', name: 'Щит', level: 1, school: 'order', description: '-30% получаемого урона' },
+      { id: 'blind', name: 'Ослепление', level: 2, school: 'order', description: 'Пропуск хода' },
+      { id: 'forgetfulness', name: 'Забывчивость', level: 2, school: 'order', description: 'Стрелок не может стрелять' },
+      { id: 'teleport', name: 'Телепорт', level: 3, school: 'order', description: 'Перемещение союзника' },
+      { id: 'clone', name: 'Зеркальный образ', level: 4, school: 'order', description: 'Создаёт копию существа' },
+      // === CHAOS (Хаос) ===
+      { id: 'bloodlust', name: 'Жажда крови', level: 1, school: 'chaos', description: '+5 атаки в ближнем бою' },
+      { id: 'lightning', name: 'Молния', level: 2, school: 'chaos', description: 'Урон одному врагу' },
+      { id: 'fireball', name: 'Огненный шар', level: 3, school: 'chaos', description: 'Урон по области 3x3' },
+      { id: 'berserk', name: 'Берсерк', level: 3, school: 'chaos', description: 'Враг атакует ближайшую цель' },
+      { id: 'meteor', name: 'Метеоритный дождь', level: 4, school: 'chaos', description: 'Мощный урон одному врагу' },
+      { id: 'armageddon', name: 'Армагеддон', level: 5, school: 'chaos', description: 'Урон всем на поле' },
+      // === NATURAL (Природа) ===
+      { id: 'stoneskin', name: 'Каменная кожа', level: 1, school: 'natural', description: '+5 защиты' },
+      { id: 'fly', name: 'Полёт', level: 3, school: 'natural', description: 'Существо получает способность летать' }
     ];
   }
 
@@ -1239,6 +1260,7 @@ export class TownScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-SIX', () => this.showTab('mageguild'));
     this.input.keyboard?.on('keydown-SEVEN', () => this.showTab('blacksmith'));
     this.input.keyboard?.on('keydown-EIGHT', () => this.showTab('tavern'));
+    this.input.keyboard?.on('keydown-NINE', () => this.showTab('shipyard'));
   }
 
   private returnToWorld(): void {
@@ -1293,7 +1315,8 @@ export class TownScene extends Phaser.Scene {
       { id: 'tavern', name: 'Таверна', description: 'Найм героев', cost: { gold: 500, wood: 5 }, requires: [], faction: 'common', category: 'infrastructure' },
       { id: 'marketplace', name: 'Рынок', description: 'Обмен ресурсов', cost: { gold: 500, wood: 5 }, requires: [], faction: 'common', category: 'economy' },
       { id: 'blacksmith', name: 'Кузница', description: 'Артефакты', cost: { gold: 1000, ore: 5 }, requires: [], faction: 'common', category: 'infrastructure' },
-      { id: 'mageGuild1', name: 'Гильдия магов', description: 'Заклинания', cost: { gold: 1000, wood: 5 }, requires: [], faction: 'common', category: 'magic' }
+      { id: 'mageGuild1', name: 'Гильдия магов', description: 'Заклинания', cost: { gold: 1000, wood: 5 }, requires: [], faction: 'common', category: 'magic' },
+      { id: 'shipyard', name: 'Верфь', description: 'Постройка кораблей', cost: { gold: 2000, wood: 20 }, requires: [], faction: 'common', category: 'infrastructure' }
     ];
   }
 
@@ -1511,6 +1534,218 @@ export class TownScene extends Phaser.Scene {
     };
 
     return armies[faction] || armies.haven;
+  }
+
+  // ==================== ВЕРФЬ (канон HoMM4) ====================
+
+  /**
+   * Отрисовка вкладки "⚓ Верфь"
+   * В каноне HoMM4: постройка кораблей (только лодка, 1000 золота)
+   * Требует: построенное здание shipyard + вода рядом с городом
+   */
+  private renderShipyard(): void {
+    const { width } = this.scale;
+    const panel = this.add.rectangle(width / 2, 400, 800, 500, 0x1a1a2e, 0.95)
+      .setStrokeStyle(2, 0xd4af37);
+    this.contentContainer.add(panel);
+
+    // Проверка 1: построена ли верфь?
+    const hasShipyard = this.town.builtBuildings.includes('shipyard');
+    if (!hasShipyard) {
+      const noShipyard = this.add.text(width / 2, 280,
+        '⚓ Постройте Верфь для покупки кораблей', {
+          fontSize: '18px', color: '#888888', fontFamily: 'Segoe UI'
+        }).setOrigin(0.5);
+      const hint = this.add.text(width / 2, 320,
+        'Требуется: 💰 2000 + 🪵 20 дерева', {
+          fontSize: '14px', color: '#666666', fontFamily: 'Segoe UI'
+        }).setOrigin(0.5);
+      this.contentContainer.add([noShipyard, hint]);
+      return;
+    }
+
+    // Проверка 2: есть ли вода рядом с городом?
+    const map = this.worldScene.getMap ? this.worldScene.getMap() : null;
+    const mapSize = this.worldScene.getMapSize ? this.worldScene.getMapSize() : { w: 60, h: 60 };
+    const canBuild = map && canBuildShipyard(
+      this.town.x, this.town.y, map, mapSize.w, mapSize.h
+    );
+
+    if (!canBuild) {
+      const noWater = this.add.text(width / 2, 280,
+        '🌊 Верфь не может строить — нет воды рядом с городом!', {
+          fontSize: '18px', color: '#e74c3c', fontFamily: 'Segoe UI'
+        }).setOrigin(0.5);
+      const hint = this.add.text(width / 2, 320,
+        'Верфь должна быть построена у берега (в радиусе 2 клеток от города)', {
+          fontSize: '13px', color: '#888888', fontFamily: 'Segoe UI'
+        }).setOrigin(0.5);
+      this.contentContainer.add([noWater, hint]);
+      return;
+    }
+
+    // Заголовок
+    const title = this.add.text(width / 2, 150,
+      '⚓ Верфь — постройка кораблей', {
+        fontSize: '20px', color: '#d4af37', fontFamily: 'Segoe UI', fontStyle: 'bold'
+      }).setOrigin(0.5);
+    this.contentContainer.add(title);
+
+    const subtitle = this.add.text(width / 2, 180,
+      'В каноне HoMM4 был только один тип корабля — обычная лодка', {
+        fontSize: '12px', color: '#888888', fontFamily: 'Segoe UI'
+      }).setOrigin(0.5);
+    this.contentContainer.add(subtitle);
+
+    // === ЕДИНСТВЕННЫЙ ТИП КОРАБЛЯ: ЛОДКА (канон HoMM4) ===
+    const shipCost = SHIP_COSTS.boat;
+    const resources = this.worldScene.getResources();
+    const canAfford = resources.gold >= shipCost;
+
+    const bg = this.add.rectangle(width / 2, 280, 700, 140, 0x2c3e50, 0.95)
+      .setStrokeStyle(2, canAfford ? 0xd4af37 : 0x444444);
+
+    // Визуал корабля
+    const boatBg = this.add.circle(width / 2 - 260, 280, 45, 0x4a7c9f, 0.95)
+      .setStrokeStyle(3, 0x87ceeb);
+    const boatIcon = this.add.text(width / 2 - 260, 280, '🚢', {
+      fontSize: '48px'
+    }).setOrigin(0.5);
+
+    // Название
+    const name = this.add.text(width / 2 - 180, 240, 'Лодка (Boat)', {
+      fontSize: '22px', color: '#f0e6d2', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    });
+
+    // Описание
+    const desc = this.add.text(width / 2 - 180, 270,
+      'Позволяет герою перемещаться по воде.\nПосадка/высадка на берег. Телепортация через водовороты.', {
+        fontSize: '12px', color: '#aaaaaa', fontFamily: 'Segoe UI',
+        wordWrap: { width: 450 }
+      });
+
+    // Статы
+    const stats = this.add.text(width / 2 - 180, 310,
+      '📦 Вместимость: 7 слотов армии  |  🚀 Скорость: базовая', {
+        fontSize: '12px', color: '#87ceeb', fontFamily: 'Segoe UI'
+      });
+
+    // Цена
+    const price = this.add.text(width / 2 - 180, 340,
+      `💰 Стоимость: ${shipCost} золота`, {
+        fontSize: '16px', color: canAfford ? '#ffd700' : '#e74c3c',
+        fontFamily: 'Segoe UI', fontStyle: 'bold'
+      });
+
+    // Текущее золото игрока
+    const playerGold = this.add.text(width / 2 - 180, 365,
+      `У вас: 💰 ${resources.gold} золота`, {
+        fontSize: '12px', color: '#888888', fontFamily: 'Segoe UI'
+      });
+
+    // Кнопка "Купить"
+    if (canAfford) {
+      const buyBtn = this.createMiniButton(width / 2 + 260, 280, '🚢 КУПИТЬ', 0x2ecc71, () => {
+        this.buyShip();
+      });
+      this.contentContainer.add([bg, boatBg, boatIcon, name, desc, stats, price, playerGold, buyBtn]);
+    } else {
+      const disabledBtn = this.createMiniButton(width / 2 + 260, 280, '❌ Нет золота', 0x555555, () => {
+        this.showNotification('❌ Недостаточно золота!');
+      });
+      this.contentContainer.add([bg, boatBg, boatIcon, name, desc, stats, price, playerGold, disabledBtn]);
+    }
+
+    // === ИНФОРМАЦИЯ О ИСПОЛЬЗОВАНИИ ===
+    const usageTitle = this.add.text(width / 2, 420, '📖 Как использовать корабль:', {
+      fontSize: '16px', color: '#4a7c9f', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    const usageText = this.add.text(width / 2, 450,
+      '• Корабль появится на ближайшей водной клетке рядом с городом\n' +
+      '• Подойдите к кораблю и кликните по нему — герой сядет на борт\n' +
+      '• Кликните по берегу — герой высадится (корабль останется на воде)\n' +
+      '• ⚠️ Водовороты имеют 25% шанс потери слабейшего отряда (канон HoMM4)', {
+        fontSize: '12px', color: '#cccccc', fontFamily: 'Segoe UI',
+        wordWrap: { width: 700 }, lineSpacing: 4
+      }).setOrigin(0.5);
+
+    this.contentContainer.add([usageTitle, usageText]);
+
+    // === СТАТИСТИКА ===
+    const playerHeroes = this.worldScene.getPlayerHeroes ? this.worldScene.getPlayerHeroes() : [this.worldScene.getHero()];
+    const heroesOnShip = playerHeroes.filter((h: any) => h.onShipId);
+    
+    const statsText = this.add.text(width / 2, 540,
+      `🦸 Героев на кораблях: ${heroesOnShip.length} из ${playerHeroes.length}`,
+      { fontSize: '14px', color: '#87ceeb', fontFamily: 'Segoe UI' }
+    ).setOrigin(0.5);
+    this.contentContainer.add(statsText);
+  }
+
+  /**
+   * Покупка корабля
+   * Списывает 1000 золота и размещает корабль на ближайшей водной клетке рядом с городом
+   */
+  private buyShip(): void {
+    const resources = this.worldScene.getResources();
+    const cost = SHIP_COSTS.boat;
+
+    if (resources.gold < cost) {
+      this.showNotification('❌ Недостаточно золота!');
+      return;
+    }
+
+    // Списываем золото
+    resources.gold -= cost;
+
+    // Ищем ближайшую водную клетку рядом с городом для размещения корабля
+    const map = this.worldScene.getMap();
+    const mapSize = this.worldScene.getMapSize();
+    const townX = this.town.x;
+    const townY = this.town.y;
+
+    let shipX = -1;
+    let shipY = -1;
+
+    // Поиск в расширяющемся радиусе (1-5 клеток)
+    for (let radius = 1; radius <= 5; radius++) {
+      if (shipX >= 0) break;
+      for (let dy = -radius; dy <= radius && shipX < 0; dy++) {
+        for (let dx = -radius; dx <= radius && shipX < 0; dx++) {
+          if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue; // Только периметр
+          const nx = townX + dx;
+          const ny = townY + dy;
+          if (nx < 0 || nx >= mapSize.w || ny < 0 || ny >= mapSize.h) continue;
+          const tile = map[ny][nx];
+          if (tile.type === 'water' && !tile.object) {
+            shipX = nx;
+            shipY = ny;
+          }
+        }
+      }
+    }
+
+    if (shipX < 0) {
+      // Не нашли воду — возвращаем золото
+      resources.gold += cost;
+      this.showNotification('❌ Нет свободной воды рядом с городом!');
+      return;
+    }
+
+    // Создаём объект корабля и размещаем на карте
+    const shipObj = createShipObject(shipX, shipY, 'boat');
+    
+    // Вызываем метод WorldScene для размещения объекта (если он есть)
+    if (this.worldScene.placeObjectSafe) {
+      this.worldScene.placeObjectSafe(shipObj.id, 'boat', shipX, shipY, shipObj.data);
+    } else {
+      // Fallback: напрямую в map
+      map[shipY][shipX].object = shipObj;
+    }
+
+    this.showNotification(`✅ Корабль построен на клетке (${shipX}, ${shipY})!`);
+    this.refreshUI();
   }
 
   private hireTavernHero(tavernHero: any): void {

@@ -66,6 +66,9 @@ export class HeroManager {
     // Стартовые навыки по классу
     const startingSkills = this.skillSystem.getStartingSkills(heroClass);
 
+    // Рассчитываем HP героя по классу и уровню
+    const heroHP = this.skillSystem.calculateHeroHP(heroClass, level);
+
     // Базовая мана зависит от знаний
     const maxMana = 10 + baseStats.knowledge * 5;
 
@@ -84,7 +87,9 @@ export class HeroManager {
         attack: baseStats.attack,
         defense: baseStats.defense,
         spellPower: baseStats.spellPower,
-        knowledge: baseStats.knowledge
+        knowledge: baseStats.knowledge,
+        hp: heroHP,
+        maxHp: heroHP
       },
       skills: startingSkills,
       mana: maxMana,
@@ -364,6 +369,11 @@ export class HeroManager {
     // Базовые бонусы
     hero.stats.attack += 1;
     hero.stats.defense += 1;
+
+    // Увеличиваем HP на perLevel для класса героя
+    const hpPerLevel = this.skillSystem.getHPPerLevel(hero.class);
+    hero.stats.hp += hpPerLevel;
+    hero.stats.maxHp = hero.stats.hp;
 
     // Обновляем ману
     hero.maxMana = this.calculateMaxMana(hero);

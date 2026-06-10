@@ -11,6 +11,7 @@ import { CaravanSystem } from '../systems/CaravanSystem';
 import { MapObjectGenerator } from '../systems/MapObjectGenerator';
 import { HeroManager } from '../systems/HeroManager';
 import { SaveSystem } from '../systems/SaveSystem';
+import { WeeksSystem } from '../systems/WeeksSystem';
 import { SaveLoadUI } from '../ui/SaveLoadUI';
 import { UndergroundGenerator } from '../systems/UndergroundGenerator';
 import {
@@ -26,6 +27,9 @@ import {
 } from '../systems/NavalSystem';
 import type { ShipType } from '../systems/NavalSystem';
 import type { MineType } from '../systems/EconomySystem';
+import { AdventureMagicSystem, ADVENTURE_SPELLS } from '../systems/AdventureMagicSystem';
+import type { AdventureSpellId } from '../systems/AdventureMagicSystem';
+import { AdventureMagicBook } from '../ui/AdventureMagicBook';
 
 export class WorldScene extends Phaser.Scene {
   public map: Tile[][] = [];
@@ -89,8 +93,18 @@ export class WorldScene extends Phaser.Scene {
   private heroManager!: HeroManager;
   /** Система сохранения игры */
   private saveSystem!: SaveSystem;
+  /** Система специальных недель (HoMM4) */
+  private weeksSystem!: WeeksSystem;
   /** Флаг: игра загружена из сохранения */
   private loadedFromSave: boolean = false;
+  
+  // === МАГИЯ НА КАРТЕ (канон HoMM4) ===
+  /** UI книга заклинаний на карте */
+  private adventureMagicBook?: AdventureMagicBook;
+  /** Режим выбора цели для заклинания (например, Dimension Door) */
+  private spellTargetMode?: AdventureSpellId;
+  /** Подсветка клеток для выбора цели заклинания */
+  private spellTargetGraphics?: Phaser.GameObjects.Graphics;
 
   constructor() {
     super({ key: CONFIG.SCENES.WORLD });
@@ -106,8 +120,13 @@ export class WorldScene extends Phaser.Scene {
       this.loadedFromSave = true;
     }
     
-    // Инициализация SaveSystem
-    this.saveSystem = SaveSystem.getInstance();
+      // Инициализация SaveSystem
+      this.saveSystem = SaveSystem.getInstance();
+      
+      // Инициализация WeeksSystem (HoMM4 special weeks)
+      this.weeksSystem = new WeeksSystem(CONFIG.MAP_SEED);
+      this.weeksSystem.initialize(CONFIG.MAP_SEED);
+      console.log('[WorldScene] ✓ WeeksSystem initialized');
     
     // Сразу рисуем отладочный текст чтобы видеть что сцена запустилась
     const debugText = this.add.text(10, 10, '🗺️ WorldScene загружена!', {
@@ -187,6 +206,9 @@ export class WorldScene extends Phaser.Scene {
 
       // === ГОРЯЧИЕ КЛАВИШИ СОХРАНЕНИЯ ===
       this.setupSaveHotkeys();
+      
+      // === МАГИЯ НА КАРТЕ (канон HoMM4) ===
+      this.initAdventureMagic();
 
       console.log('[WorldScene] === CREATE COMPLETE ===');
       
@@ -522,6 +544,15 @@ export class WorldScene extends Phaser.Scene {
 
     // Начальные заклинания (knight не маг, но можно дать базовое)
     this.hero.spells = ['bless'];
+    
+    // === МАГИЯ НА КАРТЕ: даём стартовые заклинания для тестирования ===
+    // В каноне HoMM4 герой-маг имеет заклинания, рыцарь получает их от зданий
+    // Для тестирования даём базовый набор:
+    if (!this.hero.spells.includes('townPortal')) this.hero.spells.push('townPortal');
+    if (!this.hero.spells.includes('dimensionDoor')) this.hero.spells.push('dimensionDoor');
+    if (!this.hero.spells.includes('fly')) this.hero.spells.push('fly');
+    if (!this.hero.spells.includes('waterWalk')) this.hero.spells.push('waterWalk');
+    if (!this.hero.spells.includes('visions')) this.hero.spells.push('visions');
 
     // Максимальные очки движения (с учётом Логистики)
     (this.hero as any).movementPoints = this.heroManager.getMaxMovementPoints(this.hero);
@@ -667,7 +698,11 @@ export class WorldScene extends Phaser.Scene {
       this.moveHeroTo({ x: tileX, y: tileY });
     });
 
-    this.input.keyboard?.on('keydown-ENTER', () => this.endTurn());
+    this.input.keyboard?.on('keydown-ENTER', () => {
+      this.endTurn();
+      // Сброс дневных эффектов магии при смене дня
+      this.resetDailyMagicEffects();
+    });
     this.input.keyboard?.on('keydown-H', () => this.showHeroInfo());
     this.input.keyboard?.on('keydown-ESC', () => this.scene.start(CONFIG.SCENES.MENU));
     this.input.keyboard?.on('keydown-TAB', (event: KeyboardEvent) => {
@@ -1004,10 +1039,11 @@ export class WorldScene extends Phaser.Scene {
   // === НОВЫЕ МЕТОДЫ ВЗАИМОДЕЙСТВИЯ С ОБЪЕКТАМИ ===
 
   private visitSchool(id: string, data: any): void {
-    const school = data?.school || 'fire';
+    // Школы магии HoMM4 (канон)
+    const school = data?.school || 'chaos';
     const spellNames: Record<string, string> = {
-      fire: 'Огненный шар', water: 'Ледяная стрела', earth: 'Каменная кожа',
-      air: 'Молния', mind: 'Ослепление'
+      life: 'Исцеление', death: 'Проклятие', order: 'Ускорение',
+      chaos: 'Огненный шар', natural: 'Полёт', tactics: 'Наступление'
     };
     const spellName = spellNames[school] || 'Заклинание';
     
@@ -1494,13 +1530,18 @@ export class WorldScene extends Phaser.Scene {
   }
 
   public endTurn(): void {
-    this.day++;
+    // Интеграция с WeeksSystem: переход к следующему дню
+    const weekChanged = this.weeksSystem.nextDay();
     
-    // === ЕЖЕНЕДЕЛЬНЫЙ ПРИРОСТ (каждые 7 дней) ===
-    if (this.day > 7) {
-      this.day = 1;
-      this.week++;
-      this.showNotification('📅 Новая неделя!');
+    this.day = this.weeksSystem.getState().currentDay;
+    this.week = this.weeksSystem.getState().currentWeek;
+    
+    // Отображение новой недели
+    if (weekChanged) {
+      const specialWeek = this.weeksSystem.getState().specialWeek;
+      this.showNotification(`📅 Новая неделя!\n${specialWeek.name}\n${specialWeek.description}`);
+      
+      // Применяем еженедельный прирост существ с учётом эффектов недели
       this.applyWeeklyGrowth();
     }
     
@@ -1510,7 +1551,7 @@ export class WorldScene extends Phaser.Scene {
       this.addResources(mineIncome);
       const incomeStr = Object.entries(mineIncome)
         .map(([res, val]) => {
-          const icons: Record<string, string> = { gold: '💰', wood: '🪵', ore: '⛏️', crystal: '💎', gems: '💠', sulfur: '🟡', mercury: '🩸' };
+          const icons: Record<string, string> = { gold: '💰', wood: '🪵', ore: '⛏️', crystal: '💎', gems: '💠', sulfur: '🟡', mercury: '🔵' };
           return `${icons[res] || ''}+${val}`;
         })
         .join(' ');
@@ -1524,6 +1565,16 @@ export class WorldScene extends Phaser.Scene {
       const townIncome = calculateTownDailyIncome(town.builtBuildings);
       townIncomeTotal += townIncome;
     }
+    
+    // Применяем модификатор от специальной недели (gold_abundance)
+    if (this.weeksSystem && townIncomeTotal > 0) {
+      const goldBonusPercent = this.weeksSystem.getGoldIncomeBonusPercent();
+      if (goldBonusPercent > 0) {
+        const bonus = Math.floor(townIncomeTotal * goldBonusPercent / 100);
+        townIncomeTotal += bonus;
+      }
+    }
+    
     if (townIncomeTotal > 0) {
       this.resources.gold += townIncomeTotal;
       this.showNotification(`🏰 Доход с городов: +${townIncomeTotal} 💰`);
@@ -1595,7 +1646,13 @@ export class WorldScene extends Phaser.Scene {
         const isUpgraded = this.isDwellingUpgraded(town.builtBuildings, creatureId);
         
         // Используем центральную функцию из EconomySystem
-        const growth = calculateWeeklyGrowth(creatureId, hasCitadel, isUpgraded);
+        let growth = calculateWeeklyGrowth(creatureId, hasCitadel, isUpgraded);
+        
+        // Применяем модификатор от специальной недели (если есть)
+        if (this.weeksSystem) {
+          const weekMultiplier = this.weeksSystem.getCreatureGrowthMultiplier(creatureId);
+          growth = Math.floor(growth * weekMultiplier);
+        }
         
         if (growth > 0) {
           hireSlot.count += growth;
@@ -2151,7 +2208,7 @@ export class WorldScene extends Phaser.Scene {
         faction: town.faction,
         level: 1,
         experience: 0,
-        stats: { attack: 2, defense: 2, spellPower: isNecro ? 3 : 1, knowledge: isNecro ? 3 : 1 },
+        stats: { attack: 2, defense: 2, spellPower: isNecro ? 3 : 1, knowledge: isNecro ? 3 : 1, hp: 20, maxHp: 20 },
         skills: [],
         mana: 20,
         maxMana: 20,
@@ -2857,5 +2914,577 @@ export class WorldScene extends Phaser.Scene {
     const msg = data?.message || messages[Math.floor(Math.random() * messages.length)];
     this.showNotification(`🍾 Бутылка: "${msg}"`);
     this.removeObject(id, pos);
+  }
+  
+  // ============================================================
+  // === МАГИЯ НА КАРТЕ (Adventure Magic - канон HoMM4) ===
+  // ============================================================
+  
+  /**
+   * Инициализация системы магии на карте:
+   * - Создаёт UI книгу заклинаний
+   * - Добавляет горячую клавишу M
+   */
+  private initAdventureMagic(): void {
+    // Создаём книгу заклинаний
+    this.adventureMagicBook = new AdventureMagicBook(
+      this,
+      this.hero,
+      (spellId) => this.onSpellSelected(spellId)
+    );
+    
+    // Горячая клавиша M - открыть книгу заклинаний
+    this.input.keyboard?.on('keydown-M', () => {
+      if (this.isMoving) return;
+      this.adventureMagicBook?.toggle();
+    });
+    
+    // ESC - отмена режима выбора цели
+    this.input.keyboard?.on('keydown-ESC', () => {
+      if (this.spellTargetMode) {
+        this.cancelSpellTargetMode();
+      }
+    });
+    
+    console.log('[WorldScene] ✓ Adventure magic initialized (8 spells, key M)');
+  }
+  
+  /**
+   * Обработчик выбора заклинания из книги
+   */
+  private onSpellSelected(spellId: AdventureSpellId): void {
+    const check = AdventureMagicSystem.canCastSpell(this.hero, spellId);
+    if (!check.canCast) {
+      this.showNotification(`❌ ${check.reason}`);
+      return;
+    }
+    
+    const spell = ADVENTURE_SPELLS[spellId];
+    
+    switch (spell.targetType) {
+      case 'self':
+        // Заклинания на себя - применяются сразу
+        this.castSelfSpell(spellId);
+        break;
+      case 'town':
+        // Town Portal - сразу в ближайший город
+        this.castTownPortal();
+        break;
+      case 'tile':
+        // Dimension Door - режим выбора клетки
+        this.enterSpellTargetMode(spellId);
+        break;
+      case 'boat':
+        // Summon Boat / Scuttle Boat
+        this.castBoatSpell(spellId);
+        break;
+      case 'hero':
+        // Identify Hero - нужно найти вражеского героя рядом
+        this.castIdentifyHero();
+        break;
+    }
+  }
+  
+  /**
+   * Применение заклинаний на себя (Fly, Water Walk, Visions)
+   */
+  private castSelfSpell(spellId: AdventureSpellId): void {
+    let result;
+    
+    switch (spellId) {
+      case 'fly':
+        result = AdventureMagicSystem.castFly(this.hero);
+        break;
+      case 'waterWalk':
+        result = AdventureMagicSystem.castWaterWalk(this.hero);
+        break;
+      case 'visions':
+        result = this.castVisionsImpl();
+        break;
+      default:
+        return;
+    }
+    
+    if (result.success) {
+      this.showNotification(`✨ ${result.message}`);
+      this.createMagicEffect(this.hero.x, this.hero.y);
+      
+      // Обновляем pathfinder для Fly/Water Walk
+      if (spellId === 'fly' || spellId === 'waterWalk') {
+        this.rebuildPathfinder();
+      }
+    } else {
+      this.showNotification(`❌ ${result.message}`);
+    }
+  }
+  
+  /**
+   * Реализация Visions (Видения) - показывает ближайших врагов
+   */
+  private castVisionsImpl(): any {
+    // Собираем всех вражеских существ и героев в радиусе 10 клеток
+    const nearbyEnemies: MapObject[] = [];
+    const radius = 10;
+    
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const nx = this.hero.x + dx;
+        const ny = this.hero.y + dy;
+        if (nx >= 0 && nx < this.map[0].length && ny >= 0 && ny < this.map.length) {
+          const obj = this.map[ny][nx].object;
+          if (obj && obj.type === 'creature') {
+            nearbyEnemies.push(obj);
+          }
+        }
+      }
+    }
+    
+    const result = AdventureMagicSystem.castVisions(this.hero, nearbyEnemies);
+    
+    if (result.success && result.data?.enemies) {
+      // Показываем информацию о каждом враге
+      const enemies = result.data.enemies;
+      let msg = `👁️ Обнаружено ${enemies.length} врагов:\n`;
+      enemies.slice(0, 5).forEach((e: any) => {
+        msg += `  • ${e.name} (${e.count} шт.) на (${e.position.x}, ${e.position.y})\n`;
+      });
+      if (enemies.length > 5) {
+        msg += `  ...и ещё ${enemies.length - 5}`;
+      }
+      this.showNotification(msg);
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Применение Town Portal (телепорт в ближайший свой город)
+   */
+  private castTownPortal(): void {
+    // Собираем свои города
+    const playerTowns: Array<{ id: string; name: string; x: number; y: number }> = [];
+    
+    const mapW = this.map[0].length;
+    const mapH = this.map.length;
+    
+    for (let y = 0; y < mapH; y++) {
+      for (let x = 0; x < mapW; x++) {
+        const obj = this.map[y][x].object;
+        if (obj && obj.type === 'town' && obj.owner === 'player') {
+          playerTowns.push({
+            id: obj.id,
+            name: (obj.data?.name as string) || 'Город',
+            x,
+            y
+          });
+        }
+      }
+    }
+    
+    const result = AdventureMagicSystem.castTownPortal(this.hero, playerTowns, this.map);
+    
+    if (result.success && result.data) {
+      this.showNotification(result.message);
+      this.createTeleportEffect(this.hero.x, this.hero.y);
+      
+      // Телепортируем героя
+      this.tweens.add({
+        targets: this.heroSprite,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => {
+          this.hero.x = result.data.x;
+          this.hero.y = result.data.y;
+          this.heroSprite.setPosition(result.data.x * CONFIG.TILE_SIZE, result.data.y * CONFIG.TILE_SIZE);
+          this.camera.scrollX = this.heroSprite.x - this.camera.width / 2;
+          this.camera.scrollY = this.heroSprite.y - this.camera.height / 2;
+          
+          this.tweens.add({
+            targets: this.heroSprite,
+            alpha: 1,
+            duration: 300
+          });
+          
+          this.createTeleportEffect(result.data.x, result.data.y);
+          this.refreshMapVisibility();
+        }
+      });
+    } else {
+      this.showNotification(`❌ ${result.message}`);
+    }
+  }
+  
+  /**
+   * Войти в режим выбора цели для заклинания (Dimension Door)
+   */
+  private enterSpellTargetMode(spellId: AdventureSpellId): void {
+    this.spellTargetMode = spellId;
+    
+    // Создаём графику для подсветки
+    this.spellTargetGraphics = this.add.graphics();
+    this.spellTargetGraphics.setDepth(500);
+    
+    // Показываем подсказку
+    const spell = ADVENTURE_SPELLS[spellId];
+    this.showNotification(`🎯 ${spell.name}: выберите цель (ESC - отмена)`);
+    
+    // Подсвечиваем доступные клетки
+    this.highlightSpellTargets(spellId);
+    
+    // Временно переопределяем клик по карте
+    this.input.on('gameobjectdown', this.onSpellTargetClick, this);
+  }
+  
+  /**
+   * Подсветка доступных клеток для Dimension Door
+   */
+  private highlightSpellTargets(spellId: AdventureSpellId): void {
+    if (!this.spellTargetGraphics) return;
+    this.spellTargetGraphics.clear();
+    
+    if (spellId === 'dimensionDoor') {
+      const TS = CONFIG.TILE_SIZE;
+      const range = 3; // DIMENSION_DOOR_RANGE
+      
+      for (let dy = -range; dy <= range; dy++) {
+        for (let dx = -range; dx <= range; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          
+          const nx = this.hero.x + dx;
+          const ny = this.hero.y + dy;
+          
+          if (nx >= 0 && nx < this.map[0].length && ny >= 0 && ny < this.map.length) {
+            const tile = this.map[ny][nx];
+            if (tile.type !== 'water' && tile.type !== 'rock' && tile.type !== 'lava' && tile.type !== 'cave_rock' && !tile.object) {
+              // Доступная клетка
+              this.spellTargetGraphics.fillStyle(0x00ff00, 0.3);
+              this.spellTargetGraphics.fillRect(nx * TS, ny * TS, TS, TS);
+              this.spellTargetGraphics.lineStyle(2, 0x00ff00, 0.8);
+              this.spellTargetGraphics.strokeRect(nx * TS, ny * TS, TS, TS);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  /**
+   * Клик по клетке в режиме выбора цели заклинания
+   */
+  private onSpellTargetClick = (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject): void => {
+    if (!this.spellTargetMode) return;
+    
+    // Получаем координаты клика в мире
+    const worldX = pointer.worldX;
+    const worldY = pointer.worldY;
+    const tileX = Math.floor(worldX / CONFIG.TILE_SIZE);
+    const tileY = Math.floor(worldY / CONFIG.TILE_SIZE);
+    
+    if (tileX < 0 || tileX >= this.map[0].length || tileY < 0 || tileY >= this.map.length) return;
+    
+    // Применяем заклинание
+    if (this.spellTargetMode === 'dimensionDoor') {
+      this.castDimensionDoor(tileX, tileY);
+    }
+    
+    this.cancelSpellTargetMode();
+  };
+  
+  /**
+   * Применение Dimension Door
+   */
+  private castDimensionDoor(targetX: number, targetY: number): void {
+    const result = AdventureMagicSystem.castDimensionDoor(this.hero, targetX, targetY, this.map);
+    
+    if (result.success && result.data) {
+      this.showNotification(result.message);
+      this.createTeleportEffect(this.hero.x, this.hero.y);
+      
+      // Телепортация героя
+      this.tweens.add({
+        targets: this.heroSprite,
+        alpha: 0,
+        scale: 0.5,
+        duration: 250,
+        onComplete: () => {
+          this.hero.x = targetX;
+          this.hero.y = targetY;
+          this.heroSprite.setPosition(targetX * CONFIG.TILE_SIZE, targetY * CONFIG.TILE_SIZE);
+          this.heroSprite.setScale(1);
+          this.camera.scrollX = this.heroSprite.x - this.camera.width / 2;
+          this.camera.scrollY = this.heroSprite.y - this.camera.height / 2;
+          
+          this.tweens.add({
+            targets: this.heroSprite,
+            alpha: 1,
+            duration: 250
+          });
+          
+          this.createTeleportEffect(targetX, targetY);
+          this.refreshMapVisibility();
+        }
+      });
+    } else {
+      this.showNotification(`❌ ${result.message}`);
+    }
+  }
+  
+  /**
+   * Отмена режима выбора цели
+   */
+  private cancelSpellTargetMode(): void {
+    this.spellTargetMode = undefined;
+    
+    if (this.spellTargetGraphics) {
+      this.spellTargetGraphics.destroy();
+      this.spellTargetGraphics = undefined;
+    }
+    
+    this.input.off('gameobjectdown', this.onSpellTargetClick, this);
+  }
+  
+  /**
+   * Применение заклинаний на корабли (Summon Boat, Scuttle Boat)
+   */
+  private castBoatSpell(spellId: AdventureSpellId): void {
+    // Собираем все корабли на карте
+    const ships: MapObject[] = [];
+    for (let y = 0; y < this.map.length; y++) {
+      for (let x = 0; x < this.map[0].length; x++) {
+        const obj = this.map[y][x].object;
+        if (obj && obj.type === 'boat') {
+          ships.push(obj);
+        }
+      }
+    }
+    
+    if (spellId === 'summonBoat') {
+      const result = AdventureMagicSystem.castSummonBoat(this.hero, ships, this.map);
+      
+      if (result.success && result.data) {
+        this.showNotification(result.message);
+        this.createMagicEffect(this.hero.x, this.hero.y);
+        
+        // Перемещаем спрайт корабля
+        const shipSprite = this.objectSprites.get(result.data.shipId);
+        if (shipSprite) {
+          this.tweens.add({
+            targets: shipSprite,
+            x: result.data.toX * CONFIG.TILE_SIZE,
+            y: result.data.toY * CONFIG.TILE_SIZE,
+            duration: 800,
+            ease: 'Sine.easeInOut'
+          });
+        }
+        
+        // Обновляем объект на карте
+        const oldX = result.data.fromX;
+        const oldY = result.data.fromY;
+        const shipObj = this.map[oldY][oldX].object;
+        if (shipObj) {
+          this.map[oldY][oldX].object = undefined;
+          this.map[result.data.toY][result.data.toX].object = {
+            ...shipObj,
+            x: result.data.toX,
+            y: result.data.toY
+          };
+        }
+      } else {
+        this.showNotification(`❌ ${result.message}`);
+      }
+    } else if (spellId === 'scuttleBoat') {
+      // Находим ближайший чужой корабль
+      const enemyShips = ships.filter(s => s.owner !== this.hero.owner);
+      if (enemyShips.length === 0) {
+        this.showNotification('❌ Нет чужих кораблей');
+        return;
+      }
+      
+      // Берём ближайший
+      let nearest = enemyShips[0];
+      let minDist = Infinity;
+      for (const ship of enemyShips) {
+        const dist = Math.abs(this.hero.x - ship.x) + Math.abs(this.hero.y - ship.y);
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = ship;
+        }
+      }
+      
+      const result = AdventureMagicSystem.castScuttleBoat(this.hero, nearest);
+      
+      if (result.success && result.data) {
+        this.showNotification(result.message);
+        
+        // Уничтожаем корабль с анимацией
+        const shipSprite = this.objectSprites.get(result.data.shipId);
+        if (shipSprite) {
+          this.tweens.add({
+            targets: shipSprite,
+            alpha: 0,
+            scale: 0.3,
+            angle: 180,
+            duration: 600,
+            onComplete: () => shipSprite.destroy()
+          });
+        }
+        
+        this.objectSprites.delete(result.data.shipId);
+        this.map[nearest.y][nearest.x].object = undefined;
+      } else {
+        this.showNotification(`❌ ${result.message}`);
+      }
+    }
+  }
+  
+  /**
+   * Применение Identify Hero (опознание вражеского героя)
+   */
+  private castIdentifyHero(): void {
+    // Находим ближайшего вражеского героя в радиусе 5
+    const radius = 5;
+    let nearestEnemyHero: Hero | null = null;
+    let minDist = Infinity;
+    
+    // Проверяем ИИ героев (через публичные данные)
+    if (this.aiSystem && (this.aiSystem as any).players) {
+      const players = (this.aiSystem as any).players;
+      if (Array.isArray(players)) {
+        for (const player of players) {
+          if (player.heroes && Array.isArray(player.heroes)) {
+            for (const aiHero of player.heroes) {
+              const dist = Math.abs(this.hero.x - aiHero.x) + Math.abs(this.hero.y - aiHero.y);
+              if (dist < minDist && dist <= radius) {
+                minDist = dist;
+                nearestEnemyHero = aiHero;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    if (!nearestEnemyHero) {
+      this.showNotification('❌ Нет вражеских героев в радиусе');
+      return;
+    }
+    
+    const result = AdventureMagicSystem.castIdentifyHero(this.hero, nearestEnemyHero);
+    
+    if (result.success && result.data?.heroInfo) {
+      const info = result.data.heroInfo;
+      let msg = `🔍 ${info.name} (ур. ${info.level})\n`;
+      msg += `⚔️ АТК: ${info.stats.attack} | 🛡️ ЗАЩ: ${info.stats.defense}\n`;
+      msg += `✨ СП: ${info.stats.spellPower} | 📚 ЗН: ${info.stats.knowledge}\n`;
+      msg += `👥 Армия:\n`;
+      info.army.forEach((slot: any) => {
+        msg += `  • ${slot.creature}: ${slot.count}\n`;
+      });
+      this.showNotification(msg);
+    } else {
+      this.showNotification(`❌ ${result.message}`);
+    }
+  }
+  
+  /**
+   * Сброс дневных эффектов магии (Fly, Water Walk)
+   * Вызывается в конце дня
+   */
+  private resetAdventureMagicDailyEffects(): void {
+    const hadFly = AdventureMagicSystem.isFlying(this.hero);
+    const hadWaterWalk = AdventureMagicSystem.isWaterWalking(this.hero);
+    
+    AdventureMagicSystem.resetDailyEffects(this.hero);
+    
+    if (hadFly || hadWaterWalk) {
+      this.rebuildPathfinder();
+      this.showNotification('🌅 Новый день: эффекты заклинаний сброшены');
+    }
+  }
+  
+  /**
+   * Создание эффекта магической вспышки на клетке
+   */
+  private createMagicEffect(tileX: number, tileY: number): void {
+    const TS = CONFIG.TILE_SIZE;
+    const x = tileX * TS + TS / 2;
+    const y = tileY * TS + TS / 2;
+    
+    const graphics = this.add.graphics();
+    graphics.setDepth(600);
+    graphics.setPosition(x, y);
+    
+    let radius = 5;
+    
+    const tween = this.tweens.addCounter({
+      from: 5,
+      to: TS,
+      duration: 500,
+      ease: 'Quad.easeOut',
+      onUpdate: (tween) => {
+        graphics.clear();
+        const r = tween.getValue();
+        const alpha = 1 - (r / TS);
+        graphics.lineStyle(3, 0x9966ff, alpha);
+        graphics.strokeCircle(0, 0, r);
+        graphics.fillStyle(0xffd700, alpha * 0.5);
+        graphics.fillCircle(0, 0, r * 0.3);
+      },
+      onComplete: () => {
+        graphics.destroy();
+      }
+    });
+  }
+  
+  /**
+   * Создание эффекта телепортации (две вспышки)
+   */
+  private createTeleportEffect(tileX: number, tileY: number): void {
+    const TS = CONFIG.TILE_SIZE;
+    const x = tileX * TS + TS / 2;
+    const y = tileY * TS + TS / 2;
+    
+    // Вращающиеся частицы
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const particle = this.add.circle(x, y, 3, 0x00ffff);
+      particle.setDepth(600);
+      
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * TS,
+        y: y + Math.sin(angle) * TS,
+        alpha: 0,
+        scale: 0,
+        duration: 500,
+        ease: 'Quad.easeOut',
+        onComplete: () => particle.destroy()
+      });
+    }
+    
+    // Центральная вспышка
+    const flash = this.add.circle(x, y, 5, 0xffffff, 0.8);
+    flash.setDepth(600);
+    this.tweens.add({
+      targets: flash,
+      scale: 4,
+      alpha: 0,
+      duration: 400,
+      ease: 'Quad.easeOut',
+      onComplete: () => flash.destroy()
+    });
+  }
+  
+  /**
+   * Публичный метод для сброса дневных эффектов магии.
+   * Вызывается при смене дня (из endTurn / nextDay).
+   */
+  public resetDailyMagicEffects(): void {
+    this.resetAdventureMagicDailyEffects();
+    
+    // Сброс для всех героев игрока
+    for (const hero of this.playerHeroes) {
+      AdventureMagicSystem.resetDailyEffects(hero);
+    }
   }
 }

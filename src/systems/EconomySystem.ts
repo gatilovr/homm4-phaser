@@ -297,20 +297,81 @@ export function generateMageGuildOffers(
   const offers: MageGuildOffer[] = [];
   const count = Math.min(2 + guildLevel, 5);
 
-  // Простая заглушка — реальные заклинания загружаются из spells.json
+  // Примеры заклинаний с правильными школами HoMM4 (канон)
   const sampleSpells = [
-    { id: 'bless', name: 'Благословение', school: 'water', level: 1, cost: 500 },
-    { id: 'haste', name: 'Ускорение', school: 'air', level: 1, cost: 500 },
-    { id: 'slow', name: 'Замедление', school: 'water', level: 2, cost: 1000 },
-    { id: 'shield', name: 'Щит', school: 'earth', level: 1, cost: 500 },
-    { id: 'bloodlust', name: 'Жажда крови', school: 'fire', level: 1, cost: 500 },
-    { id: 'fireball', name: 'Огненный шар', school: 'fire', level: 3, cost: 2500 },
-    { id: 'lightning', name: 'Молния', school: 'air', level: 2, cost: 1500 },
-    { id: 'teleport', name: 'Телепорт', school: 'water', level: 3, cost: 2500 },
-    { id: 'resurrect', name: 'Воскрешение', school: 'earth', level: 4, cost: 4000 },
-    { id: 'blind', name: 'Ослепление', school: 'mind', level: 2, cost: 1500 },
-    { id: 'meteor', name: 'Метеор', school: 'earth', level: 4, cost: 4000 },
-    { id: 'armageddon', name: 'Армагеддон', school: 'fire', level: 5, cost: 8000 },
+    // LIFE (Жизнь)
+    { id: 'bless', name: 'Благословение', school: 'life', level: 1, cost: 500 },
+    { id: 'mass_bless', name: 'Массовое благословение', school: 'life', level: 3, cost: 2500 },
+    { id: 'heal', name: 'Исцеление', school: 'life', level: 2, cost: 1000 },
+    { id: 'guardian_angel', name: 'Ангел-хранитель', school: 'life', level: 4, cost: 4000 },
+    { id: 'resurrect', name: 'Воскрешение', school: 'life', level: 4, cost: 4000 },
+    { id: 'resurrection_mass', name: 'Массовое воскрешение', school: 'life', level: 5, cost: 8000 },
+    { id: 'regeneration', name: 'Регенерация', school: 'life', level: 2, cost: 1000 },
+    { id: 'anti_magic', name: 'Антимагия', school: 'life', level: 3, cost: 2500 },
+    { id: 'mass_antimagic', name: 'Массовая антимагия', school: 'life', level: 5, cost: 8000 },
+    { id: 'holy_light', name: 'Святой свет', school: 'life', level: 4, cost: 4000 },
+    { id: 'destroy_unholy', name: 'Разрушение нечисти', school: 'life', level: 4, cost: 4000 },
+    { id: 'purify', name: 'Очищение', school: 'life', level: 2, cost: 1000 },
+    
+    // DEATH (Смерть)
+    { id: 'implosion', name: 'Имплозия', school: 'death', level: 3, cost: 2500 },
+    { id: 'animate_dead', name: 'Оживление мёртвых', school: 'death', level: 4, cost: 4000 },
+    { id: 'drain_life', name: 'Пожирание жизни', school: 'death', level: 2, cost: 1000 },
+    { id: 'weakness', name: 'Слабость', school: 'death', level: 1, cost: 500 },
+    { id: 'curse', name: 'Проклятие', school: 'death', level: 1, cost: 500 },
+    { id: 'mass_curse', name: 'Массовое проклятие', school: 'death', level: 3, cost: 2500 },
+    { id: 'soul_eater', name: 'Пожиратель душ', school: 'death', level: 4, cost: 4000 },
+    { id: 'misery', name: 'Скорбь', school: 'death', level: 2, cost: 1000 },
+    { id: 'vampirism', name: 'Вампиризм', school: 'death', level: 4, cost: 4000 },
+    { id: 'summon_daemons', name: 'Призыв демонов', school: 'death', level: 5, cost: 8000 },
+    
+    // ORDER (Порядок)
+    { id: 'slow', name: 'Замедление', school: 'order', level: 1, cost: 500 },
+    { id: 'mass_slow', name: 'Массовое замедление', school: 'order', level: 3, cost: 2500 },
+    { id: 'haste', name: 'Ускорение', school: 'order', level: 1, cost: 500 },
+    { id: 'mass_haste', name: 'Массовое ускорение', school: 'order', level: 3, cost: 2500 },
+    { id: 'shield', name: 'Щит', school: 'order', level: 1, cost: 500 },
+    { id: 'mass_shield', name: 'Массовый щит', school: 'order', level: 3, cost: 2500 },
+    { id: 'teleport', name: 'Телепорт', school: 'order', level: 3, cost: 2500 },
+    { id: 'dimension_door', name: 'Дверь измерений', school: 'order', level: 4, cost: 4000 },
+    { id: 'blind', name: 'Ослепление', school: 'order', level: 2, cost: 1500 },
+    { id: 'forgetfulness', name: 'Забывчивость', school: 'order', level: 2, cost: 1500 },
+    { id: 'clone', name: 'Зеркальный образ', school: 'order', level: 4, cost: 4000 },
+    { id: 'dispel', name: 'Развеивание магии', school: 'order', level: 2, cost: 1000 },
+    { id: 'precision', name: 'Точность', school: 'order', level: 2, cost: 1000 },
+    { id: 'shield_wall', name: 'Стена щитов', school: 'order', level: 2, cost: 1000 },
+    { id: 'view_air', name: 'Взгляд с воздуха', school: 'order', level: 3, cost: 2500 },
+    { id: 'view_earth', name: 'Взгляд с высоты', school: 'order', level: 4, cost: 4000 },
+    
+    // CHAOS (Хаос)
+    { id: 'bloodlust', name: 'Жажда крови', school: 'chaos', level: 1, cost: 500 },
+    { id: 'fireball', name: 'Огненный шар', school: 'chaos', level: 3, cost: 2500 },
+    { id: 'lightning', name: 'Молния', school: 'chaos', level: 2, cost: 1500 },
+    { id: 'chain_lightning', name: 'Цепная молния', school: 'chaos', level: 4, cost: 4000 },
+    { id: 'inferno', name: 'Инферно', school: 'chaos', level: 4, cost: 4000 },
+    { id: 'meteor', name: 'Метеоритный дождь', school: 'chaos', level: 4, cost: 4000 },
+    { id: 'armageddon', name: 'Армагеддон', school: 'chaos', level: 5, cost: 8000 },
+    { id: 'berserk', name: 'Берсерк', school: 'chaos', level: 3, cost: 2500 },
+    { id: 'poison', name: 'Отравление', school: 'chaos', level: 2, cost: 1000 },
+    { id: 'confusion', name: 'Путаница', school: 'chaos', level: 3, cost: 2500 },
+    { id: 'hellfire', name: 'Адский огонь', school: 'chaos', level: 4, cost: 4000 },
+    { id: 'thunder_storm', name: 'Грозовой шторм', school: 'chaos', level: 4, cost: 4000 },
+    
+    // NATURAL (Природа)
+    { id: 'stoneskin', name: 'Каменная кожа', school: 'natural', level: 1, cost: 500 },
+    { id: 'bark_skin', name: 'Кора дерева', school: 'natural', level: 1, cost: 500 },
+    { id: 'fly', name: 'Полёт', school: 'natural', level: 3, cost: 2500 },
+    { id: 'water_walk', name: 'Хождение по воде', school: 'natural', level: 3, cost: 2500 },
+    { id: 'earthquake', name: 'Землетрясение', school: 'natural', level: 4, cost: 4000 },
+    { id: 'summon_elementals', name: 'Призыв элементалей', school: 'natural', level: 4, cost: 4000 },
+    { id: 'antidote', name: 'Антидот', school: 'natural', level: 2, cost: 1000 },
+    { id: 'strength', name: 'Сила', school: 'natural', level: 2, cost: 1000 },
+    { id: 'eruption', name: 'Извержение', school: 'natural', level: 3, cost: 2500 },
+    { id: 'mirage', name: 'Мираж', school: 'natural', level: 3, cost: 2500 },
+    { id: 'thunderbolt', name: 'Громовой удар', school: 'natural', level: 3, cost: 2500 },
+    { id: 'pathfinding', name: 'Сквозной путь', school: 'natural', level: 2, cost: 1000 },
+    { id: 'land_mine', name: 'Земляная мина', school: 'natural', level: 2, cost: 1000 },
+    { id: 'force_field', name: 'Силовое поле', school: 'natural', level: 3, cost: 2500 },
   ];
 
   // Фильтруем по уровню гильдии

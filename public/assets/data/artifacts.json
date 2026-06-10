@@ -5,78 +5,26 @@
     "slot": "weapon",
     "rarity": "minor",
     "description": "Древний меч, увеличивающий атаку владельца",
-    "bonuses": {
-      "attack": 3
-    },
+    "bonuses": { "attack": 3 },
     "cost": 1500
   },
-  "shield_of_sentinel": {
-    "id": "shield_of_sentinel",
-    "name": "Щит Стража",
-    "slot": "shield",
+  "sword_of_might_2": {
+    "id": "sword_of_might_2",
+    "name": "Меч Силы+",
+    "slot": "weapon",
     "rarity": "minor",
-    "description": "Надёжный щит, защищающий от ударов",
-    "bonuses": {
-      "defense": 3
-    },
-    "cost": 1500
+    "description": "Усиленный меч силы",
+    "bonuses": { "attack": 4 },
+    "cost": 2000
   },
-  "helm_of_awareness": {
-    "id": "helm_of_awareness",
-    "name": "Шлем Бдительности",
-    "slot": "head",
-    "rarity": "minor",
-    "description": "Шлем, повышающий мораль воинов",
-    "bonuses": {
-      "morale": 1
-    },
-    "cost": 1200
-  },
-  "ring_of_mana": {
-    "id": "ring_of_mana",
-    "name": "Кольцо Маны",
-    "slot": "leftRing",
+  "blade_of_heroism": {
+    "id": "blade_of_heroism",
+    "name": "Клинок Героизма",
+    "slot": "weapon",
     "rarity": "major",
-    "description": "Магическое кольцо, восстанавливающее ману",
-    "bonuses": {
-      "spellPower": 2,
-      "knowledge": 1
-    },
-    "cost": 3000
-  },
-  "amulet_of_fortune": {
-    "id": "amulet_of_fortune",
-    "name": "Амулет Удачи",
-    "slot": "neck",
-    "rarity": "major",
-    "description": "Амулет, приносящий удачу в бою",
-    "bonuses": {
-      "luck": 2
-    },
-    "cost": 2500
-  },
-  "boots_of_speed": {
-    "id": "boots_of_speed",
-    "name": "Сапоги Скорости",
-    "slot": "boots",
-    "rarity": "major",
-    "description": "Волшебные сапоги, увеличивающие движение",
-    "bonuses": {
-      "speed": 2
-    },
-    "cost": 2800
-  },
-  "breastplate_of_bravery": {
-    "id": "breastplate_of_bravery",
-    "name": "Кираса Храбрости",
-    "slot": "torso",
-    "rarity": "major",
-    "description": "Зачарованная кираса, повышающая защиту и мораль",
-    "bonuses": {
-      "defense": 4,
-      "morale": 1
-    },
-    "cost": 4000
+    "description": "Меч, вдохновляющий войска",
+    "bonuses": { "attack": 5, "morale": 2 },
+    "cost": 5000
   },
   "sword_of_judgement": {
     "id": "sword_of_judgement",
@@ -84,11 +32,116 @@
     "slot": "weapon",
     "rarity": "relic",
     "description": "Легендарный клинок, дарующий огромную силу",
-    "bonuses": {
-      "attack": 8,
-      "spellPower": 3
-    },
+    "bonuses": { "attack": 8, "spellPower": 3 },
     "cost": 10000
+  },
+  "axe_of_victory": {
+    "id": "axe_of_victory",
+    "name": "Топор Победы",
+    "slot": "weapon",
+    "rarity": "relic",
+    "description": "Топор великих завоевателей",
+    "bonuses": { "attack": 10, "defense": 2 },
+    "cost": 12000
+  },
+  "bow_of_shooting": {
+    "id": "bow_of_shooting",
+    "name": "Лук Стрельбы",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Лук, увеличивающий дальность стрельбы",
+    "bonuses": { "attack": 5, "ranged": 50 },
+    "cost": 4500
+  },
+  "bow_of_hunting": {
+    "id": "bow_of_hunting",
+    "name": "Охотничий лук",
+    "slot": "weapon",
+    "rarity": "minor",
+    "description": "Лук охотника",
+    "bonuses": { "attack": 3, "ranged": 25 },
+    "cost": 2500
+  },
+  "crossbow_of_penetration": {
+    "id": "crossbow_of_penetration",
+    "name": "Арбалет Пронзения",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Арбалет, игнорирующий защиту",
+    "bonuses": { "attack": 6, "defense_ignore": 30 },
+    "cost": 6000
+  },
+  "scepter_of_power": {
+    "id": "scepter_of_power",
+    "name": "Скипетр Силы",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Скипетр мага-правителя",
+    "bonuses": { "spellPower": 6, "knowledge": 3 },
+    "cost": 5500
+  },
+  "staff_of_magical_power": {
+    "id": "staff_of_magical_power",
+    "name": "Посох Магической Силы",
+    "slot": "weapon",
+    "rarity": "relic",
+    "description": "Посох великого архимага",
+    "bonuses": { "spellPower": 10, "knowledge": 5, "manaRegen": 2 },
+    "cost": 15000
+  },
+  "dagger_of_darkness": {
+    "id": "dagger_of_darkness",
+    "name": "Кинжал Тьмы",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Кинжал ассасина",
+    "bonuses": { "attack": 4, "spellPower": 2, "luck": 1 },
+    "cost": 4000
+  },
+  "shield_of_sentinel": {
+    "id": "shield_of_sentinel",
+    "name": "Щит Стража",
+    "slot": "shield",
+    "rarity": "minor",
+    "description": "Надёжный щит, защищающий от ударов",
+    "bonuses": { "defense": 3 },
+    "cost": 1500
+  },
+  "shield_of_sentinel_2": {
+    "id": "shield_of_sentinel_2",
+    "name": "Щит Стража+",
+    "slot": "shield",
+    "rarity": "minor",
+    "description": "Усиленный щит",
+    "bonuses": { "defense": 4 },
+    "cost": 2000
+  },
+  "tower_shield": {
+    "id": "tower_shield",
+    "name": "Башенный щит",
+    "slot": "shield",
+    "rarity": "major",
+    "description": "Массивный щит, блокирующий урон",
+    "bonuses": { "defense": 6, "damage_reduction": 15 },
+    "cost": 4500
+  },
+  "aegis": {
+    "id": "aegis",
+    "name": "Эгида",
+    "slot": "shield",
+    "rarity": "relic",
+    "description": "Божественный щит",
+    "bonuses": { "defense": 10, "magic_resistance": 50, "damage_reduction": 25 },
+    "cost": 20000
+  },
+  "buckler_of_defense": {
+    "id": "buckler_of_defense",
+    "name": "Баклер Защиты",
+    "slot": "shield",
+    "rarity": "minor",
+    "description": "Малый щит защитника",
+    "bonuses": { "defense": 2 },
+    "cost": 1000
   },
   "crown_of_supremacy": {
     "id": "crown_of_supremacy",
@@ -96,15 +149,116 @@
     "slot": "head",
     "rarity": "relic",
     "description": "Корона древних королей, дарующая все бонусы",
-    "bonuses": {
-      "attack": 4,
-      "defense": 4,
-      "spellPower": 4,
-      "knowledge": 4,
-      "morale": 2,
-      "luck": 2
-    },
+    "bonuses": { "attack": 4, "defense": 4, "spellPower": 4, "knowledge": 4, "morale": 2, "luck": 2 },
     "cost": 25000
+  },
+  "helm_of_awareness": {
+    "id": "helm_of_awareness",
+    "name": "Шлем Бдительности",
+    "slot": "head",
+    "rarity": "minor",
+    "description": "Шлем, повышающий мораль воинов",
+    "bonuses": { "morale": 1 },
+    "cost": 1200
+  },
+  "helm_of_awareness_2": {
+    "id": "helm_of_awareness_2",
+    "name": "Шлем Бдительности+",
+    "slot": "head",
+    "rarity": "minor",
+    "description": "Усиленный шлем",
+    "bonuses": { "morale": 2 },
+    "cost": 2000
+  },
+  "helm_of_telepathy": {
+    "id": "helm_of_telepathy",
+    "name": "Шлем Телепатии",
+    "slot": "head",
+    "rarity": "major",
+    "description": "Шлем, позволяющий читать мысли",
+    "bonuses": { "spellPower": 3, "knowledge": 2, "morale": 1 },
+    "cost": 4000
+  },
+  "circlet_of_power": {
+    "id": "circlet_of_power",
+    "name": "Венец Силы",
+    "slot": "head",
+    "rarity": "major",
+    "description": "Магический венец",
+    "bonuses": { "spellPower": 5, "knowledge": 2 },
+    "cost": 5000
+  },
+  "crown_of_magic": {
+    "id": "crown_of_magic",
+    "name": "Корона Магии",
+    "slot": "head",
+    "rarity": "relic",
+    "description": "Корона архимага",
+    "bonuses": { "spellPower": 8, "knowledge": 6, "manaRegen": 2 },
+    "cost": 18000
+  },
+  "casque_of_chivalry": {
+    "id": "casque_of_chivalry",
+    "name": "Шлем Рыцарства",
+    "slot": "head",
+    "rarity": "major",
+    "description": "Шлем благородного рыцаря",
+    "bonuses": { "defense": 3, "morale": 2 },
+    "cost": 3500
+  },
+  "breastplate_of_bravery": {
+    "id": "breastplate_of_bravery",
+    "name": "Кираса Храбрости",
+    "slot": "torso",
+    "rarity": "major",
+    "description": "Зачарованная кираса, повышающая защиту и мораль",
+    "bonuses": { "defense": 4, "morale": 1 },
+    "cost": 4000
+  },
+  "armor_of_might": {
+    "id": "armor_of_might",
+    "name": "Доспех Силы",
+    "slot": "torso",
+    "rarity": "major",
+    "description": "Доспех, дающий силу",
+    "bonuses": { "attack": 3, "defense": 3 },
+    "cost": 5000
+  },
+  "plate_of_protection": {
+    "id": "plate_of_protection",
+    "name": "Латная Защита",
+    "slot": "torso",
+    "rarity": "major",
+    "description": "Латы, защищающие от всех ударов",
+    "bonuses": { "defense": 6, "damage_reduction": 10 },
+    "cost": 5500
+  },
+  "guardian_armor": {
+    "id": "guardian_armor",
+    "name": "Доспех Стража",
+    "slot": "torso",
+    "rarity": "relic",
+    "description": "Доспех святого защитника",
+    "bonuses": { "defense": 10, "morale": 3, "damage_reduction": 20 },
+    "cost": 22000
+  },
+  "robe_of_the_archmage": {
+    "id": "robe_of_the_archmage",
+    "name": "Роба Архимага",
+    "slot": "torso",
+    "rarity": "relic",
+    "description": "Роба величайшего мага",
+    "bonuses": { "spellPower": 10, "knowledge": 8, "manaRegen": 3 },
+    "cost": 25000
+  },
+  "chainmail_of_protection": {
+    "id": "chainmail_of_protection",
+    "name": "Кольчуга Защиты",
+    "slot": "torso",
+    "rarity": "minor",
+    "description": "Прочная кольчуга",
+    "bonuses": { "defense": 3 },
+    "cost": 2000
   },
   "cloak_of_darkness": {
     "id": "cloak_of_darkness",
@@ -112,10 +266,1175 @@
     "slot": "misc",
     "rarity": "relic",
     "description": "Зачарованный плащ, скрывающий владельца",
-    "bonuses": {
-      "defense": 5,
-      "luck": 3
-    },
+    "bonuses": { "defense": 5, "luck": 3 },
     "cost": 15000
+  },
+  "cloak_of_secrets": {
+    "id": "cloak_of_secrets",
+    "name": "Плащ Тайн",
+    "slot": "misc",
+    "rarity": "major",
+    "description": "Плащ, скрывающий следы",
+    "bonuses": { "defense": 3, "luck": 2 },
+    "cost": 4500
+  },
+  "cloak_of_shadows": {
+    "id": "cloak_of_shadows",
+    "name": "Плащ Теней",
+    "slot": "misc",
+    "rarity": "major",
+    "description": "Плащ теней",
+    "bonuses": { "defense": 4, "spellPower": 2 },
+    "cost": 5000
+  },
+  "mantle_of_the_wizard": {
+    "id": "mantle_of_the_wizard",
+    "name": "Мантия Чародея",
+    "slot": "misc",
+    "rarity": "major",
+    "description": "Мантия мудрого мага",
+    "bonuses": { "spellPower": 5, "knowledge": 3 },
+    "cost": 5500
+  },
+  "cape_of_power": {
+    "id": "cape_of_power",
+    "name": "Мантия Силы",
+    "slot": "misc",
+    "rarity": "relic",
+    "description": "Мантия повелителя",
+    "bonuses": { "attack": 5, "defense": 5, "spellPower": 5 },
+    "cost": 20000
+  },
+  "boots_of_speed": {
+    "id": "boots_of_speed",
+    "name": "Сапоги Скорости",
+    "slot": "boots",
+    "rarity": "major",
+    "description": "Волшебные сапоги, увеличивающие движение",
+    "bonuses": { "speed": 2 },
+    "cost": 2800
+  },
+  "boots_of_speed_2": {
+    "id": "boots_of_speed_2",
+    "name": "Сапоги Скорости+",
+    "slot": "boots",
+    "rarity": "major",
+    "description": "Усиленные сапоги",
+    "bonuses": { "speed": 3 },
+    "cost": 4000
+  },
+  "boots_of_haste": {
+    "id": "boots_of_haste",
+    "name": "Сапоги Ускорения",
+    "slot": "boots",
+    "rarity": "major",
+    "description": "Сапоги, дающие ускорение",
+    "bonuses": { "speed": 2, "morale": 1 },
+    "cost": 3500
+  },
+  "boots_of_spring": {
+    "id": "boots_of_spring",
+    "name": "Сапоги Весны",
+    "slot": "boots",
+    "rarity": "major",
+    "description": "Лёгкие сапоги для быстрого движения",
+    "bonuses": { "speed": 3, "defense": 1 },
+    "cost": 4000
+  },
+  "winged_boots": {
+    "id": "winged_boots",
+    "name": "Крылатые Сапоги",
+    "slot": "boots",
+    "rarity": "relic",
+    "description": "Крылатые сапоги Гермеса",
+    "bonuses": { "speed": 5, "flying": true },
+    "cost": 18000
+  },
+  "ring_of_mana": {
+    "id": "ring_of_mana",
+    "name": "Кольцо Маны",
+    "slot": "leftRing",
+    "rarity": "major",
+    "description": "Магическое кольцо, восстанавливающее ману",
+    "bonuses": { "spellPower": 2, "knowledge": 1 },
+    "cost": 3000
+  },
+  "ring_of_mana_2": {
+    "id": "ring_of_mana_2",
+    "name": "Кольцо Маны+",
+    "slot": "leftRing",
+    "rarity": "major",
+    "description": "Усиленное кольцо маны",
+    "bonuses": { "spellPower": 3, "knowledge": 2 },
+    "cost": 4500
+  },
+  "ring_of_power": {
+    "id": "ring_of_power",
+    "name": "Кольцо Силы",
+    "slot": "leftRing",
+    "rarity": "major",
+    "description": "Кольцо силы",
+    "bonuses": { "attack": 2, "defense": 2 },
+    "cost": 3500
+  },
+  "ring_of_luck": {
+    "id": "ring_of_luck",
+    "name": "Кольцо Удачи",
+    "slot": "leftRing",
+    "rarity": "major",
+    "description": "Кольцо, приносящее удачу",
+    "bonuses": { "luck": 3 },
+    "cost": 4000
+  },
+  "ring_of_regeneration": {
+    "id": "ring_of_regeneration",
+    "name": "Кольцо Регенерации",
+    "slot": "leftRing",
+    "rarity": "major",
+    "description": "Кольцо, восстанавливающее здоровье",
+    "bonuses": { "hpRegen": 2 },
+    "cost": 3500
+  },
+  "ring_of_wizardry": {
+    "id": "ring_of_wizardry",
+    "name": "Кольцо Чародейства",
+    "slot": "leftRing",
+    "rarity": "relic",
+    "description": "Кольцо великого чародея",
+    "bonuses": { "spellPower": 6, "knowledge": 4, "manaRegen": 2 },
+    "cost": 16000
+  },
+  "amulet_of_fortune": {
+    "id": "amulet_of_fortune",
+    "name": "Амулет Удачи",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Амулет, приносящий удачу в бою",
+    "bonuses": { "luck": 2 },
+    "cost": 2500
+  },
+  "amulet_of_fortune_2": {
+    "id": "amulet_of_fortune_2",
+    "name": "Амулет Удачи+",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Усиленный амулет",
+    "bonuses": { "luck": 3 },
+    "cost": 4000
+  },
+  "amulet_of_mana": {
+    "id": "amulet_of_mana",
+    "name": "Амулет Маны",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Амулет, дающий ману",
+    "bonuses": { "spellPower": 4, "knowledge": 2 },
+    "cost": 4500
+  },
+  "amulet_of_might": {
+    "id": "amulet_of_might",
+    "name": "Амулет Силы",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Амулет, дающий силу",
+    "bonuses": { "attack": 3, "defense": 3 },
+    "cost": 4000
+  },
+  "medallion_of_plenty": {
+    "id": "medallion_of_plenty",
+    "name": "Медальон Изобилия",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Медальон, увеличивающий добычу",
+    "bonuses": { "goldIncome": 500, "resourceBonus": 1 },
+    "cost": 5000
+  },
+  "talisman_of_mana": {
+    "id": "talisman_of_mana",
+    "name": "Талисман Маны",
+    "slot": "neck",
+    "rarity": "relic",
+    "description": "Талисман великого мага",
+    "bonuses": { "spellPower": 8, "knowledge": 6, "manaRegen": 3 },
+    "cost": 17000
+  },
+  "orb_of_inhibition": {
+    "id": "orb_of_inhibition",
+    "name": "Сфера Запрета",
+    "slot": "neck",
+    "rarity": "relic",
+    "description": "Сфера, блокирующая магию врагов",
+    "bonuses": { "enemySpellPower": -50, "magic_resistance": 100 },
+    "cost": 20000
+  },
+  "gem_of_power": {
+    "id": "gem_of_power",
+    "name": "Самоцвет Силы",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Магический самоцвет",
+    "bonuses": { "spellPower": 5, "knowledge": 3 },
+    "cost": 5000
+  },
+  "necklace_of_jewelery": {
+    "id": "necklace_of_jewelery",
+    "name": "Ожерелье Драгоценностей",
+    "slot": "neck",
+    "rarity": "minor",
+    "description": "Красивое ожерелье",
+    "bonuses": { "luck": 1, "morale": 1 },
+    "cost": 1500
+  },
+
+  "COMPONENTS": {
+    "id": "COMPONENTS",
+    "description": "Компоненты для сборки артефактов"
+  },
+  "orb_of_fire": {
+    "id": "orb_of_fire",
+    "name": "Сфера Огня",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Компонент для создания артефактов",
+    "bonuses": { "spellPower": 2 },
+    "cost": 1000
+  },
+  "orb_of_water": {
+    "id": "orb_of_water",
+    "name": "Сфера Воды",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Компонент для создания артефактов",
+    "bonuses": { "knowledge": 2 },
+    "cost": 1000
+  },
+  "orb_of_air": {
+    "id": "orb_of_air",
+    "name": "Сфера Воздуха",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Компонент для создания артефактов",
+    "bonuses": { "speed": 1 },
+    "cost": 1000
+  },
+  "orb_of_earth": {
+    "id": "orb_of_earth",
+    "name": "Сфера Земли",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Компонент для создания артефактов",
+    "bonuses": { "defense": 2 },
+    "cost": 1000
+  },
+  "golden_horseshoe": {
+    "id": "golden_horseshoe",
+    "name": "Золотая подкова",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Приносит удачу",
+    "bonuses": { "luck": 1 },
+    "cost": 800
+  },
+  "ranger_boots": {
+    "id": "ranger_boots",
+    "name": "Сапоги охотника",
+    "slot": "boots",
+    "rarity": "component",
+    "description": "Компонент для сапог скорости",
+    "bonuses": { "speed": 1 },
+    "cost": 900
+  },
+  "elven_boots": {
+    "id": "elven_boots",
+    "name": "Эльфийские сапоги",
+    "slot": "boots",
+    "rarity": "component",
+    "description": "Лёгкие сапоги эльфа",
+    "bonuses": { "speed": 1, "defense": 1 },
+    "cost": 1200
+  },
+  "boots_of_levitation": {
+    "id": "boots_of_levitation",
+    "name": "Сапоги Левитации",
+    "slot": "boots",
+    "rarity": "component",
+    "description": "Компонент для крылатых сапог",
+    "bonuses": { "speed": 2 },
+    "cost": 1500
+  },
+  "horse_of_stability": {
+    "id": "horse_of_stability",
+    "name": "Конь Стабильности",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Компонент для коня скорости",
+    "bonuses": { "morale": 1 },
+    "cost": 1000
+  },
+  "horse_of_swiftness": {
+    "id": "horse_of_swiftness",
+    "name": "Конь Быстроты",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Компонент для коня скорости",
+    "bonuses": { "speed": 1 },
+    "cost": 1000
+  },
+  "dragon_scale_shield": {
+    "id": "dragon_scale_shield",
+    "name": "Щит из Чешуи Дракона",
+    "slot": "shield",
+    "rarity": "component",
+    "description": "Компонент для драконьего щита",
+    "bonuses": { "defense": 2, "magic_resistance": 10 },
+    "cost": 1800
+  },
+  "dragon_helm": {
+    "id": "dragon_helm",
+    "name": "Шлем Дракона",
+    "slot": "head",
+    "rarity": "component",
+    "description": "Компонент для драконьего шлема",
+    "bonuses": { "defense": 2, "attack": 2 },
+    "cost": 1800
+  },
+  "dragon_armor": {
+    "id": "dragon_armor",
+    "name": "Доспех Дракона",
+    "slot": "torso",
+    "rarity": "component",
+    "description": "Компонент для драконьего доспеха",
+    "bonuses": { "defense": 3, "attack": 3 },
+    "cost": 2500
+  },
+  "dragon_gauntlets": {
+    "id": "dragon_gauntlets",
+    "name": "Перчатки Дракона",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Компонент для драконьих перчаток",
+    "bonuses": { "attack": 2 },
+    "cost": 1500
+  },
+  "dragon_ring": {
+    "id": "dragon_ring",
+    "name": "Кольцо Дракона",
+    "slot": "leftRing",
+    "rarity": "component",
+    "description": "Компонент для кольца дракона",
+    "bonuses": { "spellPower": 2 },
+    "cost": 1500
+  },
+  "dragon_necklace": {
+    "id": "dragon_necklace",
+    "name": "Ожерелье Дракона",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Компонент для ожерелья дракона",
+    "bonuses": { "attack": 2, "defense": 2 },
+    "cost": 2000
+  },
+  "dragon_cloak": {
+    "id": "dragon_cloak",
+    "name": "Плащ Дракона",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Компонент для плаща дракона",
+    "bonuses": { "defense": 2, "spellPower": 2 },
+    "cost": 2000
+  },
+  "tome_of_fire_magic": {
+    "id": "tome_of_fire_magic",
+    "name": "Фолиант Огненной Магии",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Книга магической силы",
+    "bonuses": { "spellPower": 3 },
+    "cost": 2000
+  },
+  "tome_of_water_magic": {
+    "id": "tome_of_water_magic",
+    "name": "Фолиант Водной Магии",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Книга магической силы",
+    "bonuses": { "knowledge": 3 },
+    "cost": 2000
+  },
+  "tome_of_air_magic": {
+    "id": "tome_of_air_magic",
+    "name": "Фолиант Воздушной Магии",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Книга магической силы",
+    "bonuses": { "speed": 2 },
+    "cost": 2000
+  },
+  "tome_of_earth_magic": {
+    "id": "tome_of_earth_magic",
+    "name": "Фолиант Земной Магии",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Книга магической силы",
+    "bonuses": { "defense": 3 },
+    "cost": 2000
+  },
+  "tome_of_mind_magic": {
+    "id": "tome_of_mind_magic",
+    "name": "Фолиант Разумной Магии",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Книга магической силы",
+    "bonuses": { "spellPower": 2, "knowledge": 2 },
+    "cost": 2200
+  },
+  "tome_of_dark_magic": {
+    "id": "tome_of_dark_magic",
+    "name": "Фолиант Тёмной Магии",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Книга тёмной силы",
+    "bonuses": { "attack": 2, "spellPower": 2 },
+    "cost": 2200
+  },
+  "tome_of_light_magic": {
+    "id": "tome_of_light_magic",
+    "name": "Фолиант Светлой Магии",
+    "slot": "neck",
+    "rarity": "component",
+    "description": "Книга светлой силы",
+    "bonuses": { "defense": 2, "morale": 2 },
+    "cost": 2200
+  },
+  "statue_of_legion": {
+    "id": "statue_of_legion",
+    "name": "Статуя Легиона",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Статуя для повышения морали",
+    "bonuses": { "morale": 1 },
+    "cost": 1200
+  },
+  "statue_of_the_elementals": {
+    "id": "statue_of_the_elementals",
+    "name": "Статуя Элементалей",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Статуя элементалей",
+    "bonuses": { "spellPower": 1, "knowledge": 1 },
+    "cost": 1500
+  },
+  "cyclops_eyes": {
+    "id": "cyclops_eyes",
+    "name": "Глаза Циклопа",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Глаза циклопа для точности",
+    "bonuses": { "attack": 2 },
+    "cost": 1300
+  },
+  "gorgon_head": {
+    "id": "gorgon_head",
+    "name": "Голова Горгоны",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Голова горгоны",
+    "bonuses": { "attack": 2, "defense": 1 },
+    "cost": 1800
+  },
+  "mummy_s_rib": {
+    "id": "mummy_s_rib",
+    "name": "Ребро Мумии",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Костный компонент",
+    "bonuses": { "defense": 1, "luck": 1 },
+    "cost": 800
+  },
+  "vampire_fang": {
+    "id": "vampire_fang",
+    "name": "Клык Вампира",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Клык вампира для лештсила",
+    "bonuses": { "attack": 1, "lifesteal": 10 },
+    "cost": 1000
+  },
+  "wraith_wisp": {
+    "id": "wraith_wisp",
+    "name": "Искра Призрака",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Духовный компонент",
+    "bonuses": { "spellPower": 1 },
+    "cost": 900
+  },
+  "demon_chaos_blade": {
+    "id": "demon_chaos_blade",
+    "name": "Лезвие Хаоса Демона",
+    "slot": "weapon",
+    "rarity": "component",
+    "description": "Осколок клинка хаоса",
+    "bonuses": { "attack": 2, "spellPower": 1 },
+    "cost": 1800
+  },
+  "angel_fallen_feather": {
+    "id": "angel_fallen_feather",
+    "name": "Опавшее Перо Ангела",
+    "slot": "misc",
+    "rarity": "component",
+    "description": "Священный компонент",
+    "bonuses": { "morale": 1, "luck": 1 },
+    "cost": 1200
+  },
+
+  "UNIQUE_ARTIFACTS": {
+    "id": "UNIQUE_ARTIFACTS",
+    "description": "Уникальные легендарные артефакты"
+  },
+  "artificer_armor": {
+    "id": "artificer_armor",
+    "name": "Доспех Искусника",
+    "slot": "torso",
+    "rarity": "relic",
+    "description": "Доспех величайшего мастера",
+    "bonuses": { "attack": 10, "defense": 10, "spellPower": 5, "knowledge": 5 },
+    "cost": 50000,
+    "set": "artificer"
+  },
+  "boots_of_hermes": {
+    "id": "boots_of_hermes",
+    "name": "Сапоги Гермеса",
+    "slot": "boots",
+    "rarity": "relic",
+    "description": "Крылатые сапоги бога",
+    "bonuses": { "speed": 6, "flying": true, "morale": 2 },
+    "cost": 30000,
+    "set": "hermes"
+  },
+  "gods_bane": {
+    "id": "gods_bane",
+    "name": "Погибель Богов",
+    "slot": "weapon",
+    "rarity": "relic",
+    "description": "Клинок, убивающий богов",
+    "bonuses": { "attack": 15, "spellPower": 5, "undead_damage": 100 },
+    "cost": 60000,
+    "set": "gods_bane"
+  },
+  "gold_dragon_armor": {
+    "id": "gold_dragon_armor",
+    "name": "Золотой Драконий Доспех",
+    "slot": "torso",
+    "rarity": "relic",
+    "description": "Доспех из чешуи золотого дракона",
+    "bonuses": { "attack": 10, "defense": 10, "magic_resistance": 50, "hp": 100 },
+    "cost": 75000,
+    "set": "dragon"
+  },
+  "silver_dragon_armor": {
+    "id": "silver_dragon_armor",
+    "name": "Серебряный Драконий Доспех",
+    "slot": "torso",
+    "rarity": "relic",
+    "description": "Доспех из чешуи серебряного дракона",
+    "bonuses": { "defense": 12, "magic_resistance": 60, "hp": 80 },
+    "cost": 70000,
+    "set": "dragon"
+  },
+  "gold_dragon_helm": {
+    "id": "gold_dragon_helm",
+    "name": "Золотой Драконий Шлем",
+    "slot": "head",
+    "rarity": "relic",
+    "description": "Шлем из чешуи золотого дракона",
+    "bonuses": { "attack": 8, "defense": 6, "morale": 3 },
+    "cost": 40000,
+    "set": "dragon"
+  },
+  "gold_dragon_shield": {
+    "id": "gold_dragon_shield",
+    "name": "Золотой Драконий Щит",
+    "slot": "shield",
+    "rarity": "relic",
+    "description": "Щит из чешуи золотого дракона",
+    "bonuses": { "defense": 10, "magic_resistance": 40, "damage_reduction": 20 },
+    "cost": 45000,
+    "set": "dragon"
+  },
+  "gold_dragon_gauntlets": {
+    "id": "gold_dragon_gauntlets",
+    "name": "Золотые Драконьи Перчатки",
+    "slot": "misc",
+    "rarity": "relic",
+    "description": "Перчатки из чешуи золотого дракона",
+    "bonuses": { "attack": 6, "spellPower": 4 },
+    "cost": 35000,
+    "set": "dragon"
+  },
+  "gold_dragon_ring": {
+    "id": "gold_dragon_ring",
+    "name": "Золотое Драконье Кольцо",
+    "slot": "leftRing",
+    "rarity": "relic",
+    "description": "Кольцо из чешуи золотого дракона",
+    "bonuses": { "spellPower": 6, "knowledge": 4 },
+    "cost": 30000,
+    "set": "dragon"
+  },
+  "gold_dragon_necklace": {
+    "id": "gold_dragon_necklace",
+    "name": "Золотое Драконье Ожерелье",
+    "slot": "neck",
+    "rarity": "relic",
+    "description": "Ожерелье из чешуи золотого дракона",
+    "bonuses": { "attack": 5, "defense": 5, "spellPower": 5 },
+    "cost": 40000,
+    "set": "dragon"
+  },
+  "gold_dragon_cloak": {
+    "id": "gold_dragon_cloak",
+    "name": "Золотой Драконий Плащ",
+    "slot": "misc",
+    "rarity": "relic",
+    "description": "Плащ из чешуи золотого дракона",
+    "bonuses": { "defense": 8, "spellPower": 6, "magic_resistance": 30 },
+    "cost": 42000,
+    "set": "dragon"
+  },
+  "crown_of_the_necromancer": {
+    "id": "crown_of_the_necromancer",
+    "name": "Корона Некроманта",
+    "slot": "head",
+    "rarity": "relic",
+    "description": "Корона великого некроманта",
+    "bonuses": { "spellPower": 8, "knowledge": 6, "undead_boost": 25 },
+    "cost": 55000,
+    "set": "necromancer"
+  },
+  "staff_of_zarathan": {
+    "id": "staff_of_zarathan",
+    "name": "Посох Заратана",
+    "slot": "weapon",
+    "rarity": "relic",
+    "description": "Посох величайшего мага",
+    "bonuses": { "spellPower": 12, "knowledge": 8, "manaRegen": 3 },
+    "cost": 80000,
+    "set": "zarathan"
+  },
+  "bow_of_apollo": {
+    "id": "bow_of_apollo",
+    "name": "Лук Аполлона",
+    "slot": "weapon",
+    "rarity": "relic",
+    "description": "Лук бога солнца",
+    "bonuses": { "attack": 10, "ranged": 100, "fire_damage": 20 },
+    "cost": 45000,
+    "set": "apollo"
+  },
+  "sword_of_kull": {
+    "id": "sword_of_kull",
+    "name": "Меч Кулла",
+    "slot": "weapon",
+    "rarity": "relic",
+    "description": "Меч древнего короля",
+    "bonuses": { "attack": 12, "defense": 3, "morale": 2 },
+    "cost": 50000,
+    "set": "kull"
+  },
+  "armor_of_fafnir": {
+    "id": "armor_of_fafnir",
+    "name": "Доспех Фафнира",
+    "slot": "torso",
+    "rarity": "relic",
+    "description": "Доспех дракона Фафнира",
+    "bonuses": { "defense": 15, "hp": 150, "fire_resistance": 50 },
+    "cost": 70000,
+    "set": "fafnir"
+  },
+  "ring_of_power_relic": {
+    "id": "ring_of_power_relic",
+    "name": "Кольцо Всевластия",
+    "slot": "leftRing",
+    "rarity": "relic",
+    "description": "Властелин всех колец",
+    "bonuses": { "attack": 5, "defense": 5, "spellPower": 5, "knowledge": 5 },
+    "cost": 100000,
+    "set": "power"
+  },
+  "tiara_of_superiority": {
+    "id": "tiara_of_superiority",
+    "name": "Тияра Превосходства",
+    "slot": "head",
+    "rarity": "relic",
+    "description": "Тияра верховного правителя",
+    "bonuses": { "attack": 5, "defense": 5, "morale": 3, "luck": 2 },
+    "cost": 40000,
+    "set": "superiority"
+  },
+  "shield_of_king_laylon": {
+    "id": "shield_of_king_laylon",
+    "name": "Щит Короля Лайлона",
+    "slot": "shield",
+    "rarity": "relic",
+    "description": "Щит великого короля",
+    "bonuses": { "defense": 12, "morale": 3, "damage_reduction": 20 },
+    "cost": 45000,
+    "set": "laylon"
+  },
+  "talisman_of_the_archmage": {
+    "id": "talisman_of_the_archmage",
+    "name": "Талисман Архимага",
+    "slot": "neck",
+    "rarity": "relic",
+    "description": "Талисман величайшего мага",
+    "bonuses": { "spellPower": 10, "knowledge": 7, "manaRegen": 2 },
+    "cost": 50000,
+    "set": "archmage"
+  },
+  "boots_of_balarga": {
+    "id": "boots_of_balarga",
+    "name": "Сапоги Баларги",
+    "slot": "boots",
+    "rarity": "relic",
+    "description": "Сапоги демонократа",
+    "bonuses": { "speed": 4, "defense": 3, "demon_boost": 20 },
+    "cost": 35000,
+    "set": "balarga"
+  },
+  "necklace_of_dragons_tears": {
+    "id": "necklace_of_dragons_tears",
+    "name": "Ожерелье Драконьих Слез",
+    "slot": "neck",
+    "rarity": "relic",
+    "description": "Ожерелье из слез драконов",
+    "bonuses": { "spellPower": 7, "knowledge": 5, "dragon_boost": 25 },
+    "cost": 48000,
+    "set": "dragon_tears"
+  },
+  "sword_of_smiting": {
+    "id": "sword_of_smiting",
+    "name": "Меч Разрушения",
+    "slot": "weapon",
+    "rarity": "relic",
+    "description": "Меч, наносящий сокрушительные удары",
+    "bonuses": { "attack": 12, "spellPower": 4, "siege_damage": 50 },
+    "cost": 55000,
+    "set": "smiting"
+  },
+  "cloak_of_the_darkness": {
+    "id": "cloak_of_the_darkness",
+    "name": "Плащ Абсолютной Тьмы",
+    "slot": "misc",
+    "rarity": "relic",
+    "description": "Плащ, погружающий в тьму",
+    "bonuses": { "defense": 7, "spellPower": 5, "stealth": 100 },
+    "cost": 42000,
+    "set": "darkness"
+  },
+  "orb_of_doom": {
+    "id": "orb_of_doom",
+    "name": "Сфера Рока",
+    "slot": "neck",
+    "rarity": "relic",
+    "description": "Сфера конца мира",
+    "bonuses": { "spellPower": 10, "knowledge": 5, "armageddon_boost": 50 },
+    "cost": 60000,
+    "set": "doom"
+  },
+  "helm_of_the_nuclear_turbo": {
+    "id": "helm_of_the_nuclear_turbo",
+    "name": "Шлем Ядерного Турбо",
+    "slot": "head",
+    "rarity": "relic",
+    "description": "Шлем сверхбыстрого мага",
+    "bonuses": { "speed": 3, "spellPower": 6, "knowledge": 4, "manaRegen": 2 },
+    "cost": 48000,
+    "set": "turbo"
+  },
+  "gauntlets_of_orcish_power": {
+    "id": "gauntlets_of_orcish_power",
+    "name": "Перчатки Орочьей Силы",
+    "slot": "misc",
+    "rarity": "relic",
+    "description": "Перчатки орочьего вождя",
+    "bonuses": { "attack": 8, "defense": 3, "orc_boost": 25 },
+    "cost": 38000,
+    "set": "orcish"
+  },
+  "amulet_of_the_past": {
+    "id": "amulet_of_the_past",
+    "name": "Амулет Прошлого",
+    "slot": "neck",
+    "rarity": "relic",
+    "description": "Амулет, дающий силу предков",
+    "bonuses": { "spellPower": 7, "knowledge": 5, "luck": 2 },
+    "cost": 45000,
+    "set": "past"
+  },
+  "shield_of_the_war_merchant": {
+    "id": "shield_of_the_war_merchant",
+    "name": "Щит Военного Торговца",
+    "slot": "shield",
+    "rarity": "relic",
+    "description": "Щит великого торговца оружием",
+    "bonuses": { "defense": 10, "goldIncome": 1000, "resourceBonus": 1 },
+    "cost": 40000,
+    "set": "war_merchant"
+  },
+
+  "MORE_ARTIFACTS": {
+    "id": "MORE_ARTIFACTS",
+    "description": "Дополнительные артефакты"
+  },
+  "sword_of_1000_blades": {
+    "id": "sword_of_1000_blades",
+    "name": "Меч Тысячи Лезвий",
+    "slot": "weapon",
+    "rarity": "relic",
+    "description": "Меч, рассекающий всё",
+    "bonuses": { "attack": 12, "defense_ignore": 30 },
+    "cost": 52000,
+    "set": "thousand"
+  },
+  "armor_of_god": {
+    "id": "armor_of_god",
+    "name": "Божественный Доспех",
+    "slot": "torso",
+    "rarity": "relic",
+    "description": "Доспех небесного воина",
+    "bonuses": { "attack": 8, "defense": 12, "magic_resistance": 75, "hp": 120 },
+    "cost": 85000,
+    "set": "god"
+  },
+  "helm_of_the_grand_knight": {
+    "id": "helm_of_the_grand_knight",
+    "name": "Шлем Великого Рыцаря",
+    "slot": "head",
+    "rarity": "relic",
+    "description": "Шлем величайшего рыцаря",
+    "bonuses": { "attack": 7, "defense": 7, "morale": 3 },
+    "cost": 38000,
+    "set": "grand_knight"
+  },
+  "gauntlets_of_ogre_power": {
+    "id": "gauntlets_of_ogre_power",
+    "name": "Перчатки Силы Огра",
+    "slot": "misc",
+    "rarity": "major",
+    "description": "Перчатки огрской силы",
+    "bonuses": { "attack": 5 },
+    "cost": 6000,
+    "set": "ogre"
+  },
+  "boots_of_moonlight": {
+    "id": "boots_of_moonlight",
+    "name": "Сапоги Лунного Света",
+    "slot": "boots",
+    "rarity": "major",
+    "description": "Лёгкие сапоги эльфа",
+    "bonuses": { "speed": 3, "luck": 1 },
+    "cost": 5000,
+    "set": "moonlight"
+  },
+  "amulet_of_catalyst": {
+    "id": "amulet_of_catalyst",
+    "name": "Амулет Катализатора",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Амулет усиления магии",
+    "bonuses": { "spellPower": 5, "knowledge": 3 },
+    "cost": 6500,
+    "set": "catalyst"
+  },
+  "cloak_of_the_master": {
+    "id": "cloak_of_the_master",
+    "name": "Плащ Мастера",
+    "slot": "misc",
+    "rarity": "relic",
+    "description": "Плащ мастера боевых искусств",
+    "bonuses": { "attack": 6, "defense": 6, "speed": 2 },
+    "cost": 42000,
+    "set": "master"
+  },
+  "ring_of_the_master": {
+    "id": "ring_of_the_master",
+    "name": "Кольцо Мастера",
+    "slot": "leftRing",
+    "rarity": "relic",
+    "description": "Кольцо мастера магии",
+    "bonuses": { "spellPower": 7, "knowledge": 5 },
+    "cost": 38000,
+    "set": "master"
+  },
+  "orb_of_the_wizard": {
+    "id": "orb_of_the_wizard",
+    "name": "Сфера Чародея",
+    "slot": "neck",
+    "rarity": "relic",
+    "description": "Сфера великого чародея",
+    "bonuses": { "spellPower": 9, "knowledge": 6, "manaRegen": 2 },
+    "cost": 55000,
+    "set": "wizard"
+  },
+  "sword_of_glowing": {
+    "id": "sword_of_glowing",
+    "name": "Сияющий Меч",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Меч, светящийся светом",
+    "bonuses": { "attack": 6, "spellPower": 3 },
+    "cost": 7000,
+    "set": "glowing"
+  },
+  "shield_of_the_dragon": {
+    "id": "shield_of_the_dragon",
+    "name": "Драконий Щит",
+    "slot": "shield",
+    "rarity": "relic",
+    "description": "Щит драконьей чешуи",
+    "bonuses": { "defense": 11, "magic_resistance": 45 },
+    "cost": 48000,
+    "set": "dragon_shield"
+  },
+  "helmet_of_the_wizard": {
+    "id": "helmet_of_the_wizard",
+    "name": "Шлем Чародея",
+    "slot": "head",
+    "rarity": "major",
+    "description": "Шлем мудрого мага",
+    "bonuses": { "spellPower": 5, "knowledge": 3 },
+    "cost": 6000,
+    "set": "wizard"
+  },
+  "bow_of_the_elves": {
+    "id": "bow_of_the_elves",
+    "name": "Эльфийский Лук",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Лук эльфийского лучника",
+    "bonuses": { "attack": 5, "ranged": 75 },
+    "cost": 6500,
+    "set": "elves"
+  },
+  "staff_of_the_mage": {
+    "id": "staff_of_the_mage",
+    "name": "Посох Мага",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Посох обычного мага",
+    "bonuses": { "spellPower": 4, "knowledge": 2 },
+    "cost": 5000,
+    "set": "mage"
+  },
+  "boots_of_the_giant": {
+    "id": "boots_of_the_giant",
+    "name": "Сапоги Великана",
+    "slot": "boots",
+    "rarity": "major",
+    "description": "Массивные сапоги великана",
+    "bonuses": { "speed": 2, "defense": 2 },
+    "cost": 5500,
+    "set": "giant"
+  },
+  "amulet_of_the_soldier": {
+    "id": "amulet_of_the_soldier",
+    "name": "Амулет Воина",
+    "slot": "neck",
+    "rarity": "minor",
+    "description": "Амулет простого воина",
+    "bonuses": { "attack": 2, "defense": 2 },
+    "cost": 2000,
+    "set": "soldier"
+  },
+  "ring_of_the_rogue": {
+    "id": "ring_of_the_rogue",
+    "name": "Кольцо Плута",
+    "slot": "leftRing",
+    "rarity": "major",
+    "description": "Кольцо ловкого плута",
+    "bonuses": { "attack": 3, "luck": 2 },
+    "cost": 4500,
+    "set": "rogue"
+  },
+  "cloak_of_the_assassin": {
+    "id": "cloak_of_the_assassin",
+    "name": "Плащ Убийцы",
+    "slot": "misc",
+    "rarity": "major",
+    "description": "Плащ скрытного убийцы",
+    "bonuses": { "attack": 4, "defense": 2, "stealth": 50 },
+    "cost": 5500,
+    "set": "assassin"
+  },
+  "sword_of_the_hunter": {
+    "id": "sword_of_the_hunter",
+    "name": "Меч Охотника",
+    "slot": "weapon",
+    "rarity": "minor",
+    "description": "Меч опытного охотника",
+    "bonuses": { "attack": 3, "ranged": 25 },
+    "cost": 2500,
+    "set": "hunter"
+  },
+  "shield_of_the_guardian": {
+    "id": "shield_of_the_guardian",
+    "name": "Щит Стража",
+    "slot": "shield",
+    "rarity": "minor",
+    "description": "Щит защитника",
+    "bonuses": { "defense": 4 },
+    "cost": 2200,
+    "set": "guardian"
+  },
+  "helm_of_the_commander": {
+    "id": "helm_of_the_commander",
+    "name": "Шлем Командира",
+    "slot": "head",
+    "rarity": "major",
+    "description": "Шлем командира армии",
+    "bonuses": { "morale": 2, "attack": 2 },
+    "cost": 4000,
+    "set": "commander"
+  },
+  "armor_of_the_soldier": {
+    "id": "armor_of_the_soldier",
+    "name": "Доспех Солдата",
+    "slot": "torso",
+    "rarity": "minor",
+    "description": "Простой доспех солдата",
+    "bonuses": { "defense": 3 },
+    "cost": 2000,
+    "set": "soldier"
+  },
+  "boots_of_the_traveler": {
+    "id": "boots_of_the_traveler",
+    "name": "Сапоги Путника",
+    "slot": "boots",
+    "rarity": "minor",
+    "description": "Сапоги для долгих путешествий",
+    "bonuses": { "speed": 1 },
+    "cost": 1500,
+    "set": "traveler"
+  },
+  "ring_of_the_wisdom": {
+    "id": "ring_of_the_wisdom",
+    "name": "Кольцо Мудрости",
+    "slot": "leftRing",
+    "rarity": "major",
+    "description": "Кольцо мудреца",
+    "bonuses": { "knowledge": 3, "spellPower": 2 },
+    "cost": 4000,
+    "set": "wisdom"
+  },
+  "amulet_of_protection": {
+    "id": "amulet_of_protection",
+    "name": "Амулет Защиты",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Амулет, защищающий от вреда",
+    "bonuses": { "defense": 4, "magic_resistance": 20 },
+    "cost": 5000,
+    "set": "protection"
+  },
+  "gloves_of_precision": {
+    "id": "gloves_of_precision",
+    "name": "Перчатки Точности",
+    "slot": "misc",
+    "rarity": "major",
+    "description": "Перчатки для точных выстрелов",
+    "bonuses": { "ranged": 50, "attack": 2 },
+    "cost": 4500,
+    "set": "precision"
+  },
+  "cape_of_leadership": {
+    "id": "cape_of_leadership",
+    "name": "Мантия Лидерства",
+    "slot": "misc",
+    "rarity": "major",
+    "description": "Мантия лидера",
+    "bonuses": { "morale": 2, "attack": 2 },
+    "cost": 5000,
+    "set": "leadership"
+  },
+  "orb_of_light": {
+    "id": "orb_of_light",
+    "name": "Сфера Света",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Сфера чистого света",
+    "bonuses": { "spellPower": 4, "morale": 2 },
+    "cost": 5500,
+    "set": "light"
+  },
+  "orb_of_shadow": {
+    "id": "orb_of_shadow",
+    "name": "Сфера Тени",
+    "slot": "neck",
+    "rarity": "major",
+    "description": "Сфера тёмной магии",
+    "bonuses": { "spellPower": 4, "attack": 2 },
+    "cost": 5500,
+    "set": "shadow"
+  },
+  "staff_of_elemental_fire": {
+    "id": "staff_of_elemental_fire",
+    "name": "Посох Огненного Элементаля",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Посох огня",
+    "bonuses": { "spellPower": 5, "fire_damage": 15 },
+    "cost": 6000,
+    "set": "fire"
+  },
+  "staff_of_elemental_water": {
+    "id": "staff_of_elemental_water",
+    "name": "Посох Водного Элементаля",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Посох воды",
+    "bonuses": { "knowledge": 4, "water_magic": 15 },
+    "cost": 6000,
+    "set": "water"
+  },
+  "staff_of_elemental_air": {
+    "id": "staff_of_elemental_air",
+    "name": "Посох Воздушного Элементаля",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Посох воздуха",
+    "bonuses": { "speed": 2, "air_magic": 15 },
+    "cost": 6000,
+    "set": "air"
+  },
+  "staff_of_elemental_earth": {
+    "id": "staff_of_elemental_earth",
+    "name": "Посох Земного Элементаля",
+    "slot": "weapon",
+    "rarity": "major",
+    "description": "Посох земли",
+    "bonuses": { "defense": 4, "earth_magic": 15 },
+    "cost": 6000,
+    "set": "earth"
+  },
+  "crown_of_the_wizard_king": {
+    "id": "crown_of_the_wizard_king",
+    "name": "Корона Короля-Чародея",
+    "slot": "head",
+    "rarity": "relic",
+    "description": "Корона мага-короля",
+    "bonuses": { "spellPower": 10, "knowledge": 8, "attack": 3, "defense": 3 },
+    "cost": 70000,
+    "set": "wizard_king"
+  },
+  "sword_of_holy_light": {
+    "id": "sword_of_holy_light",
+    "name": "Меч Святого Света",
+    "slot": "weapon",
+    "rarity": "relic",
+    "description": "Меч небесного света",
+    "bonuses": { "attack": 12, "spellPower": 5, "undead_damage": 75, "morale": 3 },
+    "cost": 65000,
+    "set": "holy"
   }
 }

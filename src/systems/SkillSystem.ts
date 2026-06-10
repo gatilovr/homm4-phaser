@@ -151,6 +151,21 @@ export class SkillSystem {
     barbarian:   { attack: 4, defense: 3, spellPower: 0, knowledge: 0 }
   };
 
+  // === HP ГЕРОЕВ ПО КЛАССАМ (base + perLevel) ===
+  // Формула: HP = base + (level - 1) * perLevel
+  public static CLASS_HP: Record<string, { base: number; perLevel: number }> = {
+    knight:        { base: 20, perLevel: 5 },
+    cleric:        { base: 15, perLevel: 4 },
+    death_knight:  { base: 22, perLevel: 5 },
+    necromancer:   { base: 12, perLevel: 3 },
+    ranger:        { base: 18, perLevel: 4 },
+    druid:         { base: 16, perLevel: 4 },
+    demoniac:      { base: 20, perLevel: 5 },
+    heretic:       { base: 14, perLevel: 3 },
+    wizard:        { base: 12, perLevel: 3 },
+    barbarian:     { base: 25, perLevel: 6 }
+  };
+
   constructor(seed: number = Date.now()) {
     this.random = new SeededRandom(seed);
   }
@@ -412,5 +427,31 @@ export class SkillSystem {
    */
   public getMaxSpellLevel(hero: Hero): number {
     return this.getBonusValue(hero, 'spell_level_access') || 2;
+  }
+
+  /**
+   * Рассчитать HP героя на основе класса и уровня
+   * Формула: HP = base + (level - 1) * perLevel
+   */
+  public calculateHeroHP(heroClass: string, level: number): number {
+    const hpData = SkillSystem.CLASS_HP[heroClass];
+    if (!hpData) return 20; // default
+    
+    const hp = hpData.base + (level - 1) * hpData.perLevel;
+    return Math.max(10, hp); // minimum 10 HP
+  }
+
+  /**
+   * Получить базовое HP для класса
+   */
+  public getBaseHP(heroClass: string): number {
+    return SkillSystem.CLASS_HP[heroClass]?.base || 20;
+  }
+
+  /**
+   * Получить прирост HP за уровень для класса
+   */
+  public getHPPerLevel(heroClass: string): number {
+    return SkillSystem.CLASS_HP[heroClass]?.perLevel || 4;
   }
 }

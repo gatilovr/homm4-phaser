@@ -281,7 +281,9 @@ export class AISystem {
         attack: 2,
         defense: 2,
         spellPower: isNecro ? 3 : 1,
-        knowledge: isNecro ? 3 : 1
+        knowledge: isNecro ? 3 : 1,
+        hp: 20,
+        maxHp: 20
       },
       skills: [],
       mana: 20,

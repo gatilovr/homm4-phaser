@@ -113,8 +113,8 @@ export class MapObjectGenerator {
       }
     }
 
-    // === 7. ШКОЛЫ МАГИИ (3 штуки) ===
-    const schools = ['fire', 'water', 'earth', 'air', 'mind'];
+    // === 7. ШКОЛЫ МАГИИ (3 штуки, HoMM4 канон) ===
+    const schools = ['life', 'death', 'order', 'chaos', 'natural', 'tactics'];
     for (let i = 0; i < 3; i++) {
       const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
       if (pos) {
@@ -332,7 +332,8 @@ export class MapObjectGenerator {
   }
 
   private getRandomSpell(rand: () => number): string {
-    const spells = ['fireball', 'lightning', 'heal', 'bless', 'curse', 'haste', 'slow'];
+    // Заклинания HoMM4 (канон) из разных школ
+    const spells = ['fireball', 'lightning', 'heal', 'bless', 'resurrect', 'haste', 'slow', 'shield', 'teleport', 'blind', 'bloodlust', 'fly'];
     return spells[Math.floor(rand() * spells.length)];
   }
 

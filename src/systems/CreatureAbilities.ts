@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BattleUnit, BattleState, Spell } from '../types';
+import { BattleUnit, BattleState, Spell, SpellSchool } from '../types';
 import { GameRandom } from '../utils/Random';
 import { hasAbility, isRanged } from './CreatureTypes';
 
@@ -326,8 +326,8 @@ export class CreatureAbilitiesSystem {
       return false;
     }
 
-    // Иммунитет нежити к магии разума
-    if (hasAbility(target.creatureId, 'undead') && spell.school === 'mind') {
+    // Иммунитет нежити к магии Смерти и Жизни (вместо mind)
+    if (hasAbility(target.creatureId, 'undead') && (spell.school === 'death' || spell.school === 'life')) {
       return false;
     }
 
@@ -435,7 +435,13 @@ export class CreatureAbilitiesSystem {
       const randomSpells = ['bless', 'haste', 'shield', 'heal', 'slow'];
       const spellId = randomSpells[GameRandom.randomInt(0, randomSpells.length - 1)];
       this.addLog(`✨ ${genie.creatureId} применяет случайное заклинание!`);
-      return { id: spellId, name: spellId, school: 'water', manaCost: 0, description: '', target: 'single', effects: [] };
+      
+      // Определяем правильную школу для заклинания (HoMM4 канон)
+      const schoolMap: Record<string, SpellSchool> = {
+        bless: 'life', heal: 'life', haste: 'order',
+        shield: 'order', slow: 'order'
+      };
+      return { id: spellId, name: spellId, school: schoolMap[spellId] || 'life', manaCost: 0, description: '', target: 'single', effects: [] } as Spell;
     }
     return null;
   }

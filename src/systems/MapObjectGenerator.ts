@@ -48,6 +48,18 @@ export class MapObjectGenerator {
       });
     });
 
+    // === 1b. НЕЙТРАЛЬНЫЕ ГОРОДА (канон HoMM4: города без владельца) ===
+    const neutralTownCount = 2;
+    for (let i = 0; i < neutralTownCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`neutral_town_${i + 1}`, 'town', pos.x, pos.y, {
+          faction: this.getRandomFaction(rand),
+          owner: 'neutral'
+        });
+      }
+    }
+
     // === 2. ШАХТЫ (12 штук) ===
     const mineTypes = ['gold', 'gold', 'gold', 'wood', 'wood', 'ore', 'ore',
                        'crystal', 'gems', 'sulfur', 'mercury', 'gold'];
@@ -690,6 +702,26 @@ export class MapObjectGenerator {
           type: 'university',
           skillReward: 'random',
           name: 'Университет'
+        });
+      }
+    }
+
+    // === 45. АРТЕФАКТЫ РАЗВЕДКИ (Scout Artifacts) — +обзор (канон HoMM4) ===
+    const scoutArtifacts = [
+      { id: 'scout_boots', name: 'Сапоги разведчика', effect: 'movement', value: 200 },
+      { id: 'spyglass', name: 'Подзорная труба', effect: 'vision', value: 2 },
+      { id: 'scouting_ring', name: 'Кольцо разведки', effect: 'vision', value: 1 },
+    ];
+    for (let i = 0; i < scoutArtifacts.length; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
+      if (pos) {
+        this.addObject(`scout_artifact_${i + 1}`, 'artifact', pos.x, pos.y, {
+          tier: 'minor',
+          artifactId: scoutArtifacts[i].id,
+          artifactName: scoutArtifacts[i].name,
+          effect: scoutArtifacts[i].effect,
+          effectValue: scoutArtifacts[i].value,
+          name: scoutArtifacts[i].name
         });
       }
     }

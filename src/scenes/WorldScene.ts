@@ -1397,19 +1397,57 @@ export class WorldScene extends Phaser.Scene {
   private visitGarrison(id: string, data: any): void {
     const creatures = data?.creatures || [];
     
-    for (const c of creatures) {
-      const existing = this.hero.army.find(s => s.creatureId === c.id);
-      if (existing) {
-        existing.count += c.count;
-      } else {
-        this.hero.army.push({ creatureId: c.id, count: c.count });
-      }
+    if (creatures.length === 0) {
+      this.showNotification('🏰 Гарнизон пуст!');
+      this.removeObject(id, { x: Math.floor(this.heroSprite.x / CONFIG.TILE_SIZE), y: Math.floor(this.heroSprite.y / CONFIG.TILE_SIZE) });
+      this.stopMovement();
+      return;
     }
+
+    // В каноне HoMM4 гарнизон нужно завоевать в бою
+    this.showNotification(`⚔️ Гарнизон: ${creatures.map((c: any) => `${c.count}×${c.id}`).join(', ')}. Начинается бой!`);
     
-    const creatureStr = creatures.map((c: any) => `${c.count}×${c.id}`).join(', ');
-    this.showNotification(`🏰 Гарнизон: получены ${creatureStr}!`);
-    this.removeObject(id, { x: Math.floor(this.heroSprite.x / CONFIG.TILE_SIZE), y: Math.floor(this.heroSprite.y / CONFIG.TILE_SIZE) });
-    this.stopMovement();
+    // Создаём временного защитника для гарнизона
+    const garrisonHero: Hero = {
+      id: `garrison_${id}`,
+      name: 'Гарнизон',
+      class: 'Варвар',
+      faction: 'neutral',
+      level: 1,
+      experience: 0,
+      x: Math.floor(this.heroSprite.x / CONFIG.TILE_SIZE),
+      y: Math.floor(this.heroSprite.y / CONFIG.TILE_SIZE),
+      movementPoints: 0,
+      maxMovementPoints: 0,
+      stats: {
+        attack: 2,
+        defense: 2,
+        spellPower: 1,
+        knowledge: 1,
+        hp: 20,
+        maxHp: 20,
+        morale: 0,
+        luck: 0
+      },
+      skills: [],
+      equipment: {},
+      army: creatures.map((c: any) => ({ creatureId: c.id || c.creatureId, count: c.count })),
+      mana: 0,
+      maxMana: 0,
+      spells: [],
+      owner: 'enemy'
+    };
+
+    // Запускаем бой
+    this.time.delayedCall(500, () => {
+      this.scene.sleep();
+      this.scene.launch(CONFIG.SCENES.BATTLE, {
+        attacker: this.hero,
+        defenderHero: garrisonHero,
+        worldScene: this,
+        battleType: 'creature'
+      });
+    });
   }
 
   private visitLibrary(id: string, data: any): void {

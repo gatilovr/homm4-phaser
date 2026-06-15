@@ -3,7 +3,7 @@
  * Загружает и кэширует все данные из JSON файлов
  */
 
-import type { Creature, Building, Artifact, Spell, Faction, CreatureStats } from '../types';
+import type { Creature, Building, Artifact, Spell, Faction, CreatureStats, Hero } from '../types';
 
 interface CreaturesData {
   creatures: Creature[];
@@ -239,6 +239,53 @@ export class ContentManager {
       hp: 10, attack: 5, defense: 3, speed: 4,
       damage: { min: 1, max: 3 }, shots: 0, abilities: [],
       faction: 'neutral', type: 'infantry', tier: 1
+    };
+  }
+
+  /**
+   * Получить боевые статы героя на основе его реальных характеристик.
+   * В HoMM4 герой — полноценный юнит на поле боя.
+   */
+  public getHeroBattleStats(hero: Hero): CreatureStats {
+    const attack = hero.stats?.attack ?? 5;
+    const defense = hero.stats?.defense ?? 3;
+    const spellPower = hero.stats?.spellPower ?? 0;
+
+    // HP героя = базовое 50 + 10 за уровень
+    const hp = 50 + (hero.level || 1) * 10;
+
+    // Скорость зависит от класса
+    const isRangedClass = ['cleric', 'necromancer', 'druid', 'heretic', 'wizard', 'artificer', 'shaman'].includes(hero.class);
+    const speed = isRangedClass ? 5 : 6;
+
+    // Урон: воины — физический, маги — основанный на spellPower
+    let damageMin: number;
+    let damageMax: number;
+    if (isRangedClass) {
+      damageMin = 3 + Math.floor(spellPower * 2);
+      damageMax = 6 + Math.floor(spellPower * 3);
+    } else {
+      damageMin = 5 + Math.floor(attack * 0.5);
+      damageMax = 10 + Math.floor(attack * 0.8);
+    }
+
+    // Способности: стрелки могут стрелять
+    const abilities: string[] = [];
+    if (isRangedClass) {
+      abilities.push('shooter');
+    }
+
+    return {
+      hp,
+      attack,
+      defense,
+      speed,
+      damage: { min: damageMin, max: damageMax },
+      shots: isRangedClass ? 24 : 0,
+      abilities,
+      faction: hero.faction || 'neutral',
+      type: isRangedClass ? 'shooter' : 'infantry',
+      tier: 0
     };
   }
 

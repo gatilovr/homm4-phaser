@@ -27,7 +27,8 @@ export interface AIPlayer {
   name: string;
   color: number;
   faction: string;
-  hero: Hero;
+  hero: Hero; // Основной герой (для обратной совместимости)
+  heroes: Hero[]; // Все герои ИИ (канон HoMM4: 2-3 героя)
   townId: string;
   resources: Resources;
   isActive: boolean;
@@ -45,7 +46,10 @@ export type AIGoalType =
   | 'collect_resource'
   | 'explore'
   | 'return_to_town'
-  | 'defend_town';
+  | 'defend_town'
+  | 'capture_dwelling'
+  | 'hire_from_dwelling'
+  | 'propose_truce';
 
 export interface AIGoal {
   type: AIGoalType;
@@ -85,7 +89,10 @@ const PRIORITIES = {
   RETURN_TO_TOWN: 20,         // Вернуться в город (при слабой армии)
   BUILD_CRITICAL: 100,        // Построить критическое здание
   BUILD_NORMAL: 50,           // Построить обычное
-  HIRE_STRONG: 85             // Нанять сильных существ
+  HIRE_STRONG: 85,            // Нанять сильных существ
+  CAPTURE_DWELLING: 85,       // Захватить внешнее жилище
+  HIRE_FROM_DWELLING: 65,     // Нанять из внешнего жилища
+  PROPOSE_TRUCE: 10           // Предложить перемирие (если слабее)
 };
 
 // Порядок строительства для ИИ (по приоритету)
@@ -123,6 +130,8 @@ export class AISystem {
   private getPlayerHero: () => Hero;
   private getPlayerPosition: () => { x: number; y: number };
   private getTownData: (townId: string) => any;
+  private getDiplomacySystem: () => any;
+  private getDwellingSystem: () => any;
   private onAIAttackHero?: (aiHero: Hero) => void;
   private onAIAttackCreature?: (aiHero: Hero, creatureId: string) => void;
   private onAIMove?: (aiId: string, x: number, y: number) => void;
@@ -138,6 +147,8 @@ export class AISystem {
       getPlayerHero: () => Hero;
       getPlayerPosition: () => { x: number; y: number };
       getTownData: (townId: string) => any;
+      getDiplomacySystem?: () => any;
+      getDwellingSystem?: () => any;
       onAIAttackHero?: (aiHero: Hero) => void;
       onAIAttackCreature?: (aiHero: Hero, creatureId: string) => void;
       onAIMove?: (aiId: string, x: number, y: number) => void;
@@ -153,6 +164,8 @@ export class AISystem {
     this.getPlayerHero = refs.getPlayerHero;
     this.getPlayerPosition = refs.getPlayerPosition;
     this.getTownData = refs.getTownData;
+    this.getDiplomacySystem = refs.getDiplomacySystem || (() => null);
+    this.getDwellingSystem = refs.getDwellingSystem || (() => null);
     this.onAIAttackHero = refs.onAIAttackHero;
     this.onAIAttackCreature = refs.onAIAttackCreature;
     this.onAIMove = refs.onAIMove;
@@ -199,33 +212,32 @@ export class AISystem {
   private getDefaultBuildings(): Building[] {
     return [
       { id: 'citadel', name: 'Цитадель', description: 'Основное здание', cost: { gold: 2000, wood: 5, ore: 5 }, requires: [], faction: 'common', category: 'infrastructure' },
-      { id: 'barracks', name: 'Казармы', description: 'Ополченцы', cost: { gold: 1000, wood: 3 }, requires: ['citadel'], faction: 'haven', category: 'creature', creature: 'pikeman', tier: 1 },
-      { id: 'archery_range', name: 'Стрельбище', description: 'Лучники', cost: { gold: 2000, wood: 5 }, requires: ['barracks'], faction: 'haven', category: 'creature', creature: 'archer', tier: 2 },
-      { id: 'griffin_tower', name: 'Башня грифонов', description: 'Грифоны', cost: { gold: 3000, wood: 3, ore: 2 }, requires: ['barracks'], faction: 'haven', category: 'creature', creature: 'griffin', tier: 3 },
+      { id: 'haven_dwelling_1', name: 'Сквайрский зал', description: 'Сквайр / Баллиста', cost: { gold: 500, wood: 5 }, requires: [], faction: 'haven', category: 'dwelling', creatures: ['squire', 'ballista'] },
+      { id: 'haven_dwelling_2', name: 'Оружейная', description: 'Копейщик / Арбалетчик', cost: { gold: 1000, wood: 10 }, requires: ['haven_dwelling_1'], faction: 'haven', category: 'dwelling', creatures: ['pikeman_h4', 'archer_h4'] },
+      { id: 'haven_dwelling_3', name: 'Храм', description: 'Крестоносец / Монах', cost: { gold: 2000, wood: 5, ore: 5 }, requires: ['haven_dwelling_2'], faction: 'haven', category: 'dwelling', creatures: ['crusader_h4', 'monk_h4'] },
+      { id: 'haven_dwelling_4', name: 'Портал славы', description: 'Чемпион / Ангел', cost: { gold: 10000, wood: 10, ore: 10, crystal: 5 }, requires: ['haven_dwelling_3'], faction: 'haven', category: 'dwelling', creatures: ['champion_h4', 'angel_h4'] },
       { id: 'blacksmith', name: 'Кузница', description: 'Артефакты', cost: { gold: 1500, wood: 3, ore: 5 }, requires: ['citadel'], faction: 'common', category: 'infrastructure' },
       { id: 'marketplace', name: 'Рынок', description: 'Обмен ресурсов', cost: { gold: 1000, wood: 5 }, requires: ['citadel'], faction: 'common', category: 'economy' },
-      { id: 'cathedral', name: 'Собор', description: 'Ангелы', cost: { gold: 10000, crystal: 5 }, requires: ['griffin_tower'], faction: 'haven', category: 'creature', creature: 'angel', tier: 7 },
+      { id: 'necropolis_dwelling_1', name: 'Костяная усыпальница', description: 'Скелет / Бес', cost: { gold: 400, ore: 5 }, requires: [], faction: 'necropolis', category: 'dwelling', creatures: ['skeleton_h4', 'imp_h4'] },
+      { id: 'necropolis_dwelling_2', name: 'Кладбище теней', description: 'Призрак / Цербер', cost: { gold: 1000, wood: 5 }, requires: ['necropolis_dwelling_1'], faction: 'necropolis', category: 'dwelling', creatures: ['ghost_h4', 'cerberus'] },
+      { id: 'necropolis_dwelling_3', name: 'Усыпальница вампиров', description: 'Вампир / Ядовитая тварь', cost: { gold: 3000, wood: 5, mercury: 3 }, requires: ['necropolis_dwelling_2'], faction: 'necropolis', category: 'dwelling', creatures: ['vampire_h4', 'venom_spawn'] },
+      { id: 'necropolis_dwelling_4', name: 'Склеп драконов', description: 'Костяной дракон / Дьявол', cost: { gold: 10000, wood: 10, ore: 10, mercury: 10 }, requires: ['necropolis_dwelling_3'], faction: 'necropolis', category: 'dwelling', creatures: ['bone_dragon_h4', 'devil_h4'] },
       { id: 'mage_guild_1', name: 'Гильдия магов', description: 'Заклинания 1 уровня', cost: { gold: 2000, wood: 3, crystal: 2 }, requires: ['citadel'], faction: 'common', category: 'magic' },
       { id: 'walls', name: 'Стены', description: 'Защита города', cost: { gold: 3000, ore: 10 }, requires: ['citadel'], faction: 'common', category: 'defense' },
-      // Некрополис
-      { id: 'cursed_temple', name: 'Проклятый храм', description: 'Скелеты', cost: { gold: 800, wood: 2, ore: 2 }, requires: ['citadel'], faction: 'necropolis', category: 'creature', creature: 'skeleton', tier: 1 },
-      { id: 'crypt', name: 'Склеп', description: 'Зомби', cost: { gold: 1500, ore: 3 }, requires: ['cursed_temple'], faction: 'necropolis', category: 'creature', creature: 'zombie', tier: 2 },
-      { id: 'mausoleum', name: 'Мавзолей', description: 'Вампиры', cost: { gold: 3000, ore: 3, mercury: 2 }, requires: ['crypt'], faction: 'necropolis', category: 'creature', creature: 'vampire', tier: 4 }
     ] as Building[];
   }
 
   private getDefaultCreatures(): any[] {
     return [
-      { id: 'pikeman', name: 'Ополченец', cost: { gold: 60 }, attack: 4, defense: 5, hp: 10, speed: 4, damage: [1, 3], tier: 1 },
-      { id: 'archer', name: 'Лучник', cost: { gold: 100 }, attack: 6, defense: 3, hp: 8, speed: 4, damage: [2, 4], tier: 2 },
-      { id: 'griffin', name: 'Грифон', cost: { gold: 200 }, attack: 8, defense: 8, hp: 20, speed: 6, damage: [3, 6], tier: 3 },
-      { id: 'angel', name: 'Ангел', cost: { gold: 1200 }, attack: 20, defense: 20, hp: 100, speed: 10, damage: [50, 50], tier: 7 },
-      { id: 'skeleton', name: 'Скелет', cost: { gold: 50 }, attack: 4, defense: 3, hp: 6, speed: 4, damage: [1, 2], tier: 1 },
-      { id: 'zombie', name: 'Зомби', cost: { gold: 70 }, attack: 5, defense: 4, hp: 14, speed: 3, damage: [2, 3], tier: 2 },
-      { id: 'vampire', name: 'Вампир', cost: { gold: 360 }, attack: 10, defense: 9, hp: 30, speed: 6, damage: [5, 8], tier: 4 },
-      { id: 'wolf', name: 'Волк', cost: { gold: 100 }, attack: 6, defense: 4, hp: 12, speed: 6, damage: [2, 4], tier: 2 },
-      { id: 'goblin', name: 'Гоблин', cost: { gold: 40 }, attack: 3, defense: 2, hp: 5, speed: 5, damage: [1, 2], tier: 1 },
-      { id: 'orc', name: 'Орк', cost: { gold: 150 }, attack: 8, defense: 5, hp: 15, speed: 4, damage: [3, 5], tier: 3 }
+      { id: 'squire', name: 'Сквайр', cost: { gold: 50 }, attack: 3, defense: 4, hp: 8, speed: 4, damage: [1, 2], tier: 1 },
+      { id: 'ballista', name: 'Баллиста', cost: { gold: 80 }, attack: 5, defense: 2, hp: 6, speed: 3, damage: [2, 4], tier: 1 },
+      { id: 'skeleton_h4', name: 'Скелет', cost: { gold: 30 }, attack: 3, defense: 3, hp: 5, speed: 4, damage: [1, 2], tier: 1 },
+      { id: 'imp_h4', name: 'Бес', cost: { gold: 40 }, attack: 2, defense: 2, hp: 4, speed: 6, damage: [1, 1], tier: 1 },
+      { id: 'vampire_h4', name: 'Вампир', cost: { gold: 360 }, attack: 10, defense: 8, hp: 30, speed: 6, damage: [5, 8], tier: 3 },
+      { id: 'bandit', name: 'Разбойник', cost: { gold: 50 }, attack: 4, defense: 3, hp: 8, speed: 5, damage: [1, 3], tier: 1 },
+      { id: 'orc_h4', name: 'Орк', cost: { gold: 60 }, attack: 4, defense: 2, hp: 10, speed: 4, damage: [2, 3], tier: 1 },
+      { id: 'dwarf_h4', name: 'Гном', cost: { gold: 60 }, attack: 3, defense: 5, hp: 10, speed: 3, damage: [1, 2], tier: 1 },
+      { id: 'berserker', name: 'Берсерк', cost: { gold: 50 }, attack: 4, defense: 2, hp: 8, speed: 5, damage: [2, 3], tier: 1 },
     ];
   }
 
@@ -239,14 +251,24 @@ export class AISystem {
 
     for (let i = 0; i < Math.min(4, towns.length); i++) {
       const town = towns[i];
-      const hero = startHeroes[i] || this.createDefaultAIHero(i, names[i], town);
+      
+      // Создаём основного героя
+      const mainHero = startHeroes[i] || this.createDefaultAIHero(i, names[i], town, 0);
+      const heroes: Hero[] = [mainHero];
+      
+      // Добавляем 1-2 дополнительных героя для каноничного ИИ (HoMM4: 2-3 героя)
+      if (town.faction) {
+        const secondHero = this.createDefaultAIHero(i, `${names[i]} II`, town, 1);
+        heroes.push(secondHero);
+      }
 
       const aiPlayer: AIPlayer = {
         id: `ai_${i}`,
         name: names[i],
         color: aiColors[i],
         faction: town.faction || 'necropolis',
-        hero,
+        hero: mainHero,
+        heroes,
         townId: town.id,
         resources: {
           gold: 8000,
@@ -264,15 +286,25 @@ export class AISystem {
       this.aiPlayers.push(aiPlayer);
     }
 
-    console.log(`[AI] Инициализировано ${this.aiPlayers.length} противников`);
+    console.log(`[AI] Инициализировано ${this.aiPlayers.length} противников (${this.aiPlayers.reduce((sum, ai) => sum + ai.heroes.length, 0)} героев)`);
   }
 
-  private createDefaultAIHero(index: number, name: string, town: any): Hero {
+  private createDefaultAIHero(index: number, name: string, town: any, heroIndex: number = 0): Hero {
     const isNecro = town.faction === 'necropolis';
+    const isMagic = town.faction === 'academy' || town.faction === 'asylum';
+    
+    // Второй герой получает другие статы
+    const attackBase = heroIndex === 0 ? 2 : (isMagic ? 1 : 3);
+    const defenseBase = heroIndex === 0 ? 2 : (isMagic ? 1 : 3);
+    const spellPowerBase = heroIndex === 0 ? (isNecro ? 3 : 1) : (isMagic ? 3 : 1);
+    const knowledgeBase = heroIndex === 0 ? (isNecro ? 3 : 1) : (isMagic ? 3 : 1);
+    
     return {
-      id: `ai_hero_${index}`,
+      id: `ai_hero_${index}_${heroIndex}`,
       name: name,
-      class: isNecro ? 'Некромант' : 'Рыцарь',
+      class: heroIndex === 0 
+        ? (isNecro ? 'Некромант' : 'Рыцарь')
+        : (isMagic ? 'Волшебник' : 'Варвар'),
       faction: town.faction || 'necropolis',
       level: 1,
       experience: 0,
@@ -290,12 +322,12 @@ export class AISystem {
       maxMana: 20,
       army: isNecro
         ? [
-            { creatureId: 'skeleton', count: 40 },
-            { creatureId: 'zombie', count: 25 }
+            { creatureId: 'skeleton_h4', count: 40 },
+            { creatureId: 'imp_h4', count: 25 }
           ]
         : [
-            { creatureId: 'pikeman', count: 30 },
-            { creatureId: 'archer', count: 15 }
+            { creatureId: 'squire', count: 30 },
+            { creatureId: 'ballista', count: 15 }
           ],
       equipment: {},
       spells: [],
@@ -590,32 +622,48 @@ export class AISystem {
       }
     }
 
-    // === 2. Атака героя игрока ===
-    const playerHero = this.getPlayerHero();
-    const playerPos = this.getPlayerPosition();
-    const distToPlayer = this.distance(hero.x!, hero.y!, playerPos.x, playerPos.y);
-    const playerPower = this.calculateArmyPower(playerHero.army);
+    // === 2. Атака героя игрока (с учётом дипломатии) ===
+    const diplomacy = this.getDiplomacySystem();
+    const canAttackPlayer = !diplomacy || diplomacy.canAttack?.('player') !== false;
+    
+    if (canAttackPlayer) {
+      const playerHero = this.getPlayerHero();
+      const playerPos = this.getPlayerPosition();
+      const distToPlayer = this.distance(hero.x!, hero.y!, playerPos.x, playerPos.y);
+      const playerPower = this.calculateArmyPower(playerHero.army);
 
-    if (distToPlayer <= 20 && playerPower > 0) {
-      if (heroPower > playerPower * 1.1) {
-        // Мы сильнее — атакуем!
+      if (distToPlayer <= 20 && playerPower > 0) {
+        if (heroPower > playerPower * 1.1) {
+          goals.push({
+            type: 'attack_hero',
+            targetX: playerPos.x,
+            targetY: playerPos.y,
+            targetId: playerHero.id,
+            priority: PRIORITIES.ATTACK_WEAK_HERO,
+            description: `Атаковать героя игрока (сила: ${playerPower})`
+          });
+        } else if (heroPower > playerPower * 0.7 && distToPlayer <= 8) {
+          goals.push({
+            type: 'attack_hero',
+            targetX: playerPos.x,
+            targetY: playerPos.y,
+            targetId: playerHero.id,
+            priority: PRIORITIES.ATTACK_STRONG_HERO,
+            description: `Рискнуть атаковать героя игрока`
+          });
+        }
+      }
+    } else if (diplomacy) {
+      // ИИ слабее — может предложить перемирие
+      const playerHero = this.getPlayerHero();
+      const playerPower = this.calculateArmyPower(playerHero.army);
+      if (heroPower < playerPower * 0.6) {
         goals.push({
-          type: 'attack_hero',
-          targetX: playerPos.x,
-          targetY: playerPos.y,
-          targetId: playerHero.id,
-          priority: PRIORITIES.ATTACK_WEAK_HERO,
-          description: `Атаковать героя игрока (сила: ${playerPower})`
-        });
-      } else if (heroPower > playerPower * 0.7 && distToPlayer <= 8) {
-        // Равные силы — рискнём
-        goals.push({
-          type: 'attack_hero',
-          targetX: playerPos.x,
-          targetY: playerPos.y,
-          targetId: playerHero.id,
-          priority: PRIORITIES.ATTACK_STRONG_HERO,
-          description: `Рискнуть атаковать героя игрока`
+          type: 'propose_truce',
+          targetX: hero.x!,
+          targetY: hero.y!,
+          priority: PRIORITIES.PROPOSE_TRUCE,
+          description: 'Предложить перемирие (слабее)'
         });
       }
     }
@@ -653,6 +701,26 @@ export class AISystem {
             targetId: mine.id,
             priority: PRIORITIES.CAPTURE_MINE - dist,
             description: `Захватить шахту (${dist} клеток)`
+          });
+        }
+      }
+    }
+
+    // === 4b. Захват внешних жилищ (канон HoMM4) ===
+    const dwellingSystem = this.getDwellingSystem();
+    if (dwellingSystem?.getAllDwellings) {
+      const dwellings = dwellingSystem.getAllDwellings();
+      for (const dwelling of dwellings) {
+        if (dwelling.owner === 'ai') continue;
+        const dist = this.distance(hero.x!, hero.y!, dwelling.x || 0, dwelling.y || 0);
+        if (dist <= 15) {
+          goals.push({
+            type: 'capture_dwelling',
+            targetX: dwelling.x || 0,
+            targetY: dwelling.y || 0,
+            targetId: dwelling.dwellingId,
+            priority: PRIORITIES.CAPTURE_DWELLING - dist,
+            description: `Захватить жилище ${dwelling.dwellingName}`
           });
         }
       }
@@ -794,6 +862,12 @@ export class AISystem {
 
       case 'collect_resource':
         return this.collectObject(ai, goal.targetId!, 'resource', actions);
+
+      case 'capture_dwelling':
+        return this.captureDwelling(ai, goal.targetId!, actions);
+
+      case 'propose_truce':
+        return this.proposeTruceToPlayer(ai, actions);
     }
 
     return true;
@@ -1026,6 +1100,46 @@ export class AISystem {
     if (this.onAINotification) {
       this.onAINotification(message);
     }
+  }
+
+  // =========================================================================
+  // ДИПЛОМАТИЯ И ВНЕШНИЕ ЖИЛИЩА (канон HoMM4)
+  // =========================================================================
+
+  private captureDwelling(ai: AIPlayer, dwellingId: string, actions: AIAction[]): boolean {
+    const dwellingSystem = this.getDwellingSystem();
+    if (!dwellingSystem?.captureDwelling) return false;
+
+    const result = dwellingSystem.captureDwelling(dwellingId, 'ai');
+    if (result.success) {
+      actions.push({
+        type: 'capture',
+        description: `Захвачено жилище: ${dwellingId}`
+      });
+      this.notify(`🏴 ${ai.name} захватил внешнее жилище!`);
+      return true;
+    }
+    return false;
+  }
+
+  private proposeTruceToPlayer(ai: AIPlayer, actions: AIAction[]): boolean {
+    const diplomacy = this.getDiplomacySystem();
+    if (!diplomacy?.proposeTruce) return false;
+
+    const playerHero = this.getPlayerHero();
+    const playerPower = this.calculateArmyPower(playerHero.army);
+    const aiPower = this.calculateArmyPower(ai.hero.army);
+
+    const result = diplomacy.proposeTruce('player', ai.resources.gold, aiPower, playerPower);
+    if (result.accepted) {
+      actions.push({
+        type: 'capture',
+        description: `Перемирие с игроком`
+      });
+      this.notify(`🤝 ${ai.name} предлагает перемирие!`);
+      return true;
+    }
+    return false;
   }
 
   // =========================================================================

@@ -4,6 +4,8 @@ import { Town, Building, Resources, ArmySlot, Artifact, Hero } from '../types';
 import { TownOwnership } from '../systems/VictorySystem';
 import { UPGRADE_TABLE, getUpgrade, applyUpgrade, canAffordUpgrade, BASE_MARKET_RATES, generateMageGuildOffers, BASE_WEEKLY_GROWTH, UpgradeCost } from '../systems/EconomySystem';
 import { SHIP_COSTS, canBuildShipyard, createShipObject } from '../systems/NavalSystem';
+import { PotionSystem } from '../systems/PotionSystem';
+import { RazeSystem } from '../systems/RazeSystem';
 
 /**
  * TownScene — полноценная система города:
@@ -14,7 +16,7 @@ import { SHIP_COSTS, canBuildShipyard, createShipObject } from '../systems/Naval
  * - 🍺 Таверна (найм героев)
  * - 📦 Передача армии между героем и гарнизоном
  */
-type TabId = 'buildings' | 'hire' | 'market' | 'blacksmith' | 'garrison' | 'tavern' | 'upgrade' | 'mageguild' | 'shipyard';
+type TabId = 'buildings' | 'hire' | 'market' | 'blacksmith' | 'garrison' | 'tavern' | 'upgrade' | 'mageguild' | 'shipyard' | 'alchemy' | 'raze';
 
 export class TownScene extends Phaser.Scene {
   private town!: TownOwnership;
@@ -66,11 +68,11 @@ export class TownScene extends Phaser.Scene {
         x: 0,
         y: 0,
         owner: 'player',
-        builtBuildings: ['citadel', 'barracks'],
+        builtBuildings: ['citadel', 'haven_dwelling_1'],
         garrison: [],
         availableForHire: [
-          { creatureId: 'pikeman', count: 14 },
-          { creatureId: 'archer', count: 9 }
+          { creatureId: 'squire', count: 14 },
+          { creatureId: 'ballista', count: 14 }
         ],
         lastGrowthDay: 1
       };
@@ -159,15 +161,16 @@ export class TownScene extends Phaser.Scene {
   private createTabButtons(): void {
     const { width, height } = this.scale;
     const tabs = [
-      { id: 'buildings', label: '🏗️ Здания', x: width / 2 - 340 },
-      { id: 'hire', label: '👥 Найм', x: width / 2 - 230 },
-      { id: 'upgrade', label: '⬆️ Апгрейд', x: width / 2 - 120 },
-      { id: 'garrison', label: '🛡️ Гарнизон', x: width / 2 - 10 },
-      { id: 'market', label: '🏪 Рынок', x: width / 2 + 100 },
-      { id: 'mageguild', label: '🧙 Гильдия', x: width / 2 + 210 },
-      { id: 'blacksmith', label: '⚒️ Кузница', x: width / 2 + 320 },
-      { id: 'tavern', label: '🍺 Таверна', x: width / 2 + 430 },
-      { id: 'shipyard', label: '⚓ Верфь', x: width / 2 + 540 }
+      { id: 'buildings', label: '🏗️ Здания', x: width / 2 - 390 },
+      { id: 'hire', label: '👥 Найм', x: width / 2 - 280 },
+      { id: 'upgrade', label: '⬆️ Апгрейд', x: width / 2 - 170 },
+      { id: 'garrison', label: '🛡️ Гарнизон', x: width / 2 - 60 },
+      { id: 'market', label: '🏪 Рынок', x: width / 2 + 50 },
+      { id: 'mageguild', label: '🧙 Гильдия', x: width / 2 + 160 },
+      { id: 'blacksmith', label: '⚒️ Кузница', x: width / 2 + 270 },
+      { id: 'tavern', label: '🍺 Таверна', x: width / 2 + 380 },
+      { id: 'alchemy', label: '🧪 Алхимик', x: width / 2 + 490 },
+      { id: 'raze', label: '💥 Разрушить', x: width / 2 + 600 }
     ];
 
     for (const tab of tabs) {
@@ -233,6 +236,8 @@ export class TownScene extends Phaser.Scene {
       case 'blacksmith': this.renderBlacksmith(); break;
       case 'tavern': this.renderTavern(); break;
       case 'shipyard': this.renderShipyard(); break;
+      case 'alchemy': this.renderAlchemy(); break;
+      case 'raze': this.renderRaze(); break;
     }
   }
 
@@ -598,10 +603,16 @@ export class TownScene extends Phaser.Scene {
 
   private getMageGuildLevel(): number {
     const builtBuildings = this.town.builtBuildings || [];
-    if (builtBuildings.includes('mage_guild_3') || builtBuildings.includes('mageGuild3')) return 3;
-    if (builtBuildings.includes('mage_guild_2') || builtBuildings.includes('mageGuild2')) return 2;
-    if (builtBuildings.includes('mage_guild_1') || builtBuildings.includes('mageGuild1')) return 1;
-    return 0;
+    let level = 0;
+    if (builtBuildings.includes('mage_guild_3') || builtBuildings.includes('mageGuild3')) level = 3;
+    else if (builtBuildings.includes('mage_guild_2') || builtBuildings.includes('mageGuild2')) level = 2;
+    else if (builtBuildings.includes('mage_guild_1') || builtBuildings.includes('mageGuild1')) level = 1;
+
+    // Библиотека академии: +1 уровень гильдии магов
+    const effects = this.getTownBuildingEffects();
+    if (effects.mageGuildBonus) level += effects.mageGuildBonus;
+
+    return level;
   }
 
   private buySpell(offer: any): void {
@@ -1156,32 +1167,136 @@ export class TownScene extends Phaser.Scene {
 
     this.town.builtBuildings.push(building.id);
 
-    // Если это жилище — добавляем существ для найма
-    if (building.creatureGrowth) {
-      let creatureId: string;
-      let amount: number;
-      
-      if (typeof building.creatureGrowth === 'number') {
-        creatureId = building.creature || 'unknown';
-        amount = building.creatureGrowth;
+    // Если это жилище — показываем UI выбора существ (канон HoMM4)
+    const creatureIds = building.creatures || [];
+    if (creatureIds.length > 0) {
+      const baseGrowth = (typeof building.creatureGrowth === 'number')
+        ? building.creatureGrowth
+        : (building.creatureGrowth?.amount || 8);
+      // Применяем множитель прироста от фракционных зданий
+      const growthMultiplier = this.getGrowthMultiplier();
+      const growthPerUnit = Math.floor(baseGrowth * growthMultiplier);
+
+      if (creatureIds.length >= 2) {
+        // Показываем диалог выбора между двумя существами
+        this.showCreatureChoiceDialog(building, creatureIds, growthPerUnit);
       } else {
-        creatureId = building.creatureGrowth.creatureId;
-        amount = building.creatureGrowth.amount;
+        // Если только одно существо — добавляем сразу
+        this.addCreaturesToHire(creatureIds, growthPerUnit);
+        this.showNotification(`✅ Построено: ${building.name}!`);
+        this.refreshUI();
       }
-      
+    } else {
+      this.showNotification(`✅ Построено: ${building.name}!`);
+      this.refreshUI();
+    }
+  }
+
+  /**
+   * Показать диалог выбора существа при постройке жилища (канон HoMM4)
+   */
+  private showCreatureChoiceDialog(building: Building, creatureIds: string[], growthPerUnit: number): void {
+    const { width, height } = this.scale;
+    
+    // Затемнение фона
+    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+      .setInteractive()
+      .setDepth(600);
+    this.contentContainer.add(overlay);
+
+    // Диалоговое окно
+    const dialogBg = this.add.rectangle(width / 2, height / 2, 500, 300, 0x1a1a2e, 0.98)
+      .setStrokeStyle(3, 0xd4af37)
+      .setDepth(601);
+    this.contentContainer.add(dialogBg);
+
+    const title = this.add.text(width / 2, height / 2 - 110, `🏗️ ${building.name}`, {
+      fontSize: '20px', color: '#d4af37', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(602);
+    this.contentContainer.add(title);
+
+    const subtitle = this.add.text(width / 2, height / 2 - 80, 'Выберите существо для найма:', {
+      fontSize: '14px', color: '#f0e6d2', fontFamily: 'Segoe UI'
+    }).setOrigin(0.5).setDepth(602);
+    this.contentContainer.add(subtitle);
+
+    // Получаем данные существ
+    const creaturesData = this.registry.get('creatures') || this.getFallbackCreatures();
+    const creature1 = creaturesData[creatureIds[0]];
+    const creature2 = creaturesData[creatureIds[1]];
+
+    // Кнопка выбора первого существа
+    const btn1Y = height / 2 - 20;
+    this.createChoiceButton(width / 2 - 130, btn1Y, creatureIds[0], creature1, growthPerUnit, () => {
+      this.addCreaturesToHire([creatureIds[0]], growthPerUnit);
+      this.closeChoiceDialog(overlay, dialogBg, title, subtitle);
+      this.showNotification(`✅ Построено: ${building.name}! Выбраны ${creature1?.name || creatureIds[0]}`);
+      this.refreshUI();
+    });
+
+    // Кнопка выбора второго существа
+    const btn2Y = height / 2 + 60;
+    this.createChoiceButton(width / 2 + 130, btn2Y, creatureIds[1], creature2, growthPerUnit, () => {
+      this.addCreaturesToHire([creatureIds[1]], growthPerUnit);
+      this.closeChoiceDialog(overlay, dialogBg, title, subtitle);
+      this.showNotification(`✅ Построено: ${building.name}! Выбраны ${creature2?.name || creatureIds[1]}`);
+      this.refreshUI();
+    });
+  }
+
+  /**
+   * Создать кнопку выбора существа в диалоге
+   */
+  private createChoiceButton(x: number, y: number, creatureId: string, creature: any, growth: number, onClick: () => void): void {
+    const bg = this.add.rectangle(x, y, 200, 70, 0x2c3e50, 0.95)
+      .setStrokeStyle(2, 0xd4af37)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(602);
+    
+    const name = this.add.text(x, y - 15, creature?.name || creatureId, {
+      fontSize: '15px', color: '#f0e6d2', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(603);
+
+    const stats = this.add.text(x, y + 8,
+      creature ? `АТК:${creature.attack} ЗАЩ:${creature.defense} HP:${creature.health || creature.hp}` : '',
+      { fontSize: '10px', color: '#aaaaaa', fontFamily: 'Segoe UI' }
+    ).setOrigin(0.5).setDepth(603);
+
+    const growthText = this.add.text(x, y + 25, `Прирост: ${growth}/нед`, {
+      fontSize: '11px', color: '#2ecc71', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(603);
+
+    bg.on('pointerover', () => { bg.setFillStyle(0x34495e, 1); bg.setStrokeStyle(3, 0xffd700); });
+    bg.on('pointerout', () => { bg.setFillStyle(0x2c3e50, 0.95); bg.setStrokeStyle(2, 0xd4af37); });
+    bg.on('pointerdown', onClick);
+
+    this.contentContainer.add([bg, name, stats, growthText]);
+  }
+
+  /**
+   * Закрыть диалог выбора
+   */
+  private closeChoiceDialog(...elements: Phaser.GameObjects.GameObject[]): void {
+    for (const el of elements) {
+      el.destroy();
+    }
+  }
+
+  /**
+   * Добавить существ в availableForHire
+   */
+  private addCreaturesToHire(creatureIds: string[], growthPerUnit: number): void {
+    for (const creatureId of creatureIds) {
       const existing = this.town.availableForHire.find(s => s.creatureId === creatureId);
       if (existing) {
-        existing.count += amount;
+        existing.count += growthPerUnit;
       } else {
         this.town.availableForHire.push({
           creatureId,
-          count: amount
+          count: growthPerUnit
         });
       }
     }
-
-    this.showNotification(`✅ Построено: ${building.name}!`);
-    this.refreshUI();
   }
 
   // ==================== ХЕЛПЕРЫ ====================
@@ -1197,6 +1312,47 @@ export class TownScene extends Phaser.Scene {
   private meetsRequirements(building: Building): boolean {
     const reqs = building.requires || building.requirements || [];
     return reqs.every((req: string) => this.town.builtBuildings.includes(req));
+  }
+
+  /**
+   * Получить суммарные эффекты от всех построенных зданий в городе.
+   * Используется для расчёта прироста, морали, некромантии и т.д.
+   */
+  private getTownBuildingEffects(): Record<string, number> {
+    const effects: Record<string, number> = {};
+    const buildingsData = this.registry.get('buildings');
+    if (!buildingsData) return effects;
+
+    const allBuildings: Building[] = Array.isArray(buildingsData)
+      ? buildingsData
+      : (buildingsData.buildings || []);
+
+    for (const building of allBuildings) {
+      if (!this.town.builtBuildings.includes(building.id)) continue;
+      if (!(building as any).effects) continue;
+
+      const buildingEffects = (building as any).effects;
+      for (const [key, value] of Object.entries(buildingEffects)) {
+        if (typeof value === 'number') {
+          effects[key] = (effects[key] || 0) + value;
+        } else if (value === true) {
+          effects[key] = 1;
+        }
+      }
+    }
+
+    return effects;
+  }
+
+  /**
+   * Получить множитель прироста существ с учётом зданий
+   */
+  private getGrowthMultiplier(): number {
+    const effects = this.getTownBuildingEffects();
+    let mult = effects.growthMultiplier || 1;
+    // Бонус к приросту от зданий
+    if (effects.growthBonus) mult += effects.growthBonus * 0.01;
+    return mult;
   }
 
   private createMiniButton(x: number, y: number, text: string, color: number, onClick: () => void): Phaser.GameObjects.Container {
@@ -1310,8 +1466,10 @@ export class TownScene extends Phaser.Scene {
   private getFallbackBuildings(): Building[] {
     return [
       { id: 'citadel', name: 'Цитадель', description: 'Оборона', cost: { gold: 2000, ore: 10 }, requires: [], faction: 'common', category: 'defense' },
-      { id: 'barracks', name: 'Казарма', description: 'Ополченцы', cost: { gold: 500 }, requires: [], faction: 'common', category: 'infrastructure', creature: 'pikeman', creatureGrowth: { creatureId: 'pikeman', amount: 14 } },
-      { id: 'archeryRange', name: 'Стрельбище', description: 'Лучники', cost: { gold: 1000, wood: 5 }, requires: [], faction: 'common', category: 'infrastructure', creature: 'archer', creatureGrowth: { creatureId: 'archer', amount: 9 } },
+      { id: 'haven_dwelling_1', name: 'Сквайрский зал', description: 'Сквайр / Баллиста', cost: { gold: 500, wood: 5 }, requires: [], faction: 'haven', category: 'dwelling', creatures: ['squire', 'ballista'] },
+      { id: 'haven_dwelling_2', name: 'Оружейная', description: 'Копейщик / Арбалетчик', cost: { gold: 1000, wood: 10 }, requires: ['haven_dwelling_1'], faction: 'haven', category: 'dwelling', creatures: ['pikeman_h4', 'archer_h4'] },
+      { id: 'haven_dwelling_3', name: 'Храм', description: 'Крестоносец / Монах', cost: { gold: 2000, wood: 5, ore: 5 }, requires: ['haven_dwelling_2'], faction: 'haven', category: 'dwelling', creatures: ['crusader_h4', 'monk_h4'] },
+      { id: 'haven_dwelling_4', name: 'Портал славы', description: 'Чемпион / Ангел', cost: { gold: 10000, wood: 10, ore: 10, crystal: 5 }, requires: ['haven_dwelling_3'], faction: 'haven', category: 'dwelling', creatures: ['champion_h4', 'angel_h4'] },
       { id: 'tavern', name: 'Таверна', description: 'Найм героев', cost: { gold: 500, wood: 5 }, requires: [], faction: 'common', category: 'infrastructure' },
       { id: 'marketplace', name: 'Рынок', description: 'Обмен ресурсов', cost: { gold: 500, wood: 5 }, requires: [], faction: 'common', category: 'economy' },
       { id: 'blacksmith', name: 'Кузница', description: 'Артефакты', cost: { gold: 1000, ore: 5 }, requires: [], faction: 'common', category: 'infrastructure' },
@@ -1444,6 +1602,46 @@ export class TownScene extends Phaser.Scene {
       this.contentContainer.add(heroInfo);
       heroY += 25;
     }
+
+    // === СБЕЖАВШИЕ ГЕРОИ ИЗ ПЛЕНА (канон HoMM4) ===
+    const captureSystem = this.worldScene.captureSystem;
+    if (captureSystem?.getCapturedByPlayer) {
+      const captured = captureSystem.getCapturedByPlayer();
+      if (captured.length > 0) {
+        heroY += 20;
+        const capturedTitle = this.add.text(width / 2, heroY, '🔒 Захваченные вами герои (выкуп):', {
+          fontSize: '14px', color: '#e74c3c', fontFamily: 'Segoe UI', fontStyle: 'bold'
+        }).setOrigin(0.5);
+        this.contentContainer.add(capturedTitle);
+        heroY += 25;
+
+        for (const cap of captured) {
+          const ransomCost = cap.ransomCost?.gold || 500;
+          const canAfford = this.worldScene.getResources().gold >= ransomCost;
+          
+          const capInfo = this.add.text(width / 2 - 100, heroY,
+            `${cap.hero.name} (${cap.hero.class}) — Выкуп: 💰${ransomCost}`, {
+            fontSize: '12px', color: '#f0e6d2', fontFamily: 'Segoe UI'
+          }).setOrigin(0.5);
+          this.contentContainer.add(capInfo);
+
+          if (canAfford) {
+            const ransomBtn = this.createMiniButton(width / 2 + 150, heroY, '💰Выкупить', 0x2ecc71, () => {
+              const result = captureSystem.ransomHero(cap.hero.id, this.worldScene.getResources());
+              if (result.success) {
+                this.showNotification(result.message);
+                this.refreshUI();
+              } else {
+                this.showNotification(`❌ ${result.message}`);
+              }
+            });
+            this.contentContainer.add(ransomBtn);
+          }
+
+          heroY += 25;
+        }
+      }
+    }
   }
 
   private generateTavernHeroes(): any[] {
@@ -1508,28 +1706,28 @@ export class TownScene extends Phaser.Scene {
   private generateStartingArmy(faction: string): any[] {
     const armies: Record<string, any[]> = {
       haven: [
-        { creatureId: 'pikeman', count: 15 + Math.floor(Math.random() * 10) },
-        { creatureId: 'archer', count: 8 + Math.floor(Math.random() * 5) }
+        { creatureId: 'squire', count: 15 + Math.floor(Math.random() * 10) },
+        { creatureId: 'ballista', count: 8 + Math.floor(Math.random() * 5) }
       ],
       necropolis: [
-        { creatureId: 'skeleton', count: 20 + Math.floor(Math.random() * 10) },
-        { creatureId: 'zombie', count: 12 + Math.floor(Math.random() * 8) }
+        { creatureId: 'skeleton_h4', count: 20 + Math.floor(Math.random() * 10) },
+        { creatureId: 'imp_h4', count: 12 + Math.floor(Math.random() * 8) }
       ],
       preserve: [
-        { creatureId: 'wolf', count: 10 + Math.floor(Math.random() * 8) },
-        { creatureId: 'elf', count: 6 + Math.floor(Math.random() * 4) }
+        { creatureId: 'sprite', count: 10 + Math.floor(Math.random() * 8) },
+        { creatureId: 'elf_h4', count: 6 + Math.floor(Math.random() * 4) }
       ],
       asylum: [
-        { creatureId: 'goblin', count: 18 + Math.floor(Math.random() * 10) },
-        { creatureId: 'orc', count: 8 + Math.floor(Math.random() * 5) }
+        { creatureId: 'bandit', count: 18 + Math.floor(Math.random() * 10) },
+        { creatureId: 'orc_h4', count: 8 + Math.floor(Math.random() * 5) }
       ],
       academy: [
-        { creatureId: 'gremlin', count: 20 + Math.floor(Math.random() * 10) },
-        { creatureId: 'golem', count: 6 + Math.floor(Math.random() * 4) }
+        { creatureId: 'dwarf_h4', count: 10 + Math.floor(Math.random() * 6) },
+        { creatureId: 'halfling', count: 12 + Math.floor(Math.random() * 6) }
       ],
       stronghold: [
-        { creatureId: 'goblin', count: 15 + Math.floor(Math.random() * 10) },
-        { creatureId: 'wolf_rider', count: 8 + Math.floor(Math.random() * 5) }
+        { creatureId: 'berserker', count: 15 + Math.floor(Math.random() * 10) },
+        { creatureId: 'centaur', count: 8 + Math.floor(Math.random() * 5) }
       ]
     };
 
@@ -1802,5 +2000,140 @@ export class TownScene extends Phaser.Scene {
 
     this.showNotification(`✅ Нанят герой: ${newHero.name}!`);
     this.refreshUI();
+  }
+
+  // ==================== АЛХИМИК (ЗЕЛЬЯ) ====================
+
+  private renderAlchemy(): void {
+    const { width } = this.scale;
+    const panel = this.add.rectangle(width / 2, 400, 800, 500, 0x1a1a2e, 0.95)
+      .setStrokeStyle(2, 0x9b59b6);
+    this.contentContainer.add(panel);
+
+    const potionSystem = new PotionSystem();
+    const hero = this.worldScene.getHero();
+    const buildings = this.town.builtBuildings;
+    const availablePotions = potionSystem.getAvailablePotions(buildings);
+
+    if (availablePotions.length === 0) {
+      const noLab = this.add.text(width / 2, 300, '🧪 Нет алхимической лаборатории.\nПостройте Гильдию магов для доступа к зельям.', {
+        fontSize: '16px', color: '#999999', fontFamily: 'Segoe UI', align: 'center'
+      }).setOrigin(0.5);
+      this.contentContainer.add(noLab);
+      return;
+    }
+
+    const title = this.add.text(width / 2, 170, '🧪 Алхимическая лавка', {
+      fontSize: '20px', color: '#9b59b6', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.contentContainer.add(title);
+
+    let y = 210;
+    for (const potion of availablePotions) {
+      const canAfford = (potion.cost.gold || 0) <= this.worldScene.getResources().gold;
+      const bg = this.add.rectangle(width / 2, y, 750, 50,
+        canAfford ? 0x2c3e50 : 0x1a1a2e, 0.95
+      ).setStrokeStyle(2, canAfford ? 0x9b59b6 : 0x444444);
+
+      const nameText = this.add.text(width / 2 - 360, y - 8, `${potion.name}`, {
+        fontSize: '14px', color: canAfford ? '#f0e6d2' : '#666666', fontFamily: 'Segoe UI', fontStyle: 'bold'
+      });
+
+      const descText = this.add.text(width / 2 - 360, y + 8, `${potion.description} | ${potion.rarity}`, {
+        fontSize: '11px', color: '#aaaaaa', fontFamily: 'Segoe UI'
+      });
+
+      const costStr = Object.entries(potion.cost).map(([k, v]) => `${k}: ${v}`).join(' | ');
+      const costText = this.add.text(width / 2 + 200, y, costStr, {
+        fontSize: '12px', color: canAfford ? '#ffd700' : '#666666', fontFamily: 'Segoe UI'
+      }).setOrigin(0.5);
+
+      if (canAfford) {
+        bg.setInteractive({ useHandCursor: true });
+        bg.on('pointerover', () => bg.setFillStyle(0x34495e, 1));
+        bg.on('pointerout', () => bg.setFillStyle(0x2c3e50, 0.95));
+        bg.on('pointerdown', () => {
+          const result = potionSystem.buyPotion(hero, potion.id, this.worldScene.getResources());
+          if (result.success) {
+            this.showNotification(result.message);
+            this.refreshUI();
+          } else {
+            this.showNotification(`❌ ${result.message}`);
+          }
+        });
+      }
+
+      this.contentContainer.add([bg, nameText, descText, costText]);
+      y += 58;
+    }
+  }
+
+  // ==================== РАЗРУШЕНИЕ ГОРОДА ====================
+
+  private renderRaze(): void {
+    const { width } = this.scale;
+    const panel = this.add.rectangle(width / 2, 400, 800, 500, 0x1a1a2e, 0.95)
+      .setStrokeStyle(2, 0xe74c3c);
+    this.contentContainer.add(panel);
+
+    const razeSystem = new RazeSystem();
+    const allTowns = this.worldScene.victorySystem?.getAllTowns() || [];
+    const playerTowns = allTowns.filter((t: any) => t.owner === 'player');
+
+    // Нельзя разрушить свой город
+    if (this.town.owner === 'player') {
+      const info = this.add.text(width / 2, 300, '❌ Нельзя разрушить свой город!\nЭта функция доступна только для захваченных вражеских городов.', {
+        fontSize: '16px', color: '#e74c3c', fontFamily: 'Segoe UI', align: 'center'
+      }).setOrigin(0.5);
+      this.contentContainer.add(info);
+      return;
+    }
+
+    const error = razeSystem.canRazeTown(this.townId, allTowns, playerTowns);
+    if (error) {
+      const info = this.add.text(width / 2, 300, `❌ ${error}`, {
+        fontSize: '16px', color: '#e74c3c', fontFamily: 'Segoe UI', align: 'center'
+      }).setOrigin(0.5);
+      this.contentContainer.add(info);
+      return;
+    }
+
+    const rewardInfo = razeSystem.calculateRazeReward(this.town as any);
+
+    const title = this.add.text(width / 2, 200, '💥 Разрушить город', {
+      fontSize: '24px', color: '#e74c3c', fontFamily: 'Segoe UI', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.contentContainer.add(title);
+
+    const warning = this.add.text(width / 2, 250, `Город: ${this.town.name}\nФракция: ${this.town.faction}`, {
+      fontSize: '16px', color: '#f0e6d2', fontFamily: 'Segoe UI', align: 'center'
+    }).setOrigin(0.5);
+    this.contentContainer.add(warning);
+
+    const rewardText = this.add.text(width / 2, 320, `Награда: ${rewardInfo.reward.gold} золота (${Math.round(rewardInfo.rewardPercent * 100)}% от стоимости)`, {
+      fontSize: '16px', color: '#ffd700', fontFamily: 'Segoe UI'
+    }).setOrigin(0.5);
+    this.contentContainer.add(rewardText);
+
+    const razeBtn = this.add.text(width / 2, 400, '💥 РАЗРУШИТЬ', {
+      fontSize: '20px', color: '#ffffff', fontFamily: 'Segoe UI', fontStyle: 'bold',
+      backgroundColor: '#c0392b', padding: { x: 30, y: 15 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    razeBtn.on('pointerover', () => razeBtn.setBackgroundColor('#e74c3c'));
+    razeBtn.on('pointerout', () => razeBtn.setBackgroundColor('#c0392b'));
+    razeBtn.on('pointerdown', () => {
+      const result = razeSystem.razeTown(this.townId, allTowns, playerTowns);
+      if (result.success) {
+        this.worldScene.addResources(result.reward);
+        // Удаляем город с карты (канон HoMM4)
+        this.worldScene.removeRazedTown?.(this.townId);
+        this.showNotification(result.message);
+        this.scene.stop(CONFIG.SCENES.TOWN);
+        this.scene.wake(CONFIG.SCENES.WORLD);
+      } else {
+        this.showNotification(`❌ ${result.message}`);
+      }
+    });
+    this.contentContainer.add(razeBtn);
   }
 }

@@ -118,31 +118,40 @@ export function applyMineIncome(
 
 /** Базовый еженедельный прирост существ по ID */
 export const BASE_WEEKLY_GROWTH: Record<string, number> = {
-  // Haven
-  pikeman: 14, archer: 9, griffin: 6, swordsman: 4,
-  cavalier: 3, angel: 2, archangel: 1,
+  // Haven (4 tiers, choice)
+  squire: 14, ballista: 14, pikeman_h4: 8, archer_h4: 8,
+  crusader_h4: 5, monk_h4: 5, champion_h4: 2, angel_h4: 1,
   // Necropolis
-  skeleton: 16, zombie: 10, vampire: 5, lich: 3,
-  blackKnight: 2, boneDragon: 1, ghostDragon: 1,
+  skeleton_h4: 14, imp_h4: 14, ghost_h4: 8, cerberus: 8,
+  vampire_h4: 4, venom_spawn: 4, bone_dragon_h4: 2, devil_h4: 1,
   // Preserve
-  wolf: 12, elf: 8, unicorn: 4, druid: 3, treant: 2, phoenix: 1,
+  sprite: 14, wolf_h4: 14, elf_h4: 8, white_tiger: 8,
+  griffin_h4: 5, unicorn_h4: 5, faerie_dragon_h4: 2, phoenix_h4: 1,
   // Asylum
-  imp: 15, goblin: 10, orc: 7, ogre: 4, cyclops: 2,
+  bandit: 14, orc_h4: 14, medusa: 7, minotaur_h4: 7,
+  nightmare: 4, efreet: 4, hydra: 2, black_dragon: 1,
   // Academy
-  gremlin: 18, gargoyle: 10, golem: 5, mage: 4, genie: 2, titan: 1,
+  dwarf_h4: 10, halfling: 10, gold_golem_h4: 7, mage_h4: 7,
+  naga_h4: 4, genie_h4: 4, dragon_golem: 2, titan_h4: 1,
   // Stronghold
-  goblinS: 16, wolfRider: 10, orcWarrior: 7, ogreChief: 4,
-  roc: 2, behemoth: 1,
+  berserker: 14, centaur: 14, harpy: 7, nomad: 7,
+  ogre_mage_h4: 4, cyclops_h4: 4, thunderbird_h4: 2, behemoth_h4: 1,
 };
 
 /** Расчёт еженедельного прироста для жилища */
 export function calculateWeeklyGrowth(
   creatureId: string,
   hasCitadel: boolean = false,
+  hasCastle: boolean = false,
   isUpgraded: boolean = false
 ): number {
   let base = BASE_WEEKLY_GROWTH[creatureId] || 2;
-  if (hasCitadel) base = Math.floor(base * 1.25);
+  // В каноне HoMM4: Цитадель +50%, Замок +100%
+  if (hasCastle) {
+    base = Math.floor(base * 2.0); // Замок: +100%
+  } else if (hasCitadel) {
+    base = Math.floor(base * 1.5); // Цитадель: +50%
+  }
   if (isUpgraded) base = Math.floor(base * 1.5);
   return Math.max(1, base);
 }
@@ -151,14 +160,12 @@ export function calculateWeeklyGrowth(
 // 💵 ЕЖЕДНЕВНЫЙ ДОХОД ГОРОДА
 // ============================================================
 
-/** Доход города в день (в золоте) */
+/** Доход города в день (в золоте) - канон HoMM4 */
 export function calculateTownDailyIncome(builtBuildings: string[]): number {
-  let income = 250; // базовый доход
-  if (builtBuildings.includes('treasury')) income += 500;
-  if (builtBuildings.includes('capitol')) income += 2000;
-  if (builtBuildings.includes('marketplace')) income += 250;
-  if (builtBuildings.includes('tavern')) income += 50;
-  if (builtBuildings.includes('caravansary')) income += 100;
+  let income = 250; // базовый доход (Village Hall)
+  if (builtBuildings.includes('town_hall')) income += 250; // Town Hall: +250 (total 500)
+  if (builtBuildings.includes('city_hall')) income += 500; // City Hall: +500 (total 1000)
+  if (builtBuildings.includes('capitol')) income += 1000; // Capitol: +1000 (total 2000)
   return income;
 }
 
@@ -185,49 +192,9 @@ export interface UpgradeEntry {
 }
 
 export const UPGRADE_TABLE: UpgradeEntry[] = [
-  // ===== HAVEN =====
-  { from: 'pikeman', to: 'halberdier', toName: 'Алебардщик', cost: { gold: 1000, wood: 2 }, faction: 'haven' },
-  { from: 'archer', to: 'marksman', toName: 'Стрелок', cost: { gold: 1500, wood: 3 }, faction: 'haven' },
-  { from: 'griffin', to: 'royalGriffin', toName: 'Королевский грифон', cost: { gold: 2000, ore: 2 }, faction: 'haven' },
-  { from: 'swordsman', to: 'crusader', toName: 'Крестоносец', cost: { gold: 3000, ore: 3 }, faction: 'haven' },
-  { from: 'cavalier', to: 'champion', toName: 'Чемпион', cost: { gold: 5000, ore: 4 }, faction: 'haven' },
-  { from: 'angel', to: 'archangel', toName: 'Архангел', cost: { gold: 8000, gems: 5, mercury: 3 }, faction: 'haven' },
-
-  // ===== NECROPOLIS =====
-  { from: 'skeleton', to: 'skeletonWarrior', toName: 'Скелет-воин', cost: { gold: 800, ore: 2 }, faction: 'necropolis' },
-  { from: 'zombie', to: 'plagueZombie', toName: 'Чумной зомби', cost: { gold: 1200, sulfur: 2 }, faction: 'necropolis' },
-  { from: 'vampire', to: 'vampireLord', toName: 'Вампир-лорд', cost: { gold: 3500, mercury: 3 }, faction: 'necropolis' },
-  { from: 'lich', to: 'archLich', toName: 'Архилич', cost: { gold: 5000, crystal: 4 }, faction: 'necropolis' },
-  { from: 'blackKnight', to: 'dreadKnight', toName: 'Рыцарь ужаса', cost: { gold: 7000, sulfur: 5 }, faction: 'necropolis' },
-  { from: 'boneDragon', to: 'ghostDragon', toName: 'Призрачный дракон', cost: { gold: 10000, sulfur: 5, mercury: 3 }, faction: 'necropolis' },
-
-  // ===== PRESERVE =====
-  { from: 'wolf', to: 'direWolf', toName: 'Лютый волк', cost: { gold: 900, wood: 2 }, faction: 'preserve' },
-  { from: 'elf', to: 'grandElf', toName: 'Великий эльф', cost: { gold: 1800, wood: 3 }, faction: 'preserve' },
-  { from: 'unicorn', to: 'silverPegasus', toName: 'Серебряный пегас', cost: { gold: 4000, crystal: 3 }, faction: 'preserve' },
-  { from: 'druid', to: 'archDruid', toName: 'Архидруид', cost: { gold: 5000, wood: 4 }, faction: 'preserve' },
-
-  // ===== ASYLUM =====
-  { from: 'imp', to: 'familiar', toName: 'Фамильяр', cost: { gold: 600, sulfur: 1 }, faction: 'asylum' },
-  { from: 'goblin', to: 'hobgoblin', toName: 'Хобгоблин', cost: { gold: 800, ore: 2 }, faction: 'asylum' },
-  { from: 'orc', to: 'orcChieftain', toName: 'Вождь орков', cost: { gold: 2000, ore: 3 }, faction: 'asylum' },
-  { from: 'ogre', to: 'ogreMage', toName: 'Огр-маг', cost: { gold: 4000, gems: 3 }, faction: 'asylum' },
-
-  // ===== ACADEMY =====
-  { from: 'gremlin', to: 'masterGremlin', toName: 'Мастер гремлин', cost: { gold: 500, ore: 1 }, faction: 'academy' },
-  { from: 'gargoyle', to: 'obsidianGargoyle', toName: 'Обсидиановая гаргулья', cost: { gold: 1500, ore: 3 }, faction: 'academy' },
-  { from: 'golem', to: 'diamondGolem', toName: 'Алмазный голем', cost: { gold: 3500, crystal: 4 }, faction: 'academy' },
-  { from: 'mage', to: 'archMage', toName: 'Архимаг', cost: { gold: 5000, crystal: 4 }, faction: 'academy' },
-  { from: 'genie', to: 'masterGenie', toName: 'Мастер джинн', cost: { gold: 7000, gems: 5 }, faction: 'academy' },
-  { from: 'titan', to: 'thunderTitan', toName: 'Громовой титан', cost: { gold: 12000, gems: 6, mercury: 4 }, faction: 'academy' },
-
-  // ===== STRONGHOLD =====
-  { from: 'goblinS', to: 'hobgoblinS', toName: 'Хобгоблин', cost: { gold: 700, ore: 2 }, faction: 'stronghold' },
-  { from: 'wolfRider', to: 'wolfRaider', toName: 'Волчий налётчик', cost: { gold: 1500, wood: 2 }, faction: 'stronghold' },
-  { from: 'orcWarrior', to: 'orcShaman', toName: 'Орк-шаман', cost: { gold: 2200, crystal: 2 }, faction: 'stronghold' },
-  { from: 'ogreChief', to: 'ogreLord', toName: 'Повелитель огров', cost: { gold: 4500, ore: 5 }, faction: 'stronghold' },
-  { from: 'roc', to: 'rocRuler', toName: 'Владыка рух', cost: { gold: 6000, gems: 4 }, faction: 'stronghold' },
-  { from: 'behemoth', to: 'ancientBehemoth', toName: 'Древний бехемот', cost: { gold: 11000, ore: 6, sulfur: 4 }, faction: 'stronghold' },
+  // HoMM4 не имеет апгрейдов существ — вместо этого система ВЫБОРА:
+  // На каждом уровне 2 варианта существ, строишь жилище — выбираешь какое нанимать.
+  // Таблица апгрейдов пуста (совместимость с UI).
 ];
 
 /** Получить апгрейд для существа */

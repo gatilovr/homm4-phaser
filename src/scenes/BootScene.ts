@@ -573,6 +573,38 @@ export class BootScene extends Phaser.Scene {
       g.fillCircle(38, 28, 2);
     });
 
+    // === 📜 МАГИЧЕСКИЙ СВИТОК (канон HoMM4) ===
+    this.makeTexture('magic_scroll', S, S, (g) => {
+      // Свечение (фиолетовый ореол)
+      g.fillStyle(0x9966ff, 0.3);
+      g.fillCircle(32, 32, 26);
+      
+      // Сам свиток (пергамент)
+      g.fillStyle(0xf5deb3, 1); // Светло-бежевый
+      g.fillRoundedRect(18, 20, 28, 32, 4);
+      
+      // Завитки сверху и снизу
+      g.fillStyle(0xd2b48c, 1); // Темнее пергамент
+      g.fillCircle(32, 18, 8); // Верхний завиток
+      g.fillCircle(32, 52, 8); // Нижний завиток
+      
+      // Печать (красная)
+      g.fillStyle(0x8b0000, 1);
+      g.fillCircle(32, 36, 5);
+      
+      // Линии текста
+      g.fillStyle(0x4a3a2a, 0.6);
+      g.fillRect(22, 26, 20, 1);
+      g.fillRect(22, 30, 20, 1);
+      g.fillRect(22, 40, 20, 1);
+      g.fillRect(22, 44, 20, 1);
+      
+      // Магическая искра
+      g.fillStyle(0xffff00, 0.8);
+      g.fillCircle(40, 22, 2);
+      g.fillCircle(24, 48, 2);
+    });
+
     // === Тайлы боя ===
     const BTS = CONFIG.BATTLE_TILE_SIZE;
 

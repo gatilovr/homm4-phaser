@@ -9,9 +9,9 @@
       "description": "Увеличивает урон существ ближнего боя",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "melee_damage_bonus", "value": 10, "description": "+10% урон ближнего боя" },
-        { "level": 2, "type": "melee_damage_bonus", "value": 20, "description": "+20% урон ближнего боя" },
-        { "level": 3, "type": "melee_damage_bonus", "value": 30, "description": "+30% урон ближнего боя" }
+        { "level": 1, "type": "melee_damage_bonus", "value": 10, "description": "Базовое: +10% урон ближнего боя" },
+        { "level": 2, "type": "melee_damage_bonus", "value": 20, "description": "Продвинутое: +20% урон ближнего боя" },
+        { "level": 3, "type": "melee_damage_bonus", "value": 30, "description": "Экспертное: +30% урон ближнего боя" }
       ]
     },
     {
@@ -23,9 +23,9 @@
       "description": "Уменьшает получаемый урон существами",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "damage_reduction", "value": 10, "description": "-10% получаемый урон" },
-        { "level": 2, "type": "damage_reduction", "value": 20, "description": "-20% получаемый урон" },
-        { "level": 3, "type": "damage_reduction", "value": 30, "description": "-30% получаемый урон" }
+        { "level": 1, "type": "damage_reduction", "value": 10, "description": "Базовое: -10% получаемый урон" },
+        { "level": 2, "type": "damage_reduction", "value": 20, "description": "Продвинутое: -20% получаемый урон" },
+        { "level": 3, "type": "damage_reduction", "value": 30, "description": "Экспертное: -30% получаемый урон" }
       ]
     },
     {
@@ -37,37 +37,94 @@
       "description": "Увеличивает урон стрелков",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "ranged_damage_bonus", "value": 10, "description": "+10% урон стрелков" },
-        { "level": 2, "type": "ranged_damage_bonus", "value": 25, "description": "+25% урон стрелков" },
-        { "level": 3, "type": "ranged_damage_bonus", "value": 50, "description": "+50% урон стрелков" }
+        { "level": 1, "type": "ranged_damage_bonus", "value": 10, "description": "Базовое: +10% урон стрелков" },
+        { "level": 2, "type": "ranged_damage_bonus", "value": 25, "description": "Продвинутое: +25% урон стрелков" },
+        { "level": 3, "type": "ranged_damage_bonus", "value": 50, "description": "Экспертное: +50% урон стрелков" }
       ]
     },
     {
-      "id": "leadership",
-      "name": "Лидерство",
-      "nameEn": "Leadership",
+      "id": "resistance",
+      "name": "Сопротивление",
+      "nameEn": "Resistance",
       "category": "combat",
-      "icon": "👑",
-      "description": "Увеличивает мораль союзников",
+      "icon": "🔰",
+      "description": "Увеличивает сопротивление магии существ",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "morale_bonus", "value": 1, "description": "+1 мораль" },
-        { "level": 2, "type": "morale_bonus", "value": 2, "description": "+2 мораль" },
-        { "level": 3, "type": "morale_bonus", "value": 3, "description": "+3 мораль" }
+        { "level": 1, "type": "magic_resistance", "value": 10, "description": "Базовое: +10% сопротивление магии" },
+        { "level": 2, "type": "magic_resistance", "value": 20, "description": "Продвинутое: +20% сопротивление магии" },
+        { "level": 3, "type": "magic_resistance", "value": 30, "description": "Экспертное: +30% сопротивление магии" }
+      ]
+    },
+
+    {
+      "id": "life_magic",
+      "name": "Магия жизни",
+      "nameEn": "Life Magic",
+      "category": "magic",
+      "icon": "✨",
+      "description": "Улучшает заклинания школы Жизни (лечение, защита, благословение)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "life_magic_level", "value": 1, "description": "Базовое: заклинания Жизни I уровня" },
+        { "level": 2, "type": "life_magic_level", "value": 2, "description": "Продвинутое: заклинания Жизни II уровня" },
+        { "level": 3, "type": "life_magic_level", "value": 3, "description": "Экспертное: заклинания Жизни III уровня" }
       ]
     },
     {
-      "id": "luck",
-      "name": "Удача",
-      "nameEn": "Luck",
-      "category": "combat",
-      "icon": "🍀",
-      "description": "Увеличивает удачу героев",
+      "id": "death_magic",
+      "name": "Магия смерти",
+      "nameEn": "Death Magic",
+      "category": "magic",
+      "icon": "💀",
+      "description": "Улучшает заклинания школы Смерти (проклятия, вампиризм, некромантия)",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "luck_bonus", "value": 1, "description": "+1 удача" },
-        { "level": 2, "type": "luck_bonus", "value": 2, "description": "+2 удача" },
-        { "level": 3, "type": "luck_bonus", "value": 3, "description": "+3 удача" }
+        { "level": 1, "type": "death_magic_level", "value": 1, "description": "Базовое: заклинания Смерти I уровня" },
+        { "level": 2, "type": "death_magic_level", "value": 2, "description": "Продвинутое: заклинания Смерти II уровня" },
+        { "level": 3, "type": "death_magic_level", "value": 3, "description": "Экспертное: заклинания Смерти III уровня" }
+      ]
+    },
+    {
+      "id": "order_magic",
+      "name": "Магия порядка",
+      "nameEn": "Order Magic",
+      "category": "magic",
+      "icon": "📖",
+      "description": "Улучшает заклинания школы Порядка (телепорт, щит, ускорение)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "order_magic_level", "value": 1, "description": "Базовое: заклинания Порядка I уровня" },
+        { "level": 2, "type": "order_magic_level", "value": 2, "description": "Продвинутое: заклинания Порядка II уровня" },
+        { "level": 3, "type": "order_magic_level", "value": 3, "description": "Экспертное: заклинания Порядка III уровня" }
+      ]
+    },
+    {
+      "id": "chaos_magic",
+      "name": "Магия хаоса",
+      "nameEn": "Chaos Magic",
+      "category": "magic",
+      "icon": "🔥",
+      "description": "Улучшает заклинания школы Хаоса (огонь, молнии, разрушение)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "chaos_magic_level", "value": 1, "description": "Базовое: заклинания Хаоса I уровня" },
+        { "level": 2, "type": "chaos_magic_level", "value": 2, "description": "Продвинутое: заклинания Хаоса II уровня" },
+        { "level": 3, "type": "chaos_magic_level", "value": 3, "description": "Экспертное: заклинания Хаоса III уровня" }
+      ]
+    },
+    {
+      "id": "nature_magic",
+      "name": "Магия природы",
+      "nameEn": "Nature Magic",
+      "category": "magic",
+      "icon": "🌿",
+      "description": "Улучшает заклинания школы Природы (землетрясение, полёт, призыв)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "nature_magic_level", "value": 1, "description": "Базовое: заклинания Природы I уровня" },
+        { "level": 2, "type": "nature_magic_level", "value": 2, "description": "Продвинутое: заклинания Природы II уровня" },
+        { "level": 3, "type": "nature_magic_level", "value": 3, "description": "Экспертное: заклинания Природы III уровня" }
       ]
     },
     {
@@ -75,13 +132,13 @@
       "name": "Мудрость",
       "nameEn": "Wisdom",
       "category": "magic",
-      "icon": "📖",
+      "icon": "🧙",
       "description": "Позволяет изучать заклинания высокого уровня",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "spell_level_access", "value": 3, "description": "Доступ к заклинаниям 3 уровня" },
-        { "level": 2, "type": "spell_level_access", "value": 4, "description": "Доступ к заклинаниям 4 уровня" },
-        { "level": 3, "type": "spell_level_access", "value": 5, "description": "Доступ к заклинаниям 5 уровня" }
+        { "level": 1, "type": "spell_level_access", "value": 3, "description": "Базовое: доступ к заклинаниям 3 уровня" },
+        { "level": 2, "type": "spell_level_access", "value": 4, "description": "Продвинутое: доступ к заклинаниям 4 уровня" },
+        { "level": 3, "type": "spell_level_access", "value": 5, "description": "Экспертное: доступ к заклинаниям 5 уровня" }
       ]
     },
     {
@@ -93,53 +150,26 @@
       "description": "Увеличивает максимальный запас маны",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "mana_bonus_percent", "value": 25, "description": "+25% максимальной маны" },
-        { "level": 2, "type": "mana_bonus_percent", "value": 50, "description": "+50% максимальной маны" },
-        { "level": 3, "type": "mana_bonus_percent", "value": 100, "description": "+100% максимальной маны" }
+        { "level": 1, "type": "mana_bonus_percent", "value": 25, "description": "Базовое: +25% максимальной маны" },
+        { "level": 2, "type": "mana_bonus_percent", "value": 50, "description": "Продвинутое: +50% максимальной маны" },
+        { "level": 3, "type": "mana_bonus_percent", "value": 100, "description": "Экспертное: +100% максимальной маны" }
       ]
     },
     {
-      "id": "sorcery",
-      "name": "Колдовство",
-      "nameEn": "Sorcery",
+      "id": "necromancy",
+      "name": "Некромантия",
+      "nameEn": "Necromancy",
       "category": "magic",
-      "icon": "✨",
-      "description": "Увеличивает урон заклинаний",
+      "icon": "☠️",
+      "description": "Позволяет воскрешать павших врагов как нежить",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "spell_damage_bonus", "value": 10, "description": "+10% урон заклинаний" },
-        { "level": 2, "type": "spell_damage_bonus", "value": 20, "description": "+20% урон заклинаний" },
-        { "level": 3, "type": "spell_damage_bonus", "value": 30, "description": "+30% урон заклинаний" }
+        { "level": 1, "type": "necromancy_percent", "value": 10, "description": "Базовое: 10% HP павших → нежить" },
+        { "level": 2, "type": "necromancy_percent", "value": 20, "description": "Продвинутое: 20% HP павших → нежить" },
+        { "level": 3, "type": "necromancy_percent", "value": 30, "description": "Экспертное: 30% HP павших → нежить" }
       ]
     },
-    {
-      "id": "mysticism",
-      "name": "Мистицизм",
-      "nameEn": "Mysticism",
-      "category": "magic",
-      "icon": "🔮",
-      "description": "Восстанавливает ману каждый ход",
-      "maxLevel": 3,
-      "effects": [
-        { "level": 1, "type": "mana_regen_per_turn", "value": 2, "description": "+2 маны за ход в бою" },
-        { "level": 2, "type": "mana_regen_per_turn", "value": 3, "description": "+3 маны за ход в бою" },
-        { "level": 3, "type": "mana_regen_per_turn", "value": 4, "description": "+4 маны за ход в бою" }
-      ]
-    },
-    {
-      "id": "magic_school",
-      "name": "Школа магии",
-      "nameEn": "Magic School",
-      "category": "magic",
-      "icon": "🎓",
-      "description": "Улучшает эффективность заклинаний",
-      "maxLevel": 3,
-      "effects": [
-        { "level": 1, "type": "spell_effectiveness", "value": 1, "description": "Базовый уровень школы" },
-        { "level": 2, "type": "spell_effectiveness", "value": 2, "description": "Продвинутый уровень школы" },
-        { "level": 3, "type": "spell_effectiveness", "value": 3, "description": "Экспертный уровень школы" }
-      ]
-    },
+
     {
       "id": "logistics",
       "name": "Логистика",
@@ -149,9 +179,9 @@
       "description": "Увеличивает очки движения героя",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "movement_bonus_percent", "value": 10, "description": "+10% очков движения" },
-        { "level": 2, "type": "movement_bonus_percent", "value": 20, "description": "+20% очков движения" },
-        { "level": 3, "type": "movement_bonus_percent", "value": 30, "description": "+30% очков движения" }
+        { "level": 1, "type": "movement_bonus_percent", "value": 10, "description": "Базовое: +10% очков движения" },
+        { "level": 2, "type": "movement_bonus_percent", "value": 20, "description": "Продвинутое: +20% очков движения" },
+        { "level": 3, "type": "movement_bonus_percent", "value": 30, "description": "Экспертное: +30% очков движения" }
       ]
     },
     {
@@ -163,9 +193,9 @@
       "description": "Уменьшает штраф за сложную местность",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "terrain_penalty_reduction", "value": 25, "description": "-25% штраф за местность" },
-        { "level": 2, "type": "terrain_penalty_reduction", "value": 50, "description": "-50% штраф за местность" },
-        { "level": 3, "type": "terrain_penalty_reduction", "value": 75, "description": "-75% штраф за местность" }
+        { "level": 1, "type": "terrain_penalty_reduction", "value": 25, "description": "Базовое: -25% штраф за местность" },
+        { "level": 2, "type": "terrain_penalty_reduction", "value": 50, "description": "Продвинутое: -50% штраф за местность" },
+        { "level": 3, "type": "terrain_penalty_reduction", "value": 75, "description": "Экспертное: -75% штраф за местность" }
       ]
     },
     {
@@ -177,9 +207,9 @@
       "description": "Увеличивает радиус обзора героя",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "vision_radius_bonus", "value": 1, "description": "+1 к радиусу обзора" },
-        { "level": 2, "type": "vision_radius_bonus", "value": 2, "description": "+2 к радиусу обзора" },
-        { "level": 3, "type": "vision_radius_bonus", "value": 3, "description": "+3 к радиусу обзора" }
+        { "level": 1, "type": "vision_radius_bonus", "value": 1, "description": "Базовое: +1 к радиусу обзора" },
+        { "level": 2, "type": "vision_radius_bonus", "value": 2, "description": "Продвинутое: +2 к радиусу обзора" },
+        { "level": 3, "type": "vision_radius_bonus", "value": 3, "description": "Экспертное: +3 к радиусу обзора" }
       ]
     },
     {
@@ -191,11 +221,12 @@
       "description": "Увеличивает скорость движения по воде",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "water_movement_bonus", "value": 25, "description": "+25% скорость по воде" },
-        { "level": 2, "type": "water_movement_bonus", "value": 50, "description": "+50% скорость по воде" },
-        { "level": 3, "type": "water_movement_bonus", "value": 100, "description": "+100% скорость по воде" }
+        { "level": 1, "type": "water_movement_bonus", "value": 25, "description": "Базовое: +25% скорость по воде" },
+        { "level": 2, "type": "water_movement_bonus", "value": 50, "description": "Продвинутое: +50% скорость по воде" },
+        { "level": 3, "type": "water_movement_bonus", "value": 100, "description": "Экспертное: +100% скорость по воде" }
       ]
     },
+
     {
       "id": "estates",
       "name": "Поместье",
@@ -205,9 +236,9 @@
       "description": "Герой приносит золото каждый день",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "daily_gold_income", "value": 100, "description": "+100 золота в день" },
-        { "level": 2, "type": "daily_gold_income", "value": 250, "description": "+250 золота в день" },
-        { "level": 3, "type": "daily_gold_income", "value": 500, "description": "+500 золота в день" }
+        { "level": 1, "type": "daily_gold_income", "value": 100, "description": "Базовое: +100 золота в день" },
+        { "level": 2, "type": "daily_gold_income", "value": 250, "description": "Продвинутое: +250 золота в день" },
+        { "level": 3, "type": "daily_gold_income", "value": 500, "description": "Экспертное: +500 золота в день" }
       ]
     },
     {
@@ -219,9 +250,149 @@
       "description": "Шанс присоединить нейтральных существ",
       "maxLevel": 3,
       "effects": [
-        { "level": 1, "type": "join_chance_percent", "value": 10, "description": "10% шанс присоединить нейтралов" },
-        { "level": 2, "type": "join_chance_percent", "value": 20, "description": "20% шанс присоединить нейтралов" },
-        { "level": 3, "type": "join_chance_percent", "value": 30, "description": "30% шанс присоединить нейтралов" }
+        { "level": 1, "type": "join_chance_percent", "value": 10, "description": "Базовое: 10% шанс присоединить нейтралов" },
+        { "level": 2, "type": "join_chance_percent", "value": 20, "description": "Продвинутое: 20% шанс присоединить нейтралов" },
+        { "level": 3, "type": "join_chance_percent", "value": 30, "description": "Экспертное: 30% шанс присоединить нейтралов" }
+      ]
+    },
+    {
+      "id": "tactics",
+      "name": "Тактика",
+      "nameEn": "Tactics",
+      "category": "combat",
+      "icon": "🎯",
+      "description": "Позволяет размещать юнитов перед боем (канон HoMM4)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "deployment_rows", "value": 1, "description": "Базовое: 1 ряд для размещения" },
+        { "level": 2, "type": "deployment_rows", "value": 2, "description": "Продвинутое: 2 ряда для размещения" },
+        { "level": 3, "type": "deployment_rows", "value": 3, "description": "Экспертное: 3 ряда для размещения" }
+      ]
+    },
+    {
+      "id": "leadership",
+      "name": "Лидерство",
+      "nameEn": "Leadership",
+      "category": "combat",
+      "icon": "👑",
+      "description": "Увеличивает мораль армии (канон HoMM4)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "morale_bonus", "value": 1, "description": "Базовое: +1 мораль" },
+        { "level": 2, "type": "morale_bonus", "value": 2, "description": "Продвинутое: +2 морали" },
+        { "level": 3, "type": "morale_bonus", "value": 3, "description": "Экспертное: +3 морали" }
+      ]
+    },
+    {
+      "id": "luck",
+      "name": "Удача",
+      "nameEn": "Luck",
+      "category": "combat",
+      "icon": "🍀",
+      "description": "Увеличивает удачу армии (канон HoMM4)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "luck_bonus", "value": 1, "description": "Базовое: +1 удача" },
+        { "level": 2, "type": "luck_bonus", "value": 2, "description": "Продвинутое: +2 удачи" },
+        { "level": 3, "type": "luck_bonus", "value": 3, "description": "Экспертное: +3 удачи" }
+      ]
+    },
+    {
+      "id": "sorcery",
+      "name": "Чародейство",
+      "nameEn": "Sorcery",
+      "category": "magic",
+      "icon": "🔮",
+      "description": "Увеличивает урон заклинаний (канон HoMM4)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "spell_damage_bonus", "value": 10, "description": "Базовое: +10% урон заклинаний" },
+        { "level": 2, "type": "spell_damage_bonus", "value": 25, "description": "Продвинутое: +25% урон заклинаний" },
+        { "level": 3, "type": "spell_damage_bonus", "value": 50, "description": "Экспертное: +50% урон заклинаний" }
+      ]
+    },
+    {
+      "id": "mysticism",
+      "name": "Мистицизм",
+      "nameEn": "Mysticism",
+      "category": "magic",
+      "icon": "🌀",
+      "description": "Восстановление маны каждый ход в бою (канон HoMM4)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "mana_regen_combat", "value": 2, "description": "Базовое: +2 маны в ход" },
+        { "level": 2, "type": "mana_regen_combat", "value": 4, "description": "Продвинутое: +4 маны в ход" },
+        { "level": 3, "type": "mana_regen_combat", "value": 8, "description": "Экспертное: +8 маны в ход" }
+      ]
+    },
+    {
+      "id": "armorer",
+      "name": "Бронник",
+      "nameEn": "Armorer",
+      "category": "combat",
+      "icon": "🛡️",
+      "description": "Уменьшает физический урон по существам (канон HoMM4)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "physical_damage_reduction", "value": 5, "description": "Базовое: -5% физического урона" },
+        { "level": 2, "type": "physical_damage_reduction", "value": 10, "description": "Продвинутое: -10% физического урона" },
+        { "level": 3, "type": "physical_damage_reduction", "value": 15, "description": "Экспертное: -15% физического урона" }
+      ]
+    },
+    {
+      "id": "learning",
+      "name": "Обучение",
+      "nameEn": "Learning",
+      "category": "adventure",
+      "icon": "📚",
+      "description": "Увеличивает получаемый опыт (канон HoMM4)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "experience_bonus_percent", "value": 10, "description": "Базовое: +10% опыта" },
+        { "level": 2, "type": "experience_bonus_percent", "value": 20, "description": "Продвинутое: +20% опыта" },
+        { "level": 3, "type": "experience_bonus_percent", "value": 50, "description": "Экспертное: +50% опыта" }
+      ]
+    },
+    {
+      "id": "first_aid",
+      "name": "Первая помощь",
+      "nameEn": "First Aid",
+      "category": "combat",
+      "icon": "🏥",
+      "description": "Улучшает лечение Палаткой первой помощи (канон HoMM4)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "first_aid_heal_bonus", "value": 25, "description": "Базовое: +25% лечение Палаткой" },
+        { "level": 2, "type": "first_aid_heal_bonus", "value": 50, "description": "Продвинутое: +50% лечение Палаткой" },
+        { "level": 3, "type": "first_aid_heal_bonus", "value": 100, "description": "Экспертное: +100% лечение Палаткой" }
+      ]
+    },
+    {
+      "id": "ballistics",
+      "name": "Артиллерия",
+      "nameEn": "Ballistics",
+      "category": "combat",
+      "icon": "🎯",
+      "description": "Улучшает точность и урон Баллисты (канон HoMM4)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "ballista_damage_bonus", "value": 25, "description": "Базовое: +25% урон Баллисты" },
+        { "level": 2, "type": "ballista_damage_bonus", "value": 50, "description": "Продвинутое: +50% урон Баллисты" },
+        { "level": 3, "type": "ballista_damage_bonus", "value": 100, "description": "Экспертное: +100% урон Баллисты" }
+      ]
+    },
+    {
+      "id": "eagle_eye",
+      "name": "Орлиный глаз",
+      "nameEn": "Eagle Eye",
+      "category": "magic",
+      "icon": "🦅",
+      "description": "Шанс выучить заклинание врага в бою (канон HoMM4)",
+      "maxLevel": 3,
+      "effects": [
+        { "level": 1, "type": "spell_learn_chance", "value": 20, "description": "Базовое: 20% шанс выучить заклинание" },
+        { "level": 2, "type": "spell_learn_chance", "value": 40, "description": "Продвинутое: 40% шанс выучить заклинание" },
+        { "level": 3, "type": "spell_learn_chance", "value": 60, "description": "Экспертное: 60% шанс выучить заклинание" }
       ]
     }
   ],

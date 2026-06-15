@@ -16,6 +16,7 @@
 
 import type { Hero, Resources, Tile } from '../types';
 import { CONFIG } from '../config';
+import { RandomEventsSystem } from './RandomEventsSystem';
 
 // ===== Версия сохранения =====
 export const SAVE_VERSION = '2.3.0';
@@ -42,6 +43,11 @@ export interface SaveData {
   mapModifiers?: SaveMapModifier[]; // изменения карты (например, вырытые ямы)
   caravanState?: any; // состояние караванов
   currentHeroIndex?: number;
+  randomEventsState?: any; // состояние системы случайных событий
+  dwellingState?: any[]; // состояние внешних жилищ (канон HoMM4)
+  diplomacyState?: any[]; // состояние дипломатии (канон HoMM4)
+  capturedHeroes?: any[]; // пленные герои (канон HoMM4)
+  heroPotions?: any[]; // зелья героя (канон HoMM4)
 }
 
 export interface SaveHero {
@@ -75,6 +81,7 @@ export interface SaveHero {
   mana: number;
   maxMana: number;
   spells: string[];
+  scrolls?: any[]; // Магические свитки (канон HoMM4)
   morale: number;
   luck: number;
   owner: 'player' | 'enemy';
@@ -351,6 +358,11 @@ export class SaveSystem {
       fogOfWar: this.collectFog(worldScene),
       caravanState: worldScene.caravanSystem?.getState?.() || null,
       currentHeroIndex: worldScene.currentHeroIndex || 0,
+      randomEventsState: RandomEventsSystem.serialize(),
+      dwellingState: worldScene.dwellingSystem?.serialize?.() || [],
+      diplomacyState: worldScene.diplomacySystem?.serialize?.() || [],
+      capturedHeroes: worldScene.captureSystem?.serialize?.() || [],
+      heroPotions: worldScene.hero?.scrolls || [],
     };
   }
 
@@ -404,6 +416,7 @@ export class SaveSystem {
       mana: hero.mana,
       maxMana: hero.maxMana,
       spells: [...(hero.spells || [])],
+      scrolls: (hero as any).scrolls ? JSON.parse(JSON.stringify((hero as any).scrolls)) : undefined,
       morale: hero.morale,
       luck: hero.luck,
       owner: hero.owner,
@@ -575,6 +588,35 @@ export class SaveSystem {
     if (data.caravanState && worldScene.caravanSystem?.restoreState) {
       worldScene.caravanSystem.restoreState(data.caravanState);
     }
+
+    // Восстановить случайные события
+    if (data.randomEventsState) {
+      RandomEventsSystem.deserialize(data.randomEventsState);
+    }
+
+    // Восстановить внешние жилища (канон HoMM4)
+    if (data.dwellingState && worldScene.dwellingSystem?.deserialize) {
+      worldScene.dwellingSystem.deserialize(data.dwellingState);
+      console.log('[SaveSystem] ✓ Восстановлены внешние жилища:', data.dwellingState.length);
+    }
+
+    // Восстановить дипломатию (канон HoMM4)
+    if (data.diplomacyState && worldScene.diplomacySystem?.deserialize) {
+      worldScene.diplomacySystem.deserialize(data.diplomacyState);
+      console.log('[SaveSystem] ✓ Восстановлена дипломатия:', data.diplomacyState.length);
+    }
+
+    // Восстановить пленных героев (канон HoMM4)
+    if (data.capturedHeroes && worldScene.captureSystem?.deserialize) {
+      worldScene.captureSystem.deserialize(data.capturedHeroes);
+      console.log('[SaveSystem] ✓ Восстановлены пленные герои:', data.capturedHeroes.length);
+    }
+
+    // Восстановить зелья героя (канон HoMM4)
+    if (data.heroPotions && worldScene.hero) {
+      worldScene.hero.scrolls = data.heroPotions;
+      console.log('[SaveSystem] ✓ Восстановлены зелья героя:', data.heroPotions.length);
+    }
     
     console.log('[SaveSystem] ✓ Состояние игры восстановлено');
   }
@@ -628,6 +670,10 @@ export class SaveSystem {
         };
         
         (hero as any).specialization = heroData.specialization;
+        // Восстановление магических свитков (канон HoMM4)
+        if (heroData.scrolls) {
+          (hero as any).scrolls = [...heroData.scrolls];
+        }
         worldScene.playerHeroes.push(hero);
       }
     }

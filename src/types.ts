@@ -76,6 +76,8 @@ export type MapObjectType =
   | 'subterranean_gate'
   // Магия
   | 'magic_scroll'
+  // Внешние жилища (канон HoMM4 — еженедельный прирост, банк существ)
+  | 'dwelling'
   // Прочее
   | 'observatory';
 
@@ -121,7 +123,9 @@ export type HeroClass =
   | 'demoniac'
   | 'heretic'
   | 'wizard'
-  | 'barbarian';
+  | 'barbarian'
+  | 'artificer'
+  | 'shaman';
 
 /** Тип слота экипировки */
 export type EquipmentSlot = keyof Equipment;
@@ -260,6 +264,40 @@ export interface MapObject {
 }
 
 // ============================================================================
+// ВНЕШНИЕ ЖИЛИЩА (канон HoMM4)
+// ============================================================================
+
+/** Данные внешнего жилища на карте */
+export interface DwellingData {
+  /** Уникальный ID жилища */
+  dwellingId: string;
+  /** Название жилища */
+  dwellingName: string;
+  /** ID существа для найма */
+  creatureId: string;
+  /** Название существа */
+  creatureName: string;
+  /** Фракция жилища */
+  faction: FactionId;
+  /** Тир существа (1-7) */
+  tier: number;
+  /** Базовый прирост в неделю */
+  baseGrowth: number;
+  /** Накоплено существ (банк) */
+  bankedCreatures: number;
+  /** Владелец */
+  owner: OwnerType;
+  /** Улучшено ли жилище */
+  isUpgraded: boolean;
+  /** ID улучшенного существа */
+  upgradedCreatureId?: string;
+  /** Название улучшенного существа */
+  upgradedCreatureName?: string;
+  /** Последний день, когда был получен прирост */
+  lastGrowthDay: number;
+}
+
+// ============================================================================
 // ГЕРОИ И НАВЫКИ
 // ============================================================================
 
@@ -389,6 +427,7 @@ export interface Building {
   faction: string;
   category: BuildingCategory;
   creature?: string;
+  creatures?: string[];
   tier?: number;
   creatureGrowth?: number | { creatureId: string; amount: number; min?: number; max?: number };
   nameEn?: string;

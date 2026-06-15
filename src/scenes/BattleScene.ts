@@ -12,9 +12,10 @@ import { SiegeSystem } from '../systems/SiegeSystem';
 import { BattleQueue } from '../systems/BattleQueue';
 import { HeroManager } from '../systems/HeroManager';
 import { ContentManager } from '../systems/ContentManager';
+import { CaptureSystem } from '../systems/CaptureSystem';
 import { 
   getCreatureType, isRanged, isFlying, isCavalry, 
-  hasAbility, getRetaliationCount 
+  hasAbility, getRetaliationCount, registerHeroType 
 } from '../systems/CreatureTypes';
 
 /**
@@ -129,7 +130,16 @@ export class BattleScene extends Phaser.Scene {
     // Загрузка данных заклинаний
     try {
       const response = await fetch('./assets/data/spells.json');
-      this.spellsData = await response.json();
+      const rawData = await response.json();
+      // Новый формат: {"spells": [...]} — преобразуем в Record<string, Spell>
+      if (rawData.spells && Array.isArray(rawData.spells)) {
+        this.spellsData = {};
+        for (const spell of rawData.spells) {
+          this.spellsData[spell.id] = spell;
+        }
+      } else {
+        this.spellsData = rawData;
+      }
     } catch (e) {
       console.warn('Не удалось загрузить spells.json');
       this.spellsData = {};
@@ -161,9 +171,11 @@ export class BattleScene extends Phaser.Scene {
     // Обновляем максимальную ману с учётом Intelligence
     if (this.attackerHero) {
       this.attackerHero.maxMana = this.heroManager.calculateMaxMana(this.attackerHero);
+      registerHeroType('hero', this.attackerHero.class);
     }
     if (this.defenderHero) {
       this.defenderHero.maxMana = this.heroManager.calculateMaxMana(this.defenderHero);
+      registerHeroType('defender_hero', this.defenderHero.class);
     }
 
     this.createBattlefield();
@@ -429,7 +441,8 @@ export class BattleScene extends Phaser.Scene {
     }
 
     // Герой атакующего (как юнит)
-    const attackerHeroHp = this.getCreatureHealth('hero');
+    const attackerHeroStats = this.getCreatureStats('hero', 'attacker');
+    const attackerHeroHp = attackerHeroStats.hp;
     attackerUnits.push({
       id: 'attacker_hero',
       creatureId: 'hero',
@@ -479,7 +492,8 @@ export class BattleScene extends Phaser.Scene {
 
     // Герой защитника
     if (this.defenderHero) {
-      const defenderHeroHp = this.getCreatureHealth('hero');
+      const defenderHeroStats = this.getCreatureStats('hero', 'defender');
+      const defenderHeroHp = defenderHeroStats.hp;
       defenderUnits.push({
         id: 'defender_hero',
         creatureId: 'hero',
@@ -522,9 +536,9 @@ export class BattleScene extends Phaser.Scene {
 
   private generateDefenderArmy(): { creatureId: string; count: number }[] {
     return [
-      { creatureId: 'goblin', count: 15 },
-      { creatureId: 'wolf', count: 8 },
-      { creatureId: 'ogre', count: 3 }
+      { creatureId: 'bandit', count: 15 },
+      { creatureId: 'orc_h4', count: 8 },
+      { creatureId: 'minotaur_h4', count: 3 }
     ];
   }
 
@@ -537,7 +551,14 @@ export class BattleScene extends Phaser.Scene {
    * Единая точка доступа — все статы берутся из creatures.json,
    * что устраняет дублирование и хардкод.
    */
-  private getCreatureStats(id: string): CreatureStats {
+  private getCreatureStats(id: string, side?: 'attacker' | 'defender'): CreatureStats {
+    // Для героя — используем реальные статы
+    if (id === 'hero') {
+      const hero = side === 'defender' ? this.defenderHero : this.attackerHero;
+      if (hero) {
+        return this.contentManager.getHeroBattleStats(hero);
+      }
+    }
     return this.contentManager.getCreatureStats(id);
   }
 
@@ -797,11 +818,11 @@ export class BattleScene extends Phaser.Scene {
     this.spellPanel.add(title);
 
     const schools = [
-      { id: 'water', name: '💧 Вода', color: '#00bfff' },
-      { id: 'fire', name: '🔥 Огонь', color: '#ff4500' },
-      { id: 'earth', name: '🪨 Земля', color: '#8b4513' },
-      { id: 'air', name: '💨 Воздух', color: '#ffff00' },
-      { id: 'mind', name: '🧠 Разум', color: '#ff00ff' }
+      { id: 'life', name: '✨ Жизнь', color: '#ffd700' },
+      { id: 'death', name: '💀 Смерть', color: '#8b008b' },
+      { id: 'order', name: '📖 Порядок', color: '#4169e1' },
+      { id: 'chaos', name: '🔥 Хаос', color: '#ff4500' },
+      { id: 'natural', name: '🌲 Природа', color: '#228b22' }
     ];
 
     schools.forEach((school, sIdx) => {
@@ -956,7 +977,8 @@ export class BattleScene extends Phaser.Scene {
       targets = this.battleState.units.filter(u => 
         u.count > 0 && !u.isWall && !u.isTower &&
         Math.abs(u.x - targetPos.x) <= 1 && 
-        Math.abs(u.y - targetPos.y) <= 1
+        Math.abs(u.y - targetPos.y) <= 1 &&
+        this.abilitiesSystem.canApplyMagic(u, spell) // Проверка иммунитета для area заклинаний
       );
     }
 
@@ -1020,6 +1042,7 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-M', () => this.openSpellbook());
     this.input.keyboard?.on('keydown-S', () => this.surrender());
     this.input.keyboard?.on('keydown-A', () => this.startAutoBattle());
+    this.input.keyboard?.on('keydown-P', () => this.usePotion());
     this.input.keyboard?.on('keydown-ESC', () => {
       if (this.spellPanel.visible) {
         this.closeSpellbook();
@@ -1056,11 +1079,13 @@ export class BattleScene extends Phaser.Scene {
       }
 
       const dist = Math.max(Math.abs(enemy.x - this.selectedUnit.x), Math.abs(enemy.y - this.selectedUnit.y));
-      const attackRange = isRanged(this.selectedUnit.creatureId) && 
+      const unitIsRanged = isRanged(this.selectedUnit.creatureId) || 
+        (this.selectedUnit.isHero && (this.selectedUnit.shotsLeft === undefined || this.selectedUnit.shotsLeft > 0));
+      const attackRange = unitIsRanged && 
                           (this.selectedUnit.shotsLeft === undefined || this.selectedUnit.shotsLeft > 0) ? 10 : 1;
       
       if (dist <= attackRange) {
-        if (isRanged(this.selectedUnit.creatureId) && dist > 1 && 
+        if (unitIsRanged && dist > 1 && 
             (this.selectedUnit.shotsLeft === undefined || this.selectedUnit.shotsLeft > 0)) {
           this.rangedAttack(this.selectedUnit, enemy);
         } else if (dist <= 1) {
@@ -1092,7 +1117,9 @@ export class BattleScene extends Phaser.Scene {
 
     if (enemy) {
       const dist = Math.max(Math.abs(enemy.x - this.selectedUnit.x), Math.abs(enemy.y - this.selectedUnit.y));
-      const canAttack = dist <= 1 || (isRanged(this.selectedUnit.creatureId) && dist <= 10);
+      const unitIsRanged = isRanged(this.selectedUnit.creatureId) || 
+        (this.selectedUnit.isHero && (this.selectedUnit.shotsLeft === undefined || this.selectedUnit.shotsLeft > 0));
+      const canAttack = dist <= 1 || (unitIsRanged && dist <= 10);
       
       if (canAttack) {
         const previewDamage = this.previewDamage(this.selectedUnit, enemy);
@@ -1124,7 +1151,15 @@ export class BattleScene extends Phaser.Scene {
     let minDamage = damageRange.min * attacker.count;
     let maxDamage = damageRange.max * attacker.count;
 
-    const modifier = Math.max(0.3, 1 + (attackStat - defenseStat) * 0.05);
+    // Каноническая формула HoMM4:
+    // Если атака >= защиты: 1 + (атака - защита) * 0.05
+    // Если защита > атаки: 1 - (защита - атака) * 0.025
+    let modifier: number;
+    if (attackStat >= defenseStat) {
+      modifier = 1 + (attackStat - defenseStat) * 0.05;
+    } else {
+      modifier = Math.max(0.3, 1 - (defenseStat - attackStat) * 0.025);
+    }
     minDamage = Math.floor(minDamage * modifier);
     maxDamage = Math.floor(maxDamage * modifier);
 
@@ -1575,7 +1610,15 @@ export class BattleScene extends Phaser.Scene {
 
     let baseDamage = GameRandom.randomInt(damageRange.min, damageRange.max) * attacker.count;
 
-    const modifier = Math.max(0.3, 1 + (attackStat - defenseStat) * 0.05);
+    // Каноническая формула HoMM4:
+    // Если атака >= защиты: 1 + (атака - защита) * 0.05
+    // Если защита > атаки: 1 - (защита - атака) * 0.025
+    let modifier: number;
+    if (attackStat >= defenseStat) {
+      modifier = 1 + (attackStat - defenseStat) * 0.05;
+    } else {
+      modifier = Math.max(0.3, 1 - (defenseStat - attackStat) * 0.025);
+    }
     baseDamage = Math.floor(baseDamage * modifier);
 
     // === НАВЫКИ ГЕРОЯ: Наступление/Стрельба (атакующий) ===
@@ -1616,7 +1659,6 @@ export class BattleScene extends Phaser.Scene {
     const luckResult = this.moraleLuck.checkLuck(attacker, hero);
     const luckMultiplier = this.moraleLuck.getDamageMultiplier(luckResult);
     baseDamage = Math.floor(baseDamage * luckMultiplier);
-    // TODO: luck bonus from skills уже учитывается через hero.luck в MoraleLuckSystem
 
     if (luckResult === 'critical') {
       this.effects.showLuckBanner(true);
@@ -1653,16 +1695,15 @@ export class BattleScene extends Phaser.Scene {
 
   private retaliatoryStrike(defender: BattleUnit, attacker: BattleUnit): void {
     const damage = this.calculateDamage(defender, attacker);
-    const reducedDamage = Math.floor(damage.total * 0.75);
-    
-    this.applyDamage(attacker, reducedDamage);
+    // В каноне HoMM4 контратаки наносят полный урон
+    this.applyDamage(attacker, damage.total);
 
     const attackerSprite = this.unitSprites.get(attacker.id);
     if (attackerSprite) {
-      this.effects.showDamageNumber(attackerSprite.x + 20, attackerSprite.y, reducedDamage, false);
+      this.effects.showDamageNumber(attackerSprite.x + 20, attackerSprite.y, damage.total, false);
     }
 
-    this.addLog(`↩️ ${defender.creatureId} контратакует: ${reducedDamage} урона`);
+    this.addLog(`↩️ ${defender.creatureId} контратакует: ${damage.total} урона`);
   }
 
   // ============================================================================
@@ -1886,15 +1927,68 @@ export class BattleScene extends Phaser.Scene {
     this.endUnitTurn();
   }
 
+  private usePotion(): void {
+    if (!this.selectedUnit || this.selectedUnit.side === 'defender' || this.isAnimating || this.battleEnded) return;
+    
+    const hero = this.attackerHero;
+    if (!hero) return;
+    
+    const scrolls = (hero as any).scrolls || [];
+    const battlePotions = scrolls.filter((s: any) => s.usableIn === 'battle' || s.usableIn === 'both');
+    
+    if (battlePotions.length === 0) {
+      this.addLog('🧪 Нет зелий для использования в бою!');
+      return;
+    }
+    
+    // Используем первое доступное зелье
+    const potion = battlePotions[0];
+    const potionIndex = scrolls.indexOf(potion);
+    
+    let message = '';
+    switch (potion.effect) {
+      case 'heal':
+        hero.stats.hp = Math.min(hero.stats.maxHp || 100, hero.stats.hp + potion.value);
+        message = `🧪 ${potion.name}: +${potion.value} HP`;
+        break;
+      case 'restore_mana':
+        hero.mana = Math.min(hero.maxMana, hero.mana + potion.value);
+        message = `🧪 ${potion.name}: +${potion.value} маны`;
+        break;
+      case 'boost_attack':
+        this.selectedUnit.effects.push({ spellId: 'potion_attack', duration: potion.duration || 3, value: potion.value });
+        message = `🧪 ${potion.name}: +${potion.value} атаки на ${potion.duration || 3} хода`;
+        break;
+      case 'boost_defense':
+        this.selectedUnit.effects.push({ spellId: 'potion_defense', duration: potion.duration || 3, value: potion.value });
+        message = `🧪 ${potion.name}: +${potion.value} защиты на ${potion.duration || 3} хода`;
+        break;
+      case 'boost_speed':
+        this.selectedUnit.effects.push({ spellId: 'potion_speed', duration: potion.duration || 3, value: potion.value });
+        message = `🧪 ${potion.name}: +${potion.value} скорости на ${potion.duration || 3} хода`;
+        break;
+      default:
+        message = `🧪 ${potion.name}: эффект применён`;
+    }
+    
+    // Удаляем зелье из инвентаря
+    if (potionIndex >= 0) {
+      scrolls.splice(potionIndex, 1);
+    }
+    
+    this.addLog(message);
+    this.endUnitTurn();
+  }
+
   private surrender(): void {
     this.forceStopAll();
     this.showConfirmation(
       '🏳 Сдаться?',
-      'Вы потеряете всю армию и заплатите выкуп (25% золота).',
+      'Герой будет захвачен в плен. Вы можете выкупить его позже.',
       () => {
-        if (this.worldScene?.getResources) {
-          const resources = this.worldScene.getResources();
-          this.worldScene.addResources({ gold: -Math.floor(resources.gold * 0.25) });
+        if (this.worldScene?.captureSystem && this.attackerHero) {
+          const day = this.worldScene.day || 1;
+          this.worldScene.captureSystem.captureHero(this.attackerHero, 'defender', 'Враг', day);
         }
         if (this.attackerHero) {
           this.attackerHero.army = this.attackerHero.army.map(slot => ({ ...slot, count: 0 }));
@@ -2028,6 +2122,25 @@ export class BattleScene extends Phaser.Scene {
 
   private checkBattleEnd(): void {
     if (this.battleEnded) return;
+
+    // Герой пал = поражение (канон HoMM4)
+    const attackerHero = this.battleState.units.find(u => u.isHero && u.side === 'attacker');
+    const defenderHero = this.battleState.units.find(u => u.isHero && u.side === 'defender');
+
+    if (attackerHero && attackerHero.count <= 0) {
+      this.addLog('💀 Герой захвачен в плен!');
+      if (this.worldScene?.captureSystem && this.attackerHero) {
+        const day = this.worldScene.day || 1;
+        this.worldScene.captureSystem.captureHero(this.attackerHero, 'defender', 'Враг', day);
+      }
+      this.time.delayedCall(500, () => this.endBattle('defender'));
+      return;
+    }
+    if (defenderHero && defenderHero.count <= 0) {
+      this.addLog('💀 Вражеский герой захвачен!');
+      this.time.delayedCall(500, () => this.endBattle('attacker'));
+      return;
+    }
     
     const attackerAlive = this.battleState.units.filter(u => 
       u.side === 'attacker' && u.count > 0 && !u.isWall && !u.isTower

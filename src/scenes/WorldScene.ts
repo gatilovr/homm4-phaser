@@ -30,6 +30,17 @@ import type { MineType } from '../systems/EconomySystem';
 import { AdventureMagicSystem, ADVENTURE_SPELLS } from '../systems/AdventureMagicSystem';
 import type { AdventureSpellId } from '../systems/AdventureMagicSystem';
 import { AdventureMagicBook } from '../ui/AdventureMagicBook';
+import { MagicScrollSystem } from '../systems/MagicScrollSystem';
+import type { MagicScroll } from '../systems/MagicScrollSystem';
+import { RandomEventsSystem, type RandomEvent } from '../systems/RandomEventsSystem';
+import { RandomEventModal } from '../ui/RandomEventModal';
+import { ExternalDwellingSystem } from '../systems/ExternalDwellingSystem';
+import { DiplomacySystem } from '../systems/DiplomacySystem';
+import { DiplomacyUI } from '../ui/DiplomacyUI';
+import { DesertionSystem } from '../systems/DesertionSystem';
+import { CaptureSystem } from '../systems/CaptureSystem';
+import { RazeSystem } from '../systems/RazeSystem';
+import { PotionSystem } from '../systems/PotionSystem';
 
 export class WorldScene extends Phaser.Scene {
   public map: Tile[][] = [];
@@ -95,6 +106,18 @@ export class WorldScene extends Phaser.Scene {
   private saveSystem!: SaveSystem;
   /** Система специальных недель (HoMM4) */
   private weeksSystem!: WeeksSystem;
+  /** Система внешних жилищ (канон HoMM4 — еженедельный прирост, банк) */
+  private dwellingSystem!: ExternalDwellingSystem;
+  /** Система дипломатии с ИИ (канон HoMM4) */
+  private diplomacySystem!: DiplomacySystem;
+  /** Система дезертирства существ (канон HoMM4) */
+  private desertionSystem!: DesertionSystem;
+  /** Система захвата героев в плен (канон HoMM4) */
+  private captureSystem!: CaptureSystem;
+  /** Система разрушения городов (канон HoMM4) */
+  private razeSystem!: RazeSystem;
+  /** Система зелий (канон HoMM4) */
+  private potionSystem!: PotionSystem;
   /** Флаг: игра загружена из сохранения */
   private loadedFromSave: boolean = false;
   
@@ -127,6 +150,25 @@ export class WorldScene extends Phaser.Scene {
       this.weeksSystem = new WeeksSystem(CONFIG.MAP_SEED);
       this.weeksSystem.initialize(CONFIG.MAP_SEED);
       console.log('[WorldScene] ✓ WeeksSystem initialized');
+
+      // Инициализация RandomEventsSystem (случайные события)
+      RandomEventsSystem.init(CONFIG.MAP_SEED);
+      console.log('[WorldScene] ✓ RandomEventsSystem initialized');
+
+      // Инициализация ExternalDwellingSystem (внешние жилища, канон HoMM4)
+      this.dwellingSystem = new ExternalDwellingSystem();
+      console.log('[WorldScene] ✓ ExternalDwellingSystem initialized');
+
+      // Инициализация DiplomacySystem (дипломатия с ИИ, канон HoMM4)
+      this.diplomacySystem = new DiplomacySystem();
+      console.log('[WorldScene] ✓ DiplomacySystem initialized');
+
+      // Инициализация остальных систем (канон HoMM4)
+      this.desertionSystem = new DesertionSystem();
+      this.captureSystem = new CaptureSystem();
+      this.razeSystem = new RazeSystem();
+      this.potionSystem = new PotionSystem();
+      console.log('[WorldScene] ✓ DesertionSystem, CaptureSystem, RazeSystem, PotionSystem initialized');
     
     // Сразу рисуем отладочный текст чтобы видеть что сцена запустилась
     const debugText = this.add.text(10, 10, '🗺️ WorldScene загружена!', {
@@ -436,9 +478,16 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private getMoveCost(type: TileType): number {
+    // Канонические стоимости HoMM4
     const costs: Record<TileType, number> = {
-      grass: 1, sand: 1.5, water: 999, rock: 999,
-      snow: 1.5, swamp: 2, lava: 999, forest: 1.5,
+      grass: 1,      // Трава: 1 (канон)
+      sand: 1,       // Песок: 1 (канон, было 1.5)
+      water: 999,    // Вода: непроходима
+      rock: 999,     // Скала: непроходима
+      snow: 2,       // Снег: 2 (канон, было 1.5)
+      swamp: 2,      // Болото: 2 (канон)
+      lava: 999,     // Лава: непроходима
+      forest: 2,     // Лес: 2 (канон, было 1.5)
       // Подземные тайлы
       cave_floor: 1,
       cave_rock: 999,
@@ -534,8 +583,8 @@ export class WorldScene extends Phaser.Scene {
 
     // Стартовая армия
     this.hero.army = [
-      { creatureId: 'pikeman', count: 20 },
-      { creatureId: 'archer', count: 10 }
+      { creatureId: 'squire', count: 20 },
+      { creatureId: 'ballista', count: 10 }
     ];
 
     // Позиция
@@ -603,13 +652,27 @@ export class WorldScene extends Phaser.Scene {
       }
       
       this.placeObjectSafe(obj.id, obj.type, obj.x, obj.y, obj.data);
+
+      // Регистрируем внешние жилища в системе
+      if (obj.type === 'dwelling' && obj.data?.definitionId) {
+        this.dwellingSystem.createDwelling(
+          obj.id,
+          obj.data.definitionId,
+          obj.x,
+          obj.y,
+          obj.data.owner || 'neutral'
+        );
+      }
     }
     
     // === МОРСКИЕ ОБЪЕКТЫ (канон HoMM4) ===
     this.generateShips();
     this.generateWhirlpools();
     
-    console.log(`[WorldScene] Размещено ${objects.length} объектов на карте (+ морские)`);
+    // === МАГИЧЕСКИЕ СВИТКИ (канон HoMM4) ===
+    this.generateMagicScrolls();
+    
+    console.log(`[WorldScene] Размещено ${objects.length} объектов на карте (+ морские + свитки)`);
   }
 
   private placeObjectSafe(id: string, type: string, x: number, y: number, data?: any): void {
@@ -704,6 +767,7 @@ export class WorldScene extends Phaser.Scene {
       this.resetDailyMagicEffects();
     });
     this.input.keyboard?.on('keydown-H', () => this.showHeroInfo());
+    this.input.keyboard?.on('keydown-D', () => this.openDiplomacy());
     this.input.keyboard?.on('keydown-ESC', () => this.scene.start(CONFIG.SCENES.MENU));
     this.input.keyboard?.on('keydown-TAB', (event: KeyboardEvent) => {
       event.preventDefault();
@@ -712,6 +776,10 @@ export class WorldScene extends Phaser.Scene {
     // === U — переключение между поверхностью и подземельем (канон HoMM4) ===
     this.input.keyboard?.on('keydown-U', () => {
       this.switchLevel();
+    });
+    // === G — улучшить внешнее жилище (канон HoMM4) ===
+    this.input.keyboard?.on('keydown-G', () => {
+      this.upgradeDwellingAtPosition();
     });
   }
 
@@ -859,6 +927,9 @@ export class WorldScene extends Phaser.Scene {
       case 'refugee_camp':
         this.visitRefugeeCamp(obj.id, obj.data);
         break;
+      case 'dwelling':
+        this.visitDwelling(obj.id, obj.data);
+        break;
       case 'garrison':
         this.visitGarrison(obj.id, obj.data);
         break;
@@ -899,6 +970,10 @@ export class WorldScene extends Phaser.Scene {
         break;
       case 'bottle':
         this.readBottle(obj.id, obj.data);
+        break;
+      // === МАГИЧЕСКИЕ СВИТКИ (канон HoMM4) ===
+      case 'magic_scroll':
+        this.collectMagicScroll(obj.id, obj.data);
         break;
     }
   }
@@ -943,40 +1018,49 @@ export class WorldScene extends Phaser.Scene {
 
   private startBattle(creatureId: string): void {
     console.log('[WorldScene] Starting battle:', creatureId);
-    this.stopMovement(); // Останавливаем движение
+    this.stopMovement();
+
+    // Получаем данные существа из тайла карты
+    const pos = this.getHeroPosition();
+    const tile = this.map[pos.y]?.[pos.x];
+    const mapObj = tile?.object;
+    const actualCreatureId = mapObj?.data?.creatureId || creatureId;
+    const creatureCount = mapObj?.data?.count || 1;
 
     // === ПРОВЕРКА ДИПЛОМАТИИ (Diplomacy skill) ===
     if (this.heroManager) {
       const diplomacyResult = this.heroManager.tryDiplomacy(this.hero);
       if (diplomacyResult.success) {
-        // Нейтралы присоединились!
-        const creatureType = creatureId.replace('creature_', '').split('_')[0];
-        const joinedCount = diplomacyResult.joinedCount;
+        const joinedCount = Math.min(diplomacyResult.joinedCount, creatureCount);
 
         // Добавляем в армию героя
-        const existing = this.hero.army.find(s => s.creatureId === creatureType);
+        const existing = this.hero.army.find(s => s.creatureId === actualCreatureId);
         if (existing) {
           existing.count += joinedCount;
         } else {
-          this.hero.army.push({ creatureId: creatureType, count: joinedCount });
+          this.hero.army.push({ creatureId: actualCreatureId, count: joinedCount });
         }
 
-        // Удаляем существо с карты
-        const pos = this.getHeroPosition();
-        this.removeObject(creatureId, pos);
+        // Удаляем существо с карты (или уменьшаем количество)
+        if (joinedCount >= creatureCount) {
+          this.removeObject(creatureId, this.getHeroPosition());
+        } else if (mapObj?.data) {
+          mapObj.data.count -= joinedCount;
+        }
 
-        this.showNotification(`🤝 Дипломатия! ${joinedCount}×${creatureType} присоединились к вам!`);
+        this.showNotification(`🤝 Дипломатия! ${joinedCount}×${actualCreatureId} присоединились к вам!`);
         return;
       }
     }
 
-    this.showNotification('⚔️ Бой начинается!');
+    // === ОБЫЧНЫЙ БОЙ ===
+    this.showNotification(`⚔️ Бой с ${actualCreatureId} (${creatureCount} шт)!`);
     this.time.delayedCall(300, () => {
-      // Засыпаем WorldScene и запускаем BattleScene
       this.scene.sleep();
       this.scene.launch(CONFIG.SCENES.BATTLE, {
         attacker: this.hero,
-        defenderId: creatureId,
+        defenderId: actualCreatureId,
+        defenderCount: creatureCount,
         worldScene: this
       });
     });
@@ -991,12 +1075,33 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private collectResource(id: string, pos: Position): void {
-    const amount = Phaser.Math.Between(500, 2000);
-    this.resources.gold += amount;
-    this.showNotification(`💰 Получено ${amount} золота!`);
+    const tile = this.map[pos.y]?.[pos.x];
+    const objData = tile?.object?.data;
+    
+    // Проверяем, является ли ресурс зельем (канон HoMM4)
+    if (objData?.type === 'potion' && objData?.potionId) {
+      // Добавляем зелье в инвентарь героя
+      if (!this.hero.scrolls) this.hero.scrolls = [];
+      this.hero.scrolls.push({
+        id: objData.potionId,
+        name: objData.potionName,
+        effect: objData.effect,
+        value: objData.value,
+        duration: objData.duration,
+        usableIn: 'both',
+        rarity: 'common'
+      });
+      this.showNotification(`🧪 Подобрано: ${objData.potionName}!`);
+    } else {
+      // Обычный ресурс — золото
+      const amount = Phaser.Math.Between(500, 2000);
+      this.resources.gold += amount;
+      this.showNotification(`💰 Получено ${amount} золота!`);
+      this.updateResourceDisplay();
+    }
+    
     this.removeObject(id, pos);
-    this.updateResourceDisplay();
-    this.stopMovement(); // Останавливаем движение после подбора
+    this.stopMovement();
   }
 
   private captureMine(mineId: string): void {
@@ -1033,6 +1138,22 @@ export class WorldScene extends Phaser.Scene {
     }
     if (this.map[pos.y]?.[pos.x]) {
       this.map[pos.y][pos.x].object = undefined;
+    }
+  }
+
+  /**
+   * Удалить разрушенный город с карты (канон HoMM4)
+   */
+  public removeRazedTown(townId: string): void {
+    // Ищем объект города на карте
+    for (let y = 0; y < this.map.length; y++) {
+      for (let x = 0; x < this.map[y].length; x++) {
+        const obj = this.map[y][x].object;
+        if (obj && (obj.id === townId || obj.id === `enemy_${townId}`)) {
+          this.removeObject(obj.id, { x, y });
+          return;
+        }
+      }
     }
   }
 
@@ -1158,6 +1279,115 @@ export class WorldScene extends Phaser.Scene {
     this.stopMovement();
   }
 
+  private visitDwelling(id: string, data: any): void {
+    const dwelling = this.dwellingSystem.getDwelling(id);
+    if (!dwelling) {
+      this.showNotification('Жилище не найдено');
+      return;
+    }
+
+    const dwellingName = dwelling.dwellingName;
+    const bankedCreatures = dwelling.bankedCreatures;
+    const owner = dwelling.owner;
+
+    // Если жилище нейтральное — захватываем его при первом посещении
+    if (owner === 'neutral') {
+      this.dwellingSystem.captureDwelling(id, 'player');
+      data.owner = 'player';
+      this.showNotification(`🏰 ${dwellingName} захвачено! Теперь оно ваше.`);
+    }
+
+    // Показываем информацию о жилище
+    const creatureName = dwelling.isUpgraded 
+      ? (dwelling.upgradedCreatureName || dwelling.creatureName)
+      : dwelling.creatureName;
+    
+    let info = `🏠 ${dwellingName}: ${bankedCreatures}× ${creatureName}`;
+    
+    // Показываем возможность улучшения (канон HoMM4)
+    if (!dwelling.isUpgraded && dwelling.upgradedCreatureId) {
+      const canUpgrade = this.dwellingSystem.canUpgradeDwelling(id, this.resources);
+      const def = this.dwellingSystem.getDefinition(id);
+      const upgradeCost = def?.upgradeCost || {};
+      const costStr = Object.entries(upgradeCost).map(([k, v]) => `${k}: ${v}`).join(', ');
+      
+      if (canUpgrade) {
+        info += ` | ⬆️ Улучшить (${costStr}) — нажмите [U]`;
+      } else {
+        info += ` | 🔒 Улучшение: ${costStr}`;
+      }
+    }
+    
+    this.showNotification(info);
+
+    // Нанимаем существ из жилища
+    if (bankedCreatures > 0) {
+      const result = this.dwellingSystem.hireFromDwelling(this.hero, id, bankedCreatures, this.resources);
+      if (result.success) {
+        this.showNotification(`✅ ${result.message}`);
+      } else {
+        this.showNotification(`❌ ${dwellingName}: ${result.message}`);
+      }
+    } else {
+      this.showNotification(`⏳ ${dwellingName}: банк пуст. Прирост через неделю.`);
+    }
+
+    this.stopMovement();
+  }
+  
+  private openDiplomacy(): void {
+    if (this.isMoving) return;
+    const ui = new DiplomacyUI(this, this.diplomacySystem, this.resources);
+    ui.show();
+  }
+
+  /**
+   * Улучшить внешнее жилище на текущей позиции героя (канон HoMM4)
+   */
+  private upgradeDwellingAtPosition(): void {
+    const heroPos = this.getHeroPosition();
+    const tile = this.map[heroPos.y]?.[heroPos.x];
+    const obj = tile?.object;
+    
+    if (!obj || obj.type !== 'dwelling') {
+      this.showNotification('❌ Здесь нет внешнего жилища');
+      return;
+    }
+
+    const dwelling = this.dwellingSystem.getDwelling(obj.id);
+    if (!dwelling) {
+      this.showNotification('❌ Жилище не найдено');
+      return;
+    }
+
+    if (dwelling.isUpgraded) {
+      this.showNotification('❌ Жилище уже улучшено');
+      return;
+    }
+
+    if (!dwelling.upgradedCreatureId) {
+      this.showNotification('❌ Это жилище нельзя улучшить');
+      return;
+    }
+
+    const canUpgrade = this.dwellingSystem.canUpgradeDwelling(obj.id, this.resources);
+    if (!canUpgrade) {
+      const def = this.dwellingSystem.getDefinition(obj.id);
+      const cost = def?.upgradeCost || {};
+      const costStr = Object.entries(cost).map(([k, v]) => `${k}: ${v}`).join(', ');
+      this.showNotification(`❌ Недостаточно ресурсов для улучшения (${costStr})`);
+      return;
+    }
+
+    const result = this.dwellingSystem.upgradeDwelling(obj.id, this.resources);
+    if (result.success) {
+      this.showNotification(`⬆️ ${result.message}`);
+      this.updateResourceDisplay();
+    } else {
+      this.showNotification(`❌ ${result.message}`);
+    }
+  }
+
   private visitGarrison(id: string, data: any): void {
     const creatures = data?.creatures || [];
     
@@ -1205,24 +1435,32 @@ export class WorldScene extends Phaser.Scene {
 
   private visitOasis(id: string, data: any): void {
     const bonus = data?.movementBonus || 500;
-    // TODO: добавить систему очков движения
-    this.showNotification(`🌴 Оазис: +${bonus} очков движения на следующий ход!`);
+    // Добавляем бонус к очкам движения героя
+    this.hero.movementPoints = Math.min(
+      this.hero.maxMovementPoints,
+      this.hero.movementPoints + bonus
+    );
+    this.showNotification(`🌴 Оазис: +${bonus} очков движения!`);
     this.removeObject(id, { x: Math.floor(this.heroSprite.x / CONFIG.TILE_SIZE), y: Math.floor(this.heroSprite.y / CONFIG.TILE_SIZE) });
     this.stopMovement();
   }
 
   private claimWindmill(id: string, data: any): void {
     const goldPerWeek = data?.goldPerWeek || 500;
-    // TODO: добавить систему еженедельного дохода
-    this.showNotification(`🌾 Ветряная мельница захвачена: +${goldPerWeek} золота/неделю!`);
+    // Добавляем золото сразу (упрощённая модель - в каноне даёт раз в неделю)
+    this.resources.gold += goldPerWeek;
+    this.showNotification(`🌾 Ветряная мельница: +${goldPerWeek} золота!`);
+    this.updateResourceDisplay();
     this.removeObject(id, { x: Math.floor(this.heroSprite.x / CONFIG.TILE_SIZE), y: Math.floor(this.heroSprite.y / CONFIG.TILE_SIZE) });
     this.stopMovement();
   }
 
   private claimWaterWheel(id: string, data: any): void {
     const goldPerWeek = data?.goldPerWeek || 750;
-    // TODO: добавить систему еженедельного дохода
-    this.showNotification(`💧 Водяное колесо захвачено: +${goldPerWeek} золота/неделю!`);
+    // Добавляем золото сразу (упрощённая модель - в каноне даёт раз в неделю)
+    this.resources.gold += goldPerWeek;
+    this.showNotification(`💧 Водяное колесо: +${goldPerWeek} золота!`);
+    this.updateResourceDisplay();
     this.removeObject(id, { x: Math.floor(this.heroSprite.x / CONFIG.TILE_SIZE), y: Math.floor(this.heroSprite.y / CONFIG.TILE_SIZE) });
     this.stopMovement();
   }
@@ -1543,7 +1781,19 @@ export class WorldScene extends Phaser.Scene {
       
       // Применяем еженедельный прирост существ с учётом эффектов недели
       this.applyWeeklyGrowth();
+
+      // Случайные события (канон HoMM4: 30% шанс каждую неделю)
+      const event = RandomEventsSystem.tryGenerateEvent();
+      if (event) {
+        new RandomEventModal(this, event, () => {
+          // После закрытия модалки — применяем эффекты
+          this.applyRandomEventEffects(event);
+        });
+      }
     }
+
+    // Обновление длительности активного события (каждый день)
+    RandomEventsSystem.updateDaily();
     
     // === ДОХОД С ШАХТ (разные типы) ===
     const mineIncome = this.victorySystem.getDailyIncome();
@@ -1610,6 +1860,32 @@ export class WorldScene extends Phaser.Scene {
       this.handleCaravanArrival(caravan);
     }
     
+    // Обновить дипломатию (истечение перемирий)
+    if (this.diplomacySystem) {
+      this.diplomacySystem.updateTurn(this.day);
+    }
+
+    // Проверка дезертирства (канон HoMM4)
+    if (this.desertionSystem) {
+      const warning = this.desertionSystem.getDesertionWarning(this.hero);
+      if (warning) {
+        this.showNotification(warning);
+      }
+
+      const desertion = this.desertionSystem.checkDesertion(this.hero);
+      if (desertion.deserted) {
+        this.showNotification(desertion.message);
+      }
+    }
+
+    // Попытка побега пленных (канон HoMM4)
+    if (this.captureSystem) {
+      const escapes = this.captureSystem.tryEscape(this.day);
+      for (const escape of escapes) {
+        this.showNotification(escape.message);
+      }
+    }
+
     // Ход ИИ противников
     this.aiSystem.executeTurn();
     this.updateAIHeroPositions();
@@ -1625,15 +1901,16 @@ export class WorldScene extends Phaser.Scene {
    * Применить еженедельный прирост существ во всех городах игрока
    * 
    * Использует EconomySystem.calculateWeeklyGrowth() с учётом:
-   * - Цитадель (Citadel/Capitol): +25% прирост
+   * - Цитадель (Citadel): +50% прирост (канон HoMM4)
+   * - Замок (Castle): +100% прирост (канон HoMM4)
    * - Улучшенное жилище: +50% прирост
    */
   private applyWeeklyGrowth(): void {
     const playerTowns = this.victorySystem.getPlayerTowns();
     
     for (const town of playerTowns) {
-      const hasCitadel = town.builtBuildings.includes('citadel') || 
-                         town.builtBuildings.includes('capitol');
+      const hasCitadel = town.builtBuildings.includes('citadel');
+      const hasCastle = town.builtBuildings.includes('castle');
       
       const growthDetails: string[] = [];
       
@@ -1643,16 +1920,20 @@ export class WorldScene extends Phaser.Scene {
         
         // Проверяем построено ли улучшенное жилище
         // Апгрейд увеличивает прирост на +50%
-        const isUpgraded = this.isDwellingUpgraded(town.builtBuildings, creatureId);
+        const isUpgraded = false;
         
         // Используем центральную функцию из EconomySystem
-        let growth = calculateWeeklyGrowth(creatureId, hasCitadel, isUpgraded);
+        let growth = calculateWeeklyGrowth(creatureId, hasCitadel, hasCastle, isUpgraded);
         
         // Применяем модификатор от специальной недели (если есть)
         if (this.weeksSystem) {
           const weekMultiplier = this.weeksSystem.getCreatureGrowthMultiplier(creatureId);
           growth = Math.floor(growth * weekMultiplier);
         }
+
+        // Применяем модификатор от случайного события (чума/двойной прирост)
+        const eventGrowthMultiplier = RandomEventsSystem.getGrowthMultiplier();
+        growth = Math.floor(growth * eventGrowthMultiplier);
         
         if (growth > 0) {
           hireSlot.count += growth;
@@ -1665,6 +1946,45 @@ export class WorldScene extends Phaser.Scene {
         this.showNotification(`📈 Прирост в ${town.name}: ${growthDetails.join(', ')}`);
       }
     }
+
+    // === ЕЖЕНЕДЕЛЬНЫЙ ПРИРОСТ ВНЕШНИХ ЖИЛИЩ (канон HoMM4) ===
+    if (this.dwellingSystem) {
+      const weekMultiplier = this.weeksSystem?.getCreatureGrowthMultiplier('any') || 1.0;
+      const eventMultiplier = RandomEventsSystem.getGrowthMultiplier();
+      const totalMultiplier = weekMultiplier * eventMultiplier;
+
+      const dwellingGrowth = this.dwellingSystem.applyWeeklyGrowth('player', this.day, totalMultiplier);
+      for (const growth of dwellingGrowth) {
+        const info = this.dwellingSystem.getDwelling(growth.dwellingId);
+        const name = info?.dwellingName || growth.dwellingId;
+        this.showNotification(`📈 ${name}: +${growth.growth}×${growth.creatureId} (банк: ${growth.newBankTotal})`);
+      }
+    }
+  }
+
+  /**
+   * Применить эффекты случайного события к игровому состоянию
+   */
+  private applyRandomEventEffects(event: RandomEvent): void {
+    // Ресурсные эффекты (мгновенные)
+    this.resources = RandomEventsSystem.applyResourceEffect(this.resources) as typeof this.resources;
+    this.updateResourceDisplay();
+
+    // Эффекты к герою
+    RandomEventsSystem.applyManaEffect(this.hero);
+    RandomEventsSystem.applyLuckBonus(this.hero);
+    RandomEventsSystem.applyMoraleBonus(this.hero);
+
+    // Эффекты к другим героям
+    for (const otherHero of this.playerHeroes) {
+      RandomEventsSystem.applyManaEffect(otherHero);
+      RandomEventsSystem.applyLuckBonus(otherHero);
+      RandomEventsSystem.applyMoraleBonus(otherHero);
+    }
+
+    // Уведомление
+    const prefix = event.positive ? '✅' : '❌';
+    this.showNotification(`${prefix} ${event.name}: ${event.description}`);
   }
   
   /**
@@ -1736,6 +2056,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private checkVictoryConditions(): void {
+    // Передаём текущее золото в VictorySystem для проверки условий
+    this.victorySystem.setGold(this.resources.gold);
     const result = this.victorySystem.checkVictory();
     
     if (result.gameOver) {
@@ -1844,6 +2166,7 @@ export class WorldScene extends Phaser.Scene {
       hero: this.hero,
       owner: 'player',
       alive: true,
+      captured: false,
       x: heroPos.x,
       y: heroPos.y
     });
@@ -1873,10 +2196,10 @@ export class WorldScene extends Phaser.Scene {
             faction: 'necropolis',
             x, y,
             owner: 'ai',
-            builtBuildings: ['citadel', 'cursed_temple'],
+            builtBuildings: ['citadel', 'necropolis_dwelling_1'],
             garrison: [
-              { creatureId: 'skeleton', count: 30 },
-              { creatureId: 'zombie', count: 20 }
+              { creatureId: 'skeleton_h4', count: 30 },
+              { creatureId: 'imp_h4', count: 20 }
             ],
             availableForHire: [],
             lastGrowthDay: 1
@@ -2089,6 +2412,7 @@ export class WorldScene extends Phaser.Scene {
         hero: newHero,
         owner: 'player',
         alive: true,
+        captured: false,
         x: spawnX,
         y: spawnY
       });
@@ -2176,6 +2500,8 @@ export class WorldScene extends Phaser.Scene {
       getPlayerHero: () => this.hero,
       getPlayerPosition: () => this.getHeroPosition(),
       getTownData: (townId: string) => this.getTownDataForAI(townId),
+      getDiplomacySystem: () => this.diplomacySystem,
+      getDwellingSystem: () => this.dwellingSystem,
       onAIAttackHero: (aiHero) => this.handleAIAttackHero(aiHero),
       onAIAttackCreature: (aiHero, creatureId) => this.handleAIAttackCreature(aiHero, creatureId),
       onAIMove: (aiId, x, y) => this.animateAIHeroMove(aiId, x, y),
@@ -2214,12 +2540,12 @@ export class WorldScene extends Phaser.Scene {
         maxMana: 20,
         army: isNecro
           ? [
-              { creatureId: 'skeleton', count: 40 },
-              { creatureId: 'zombie', count: 25 }
+              { creatureId: 'skeleton_h4', count: 40 },
+              { creatureId: 'imp_h4', count: 25 }
             ]
           : [
-              { creatureId: 'pikeman', count: 30 },
-              { creatureId: 'archer', count: 15 }
+              { creatureId: 'squire', count: 30 },
+              { creatureId: 'ballista', count: 15 }
             ],
         equipment: {},
         spells: [],
@@ -2254,6 +2580,11 @@ export class WorldScene extends Phaser.Scene {
 
     // Инициализируем ИИ игроков с данными о городах
     this.aiSystem.initAIPlayers(aiTowns, []);
+
+    // Инициализируем дипломатию с ИИ (канон HoMM4)
+    for (const aiPlayer of this.aiSystem.getAIPlayers()) {
+      this.diplomacySystem.initRelation(aiPlayer.id, aiPlayer.hero?.name || aiPlayer.name);
+    }
 
     console.log(`[AI] Инициализировано ${aiTowns.length} ИИ противников`);
   }
@@ -2913,6 +3244,80 @@ export class WorldScene extends Phaser.Scene {
     ];
     const msg = data?.message || messages[Math.floor(Math.random() * messages.length)];
     this.showNotification(`🍾 Бутылка: "${msg}"`);
+    this.removeObject(id, pos);
+  }
+
+  // ============================================================
+  // === 📜 МАГИЧЕСКИЕ СВИТКИ (канон HoMM4) ===
+  // ============================================================
+
+  /**
+   * Генерация магических свитков на карте
+   * Размещает 5-8 свитков на проходимых клетках
+   */
+  private generateMagicScrolls(): void {
+    const mapW = this.map[0].length;
+    const mapH = this.map.length;
+    const scrollCount = 6;
+    let placed = 0;
+    let attempts = 0;
+
+    while (placed < scrollCount && attempts < 300) {
+      attempts++;
+      const x = Phaser.Math.Between(3, mapW - 4);
+      const y = Phaser.Math.Between(3, mapH - 4);
+      const tile = this.map[y]?.[x];
+
+      // Свиток должен быть на проходимой клетке
+      if (!tile || !tile.passable) continue;
+      if (tile.object) continue;
+      if (tile.type === 'water' || tile.type === 'rock' || tile.type === 'lava') continue;
+
+      // Генерируем свиток через MagicScrollSystem
+      const scroll = MagicScrollSystem.generateRandomScroll(1, 5);
+
+      // Размещаем на карте
+      const scrollId = `magic_scroll_${placed}`;
+      this.placeObjectSafe(scrollId, 'magic_scroll', x, y, {
+        scroll: scroll
+      });
+      placed++;
+    }
+
+    console.log(`[WorldScene] 📜 Размещено ${placed} магических свитков`);
+  }
+
+  /**
+   * Подбор магического свитка
+   */
+  private collectMagicScroll(id: string, data: any): void {
+    this.stopMovement();
+    const pos = this.getHeroPosition();
+
+    if (!data?.scroll) {
+      this.showNotification('📜 Свиток пуст!');
+      this.removeObject(id, pos);
+      return;
+    }
+
+    const scroll: MagicScroll = data.scroll;
+    
+    // Добавляем свиток герою
+    MagicScrollSystem.addScrollToHero(this.hero, scroll);
+
+    // Красивое уведомление
+    const schoolEmoji = MagicScrollSystem.getSchoolEmoji(scroll.school);
+    const rarityColor = MagicScrollSystem.getRarityColor(scroll.rarity);
+    const rarityName = MagicScrollSystem.getRarityName(scroll.rarity);
+    
+    this.showNotification(
+      `📜 Найден свиток: ${schoolEmoji} ${scroll.spellName} (${rarityName}, ур.${scroll.level})\n` +
+      `${scroll.description}`
+    );
+
+    console.log(`[WorldScene] 📜 Scroll collected: ${scroll.spellName} (${scroll.school}, lvl ${scroll.level})`);
+
+    // Удаляем свиток с карты
     this.removeObject(id, pos);
   }
   

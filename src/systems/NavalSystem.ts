@@ -248,7 +248,7 @@ export function canMoveOnWater(hero: Hero): boolean {
     return true;
   }
   
-  // Заклинание Water Walk (если есть) - TODO: реализовать
+  // Заклинание Water Walk (если есть)
   if (hero.waterWalk) {
     return true;
   }
@@ -273,7 +273,7 @@ export function getWaterMovementSpeed(hero: Hero): number {
 /**
  * Морское сражение ( boarding combat )
  * Когда герой на корабле встречает вражеский корабль
- * TODO: реализовать отдельную сцену морского боя
+ * Примечание: полноценные морские сражения - будущая фича
  */
 export function initiateNavalBattle(
   attacker: Hero,

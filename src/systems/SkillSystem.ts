@@ -110,8 +110,17 @@ export class SkillSystem {
     wizard: {
       id: 'wizard_specialization',
       name: 'Эрудит',
-      description: 'Доступ ко всем школам магии',
+      description: '+1 к силе магии всех школ',
       icon: '📚',
+      apply: (hero) => {
+        hero.stats.spellPower = (hero.stats.spellPower || 0) + 1;
+      }
+    },
+    artificer: {
+      id: 'artificer_specialization',
+      name: 'Мастер магических предметов',
+      description: '+20% эффективность артефактов',
+      icon: '⚒️',
       apply: () => {}
     },
     barbarian: {
@@ -120,21 +129,33 @@ export class SkillSystem {
       description: '+2 атака существ ближнего боя',
       icon: '🪓',
       apply: () => {}
+    },
+    shaman: {
+      id: 'shaman_specialization',
+      name: 'Дух предков',
+      description: '+1 мораль и +1 удача',
+      icon: '🔮',
+      apply: (hero) => {
+        hero.stats.morale = (hero.stats.morale || 0) + 1;
+        hero.stats.luck = (hero.stats.luck || 0) + 1;
+      }
     }
   };
 
-  // === СТАРТОВЫЕ НАВЫКИ ПО КЛАССАМ ===
+  // === СТАРТОВЫЕ НАВЫКИ ПО КЛАССАМ (канон HoMM4) ===
   public static STARTING_SKILLS: Record<string, string[]> = {
-    knight: ['offense', 'leadership'],
-    cleric: ['wisdom', 'mysticism'],
-    death_knight: ['offense', 'defense_skill'],
-    necromancer: ['wisdom', 'intelligence'],
+    knight: ['offense', 'defense_skill'],
+    cleric: ['life_magic', 'wisdom'],
+    death_knight: ['offense', 'death_magic'],
+    necromancer: ['death_magic', 'necromancy'],
     ranger: ['archery', 'scouting'],
-    druid: ['wisdom', 'magic_school'],
-    demoniac: ['offense', 'sorcery'],
-    heretic: ['sorcery', 'intelligence'],
-    wizard: ['wisdom', 'intelligence', 'mysticism'],
-    barbarian: ['offense', 'leadership', 'logistics']
+    druid: ['nature_magic', 'wisdom'],
+    demoniac: ['chaos_magic', 'offense'],
+    heretic: ['chaos_magic', 'death_magic'],
+    wizard: ['order_magic', 'wisdom'],
+    artificer: ['order_magic', 'intelligence'],
+    barbarian: ['offense', 'logistics'],
+    shaman: ['nature_magic', 'resistance']
   };
 
   // === СТАРТОВЫЕ ХАРАКТЕРИСТИКИ ПО КЛАССАМ ===
@@ -148,7 +169,9 @@ export class SkillSystem {
     demoniac:    { attack: 4, defense: 2, spellPower: 1, knowledge: 0 },
     heretic:     { attack: 2, defense: 1, spellPower: 3, knowledge: 1 },
     wizard:      { attack: 0, defense: 0, spellPower: 3, knowledge: 4 },
-    barbarian:   { attack: 4, defense: 3, spellPower: 0, knowledge: 0 }
+    artificer:   { attack: 1, defense: 1, spellPower: 2, knowledge: 3 },
+    barbarian:   { attack: 4, defense: 3, spellPower: 0, knowledge: 0 },
+    shaman:      { attack: 1, defense: 2, spellPower: 2, knowledge: 2 }
   };
 
   // === HP ГЕРОЕВ ПО КЛАССАМ (base + perLevel) ===
@@ -163,7 +186,9 @@ export class SkillSystem {
     demoniac:      { base: 20, perLevel: 5 },
     heretic:       { base: 14, perLevel: 3 },
     wizard:        { base: 12, perLevel: 3 },
-    barbarian:     { base: 25, perLevel: 6 }
+    artificer:     { base: 14, perLevel: 4 },
+    barbarian:     { base: 25, perLevel: 6 },
+    shaman:        { base: 16, perLevel: 4 }
   };
 
   constructor(seed: number = Date.now()) {

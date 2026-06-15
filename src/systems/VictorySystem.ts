@@ -41,6 +41,7 @@ export interface HeroState {
   hero: Hero;
   owner: OwnerType;
   alive: boolean;
+  captured: boolean;
   x: number;
   y: number;
 }
@@ -73,9 +74,10 @@ export class VictorySystem {
   private towns: Map<string, TownOwnership> = new Map();
   private mines: Map<string, MineOwnership> = new Map();
   private heroes: Map<string, HeroState> = new Map();
+  private day: number = 1;
   private victoryCondition: VictoryCondition;
   private defeatCondition: DefeatCondition;
-  private day: number = 1;
+  private currentGold: number = 0;
 
   constructor(
     victory: VictoryCondition = { type: 'defeat_all_enemies' },
@@ -127,8 +129,31 @@ export class VictorySystem {
     if (hero) hero.alive = false;
   }
 
+  captureHeroById(heroId: string): void {
+    const hero = this.heroes.get(heroId);
+    if (hero) {
+      hero.captured = true;
+      hero.alive = false;
+    }
+  }
+
+  releaseHero(heroId: string): void {
+    const hero = this.heroes.get(heroId);
+    if (hero) {
+      hero.captured = false;
+      hero.alive = true;
+    }
+  }
+
   setDay(day: number): void {
     this.day = day;
+  }
+
+  /**
+   * Установить текущее количество золота игрока (для проверки условий победы)
+   */
+  setGold(gold: number): void {
+    this.currentGold = gold;
   }
 
   // === ПРОВЕРКА УСЛОВИЙ ===
@@ -229,7 +254,6 @@ export class VictorySystem {
   getStats(): VictoryCheckResult['stats'] {
     let playerTowns = 0, aiTowns = 0;
     let playerHeroes = 0, aiHeroes = 0;
-    let playerGold = 0;
 
     for (const town of this.towns.values()) {
       if (town.owner === 'player') playerTowns++;
@@ -237,10 +261,9 @@ export class VictorySystem {
     }
 
     for (const hero of this.heroes.values()) {
-      if (!hero.alive) continue;
+      if (!hero.alive || hero.captured) continue;
       if (hero.owner === 'player') {
         playerHeroes++;
-        // Gold is tracked externally, this is approximate
       }
       else if (hero.owner === 'ai') aiHeroes++;
     }
@@ -250,7 +273,7 @@ export class VictorySystem {
       playerHeroes,
       aiTowns,
       aiHeroes,
-      playerGold,
+      playerGold: this.currentGold,
       day: this.day
     };
   }

@@ -1,6 +1,9 @@
 /**
  * Процедурный генератор объектов карты
- * Создаёт 50+ объектов с правильным зонированием
+ * Создаёт 60+ объектов с правильным зонированием
+ * 
+ * Канон HoMM4: нейтральные существа спавнятся по тирам,
+ * чем дальше от стартового города — сильнее стражи.
  */
 
 import { MapObject, MapObjectType, MapLevel } from '../types';
@@ -37,52 +40,123 @@ export class MapObjectGenerator {
     const { mapWidth, mapHeight, playerStartX, playerStartY } = config;
 
     // === 1. ГОРОДА ===
-    // Стартовый город игрока (рядом с героем)
     this.addObject('town_1', 'town', playerStartX + 3, playerStartY, { faction: 'haven' });
 
-    // Вражеские города
     config.enemyTownPositions.forEach((pos, i) => {
       this.addObject(`enemy_town_${i + 1}`, 'enemy_town', pos.x, pos.y, {
         faction: this.getRandomFaction(rand)
       });
     });
 
-    // === 2. ШАХТЫ (12 штук, разных типов) ===
-    const mineTypes = ['gold', 'gold', 'gold', 'wood', 'wood', 'ore', 'ore', 
+    // === 2. ШАХТЫ (12 штук) ===
+    const mineTypes = ['gold', 'gold', 'gold', 'wood', 'wood', 'ore', 'ore',
                        'crystal', 'gems', 'sulfur', 'mercury', 'gold'];
     for (let i = 0; i < 12; i++) {
       const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
       if (pos) {
-        this.addObject(`mine_${i + 1}`, 'mine', pos.x, pos.y, { 
-          type: mineTypes[i] 
+        this.addObject(`mine_${i + 1}`, 'mine', pos.x, pos.y, {
+          type: mineTypes[i]
         });
       }
     }
 
-    // === 3. СУЩЕСТВА (20 штук, разных уровней) ===
-    const creatureTypes = [
-      'pikeman', 'archer', 'griffin', 'skeleton', 'zombie', 'wolf', 'elf',
-      'goblin', 'orc', 'gremlin', 'golem', 'gnoll', 'lizardman',
-      'cavalier', 'vampire', 'unicorn', 'minotaur', 'mage', 'troll'
-    ];
-    for (let i = 0; i < 20; i++) {
+    // === 3. НЕЙТРАЛЬНЫЕ СУЩЕСТВА (35 штук, по тирам из канона HoMM4) ===
+    // Тир 1: слабые (поблизости от стартового города)
+    const tier1Neutrals = ['peasant', 'halfling_neutral', 'boar', 'goblin', 'wolf_neutral', 'zombie', 'skeleton_neutral'];
+    // Тир 2: средние
+    const tier2Neutrals = ['bandit_neutral', 'nomad_neutral', 'nymph', 'satyr', 'blind_monk', 'ice_elemental', 'fire_elemental', 'earth_elemental', 'air_elemental'];
+    // Тир 3: сильные
+    const tier3Neutrals = ['troll', 'mummy', 'ogre_neutral', 'sea_serpent', 'griffin_neutral', 'wizard_neutral'];
+    // Тир 4: элитные
+    const tier4Neutrals = ['behemoth_neutral', 'dragon_neutral', 'hydra_neutral', 'angel_neutral', 'devil_neutral', 'phoenix_neutral'];
+    // Тир 5: легендарные (края карты)
+    const tier5Neutrals = ['azure_dragon', 'rust_dragon', 'crystal_dragon', 'faerie_dragon_neutral'];
+
+    const maxDist = Math.sqrt(Math.pow(mapWidth, 2) + Math.pow(mapHeight, 2));
+
+    for (let i = 0; i < 35; i++) {
       const pos = this.findPosition(rand, mapWidth, mapHeight, 'any');
       if (pos) {
-        const creature = creatureTypes[Math.floor(rand() * creatureTypes.length)];
+        const distFromStart = Math.sqrt(
+          Math.pow(pos.x - playerStartX, 2) + Math.pow(pos.y - playerStartY, 2)
+        );
+        const distanceRatio = distFromStart / maxDist;
+
+        let creaturePool: string[];
+        let countMin: number;
+        let countMax: number;
+
+        if (distanceRatio < 0.15) {
+          creaturePool = tier1Neutrals;
+          countMin = 8; countMax = 20;
+        } else if (distanceRatio < 0.35) {
+          creaturePool = rand() < 0.5 ? tier1Neutrals : tier2Neutrals;
+          countMin = 5; countMax = 15;
+        } else if (distanceRatio < 0.55) {
+          creaturePool = rand() < 0.6 ? tier2Neutrals : tier3Neutrals;
+          countMin = 3; countMax = 12;
+        } else if (distanceRatio < 0.75) {
+          creaturePool = rand() < 0.5 ? tier3Neutrals : tier4Neutrals;
+          countMin = 2; countMax = 8;
+        } else {
+          creaturePool = rand() < 0.7 ? tier4Neutrals : tier5Neutrals;
+          countMin = 1; countMax = 5;
+        }
+
+        const creature = creaturePool[Math.floor(rand() * creaturePool.length)];
+        const count = countMin + Math.floor(rand() * (countMax - countMin));
+
         this.addObject(`creature_${i + 1}`, 'creature', pos.x, pos.y, {
           creatureId: creature,
-          count: Math.floor(rand() * 20) + 5
+          count: count
         });
+      }
+    }
+
+    // === 3b. Стражи шахт (охраняют ресурсы) ===
+    const mineGuardPools: Record<string, string[]> = {
+      'gold': ['bandit_neutral', 'ogre_neutral', 'cyclops_h4'],
+      'wood': ['troll', 'mummy'],
+      'ore': ['earth_elemental', 'stone_golem'],
+      'crystal': ['ice_elemental', 'fire_elemental'],
+      'gems': ['air_elemental', 'fire_elemental'],
+      'sulfur': ['dragon_neutral', 'behemoth_neutral'],
+      'mercury': ['wizard_neutral', 'angel_neutral']
+    };
+
+    // Стражи ставятся рядом с шахтами (offset 1-2 клетки)
+    for (let i = 0; i < 12; i++) {
+      const mineObj = this.objects.find(o => o.id === `mine_${i + 1}`);
+      if (mineObj) {
+        const mineType = mineTypes[i];
+        const pool = mineGuardPools[mineType] || tier2Neutrals;
+        const guardCreature = pool[Math.floor(rand() * pool.length)];
+        const guardCount = 3 + Math.floor(rand() * 8);
+
+        // Ищем свободную клетку рядом с шахтой
+        const offsets = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1]];
+        for (const [dx, dy] of offsets) {
+          const gx = mineObj.x + dx;
+          const gy = mineObj.y + dy;
+          const gkey = `${gx},${gy}`;
+          if (!this.occupiedCells.has(gkey) && gx >= 0 && gx < mapWidth && gy >= 0 && gy < mapHeight) {
+            this.addObject(`mine_guard_${i + 1}`, 'creature', gx, gy, {
+              creatureId: guardCreature,
+              count: guardCount
+            });
+            break;
+          }
+        }
       }
     }
 
     // === 4. АРТЕФАКТЫ (8 штук) ===
-    const artifactTiers = ['minor', 'minor', 'minor', 'major', 'major', 'relic'];
+    const artifactTiers = ['minor', 'minor', 'minor', 'major', 'major', 'major', 'relic', 'relic'];
     for (let i = 0; i < 8; i++) {
       const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
       if (pos) {
         this.addObject(`artifact_${i + 1}`, 'artifact', pos.x, pos.y, {
-          tier: artifactTiers[Math.floor(rand() * artifactTiers.length)]
+          tier: artifactTiers[i]
         });
       }
     }
@@ -113,8 +187,8 @@ export class MapObjectGenerator {
       }
     }
 
-    // === 7. ШКОЛЫ МАГИИ (3 штуки, HoMM4 канон) ===
-    const schools = ['life', 'death', 'order', 'chaos', 'natural', 'tactics'];
+    // === 7. ШКОЛЫ МАГИИ (3 штуки) ===
+    const schools = ['life', 'death', 'order', 'chaos', 'natural'];
     for (let i = 0; i < 3; i++) {
       const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
       if (pos) {
@@ -157,7 +231,7 @@ export class MapObjectGenerator {
       }
     }
 
-    // === 11. ТАВЕРНЫ (2 штуки, слухи) ===
+    // === 11. ТАВЕРНЫ (2 штуки) ===
     for (let i = 0; i < 2; i++) {
       const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
       if (pos) {
@@ -192,8 +266,9 @@ export class MapObjectGenerator {
     for (let i = 0; i < 2; i++) {
       const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
       if (pos) {
+        const allNeutrals = [...tier1Neutrals, ...tier2Neutrals];
         this.addObject(`refugee_${i + 1}`, 'refugee_camp', pos.x, pos.y, {
-          creature: creatureTypes[Math.floor(rand() * creatureTypes.length)],
+          creature: allNeutrals[Math.floor(rand() * allNeutrals.length)],
           count: Math.floor(rand() * 10) + 5
         });
       }
@@ -203,10 +278,11 @@ export class MapObjectGenerator {
     for (let i = 0; i < 3; i++) {
       const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
       if (pos) {
+        const pool = [...tier2Neutrals, ...tier3Neutrals];
         this.addObject(`garrison_${i + 1}`, 'garrison', pos.x, pos.y, {
           creatures: [
-            { id: creatureTypes[Math.floor(rand() * creatureTypes.length)], count: Math.floor(rand() * 15) + 10 },
-            { id: creatureTypes[Math.floor(rand() * creatureTypes.length)], count: Math.floor(rand() * 10) + 5 }
+            { id: pool[Math.floor(rand() * pool.length)], count: Math.floor(rand() * 15) + 10 },
+            { id: pool[Math.floor(rand() * pool.length)], count: Math.floor(rand() * 10) + 5 }
           ]
         });
       }
@@ -262,13 +338,118 @@ export class MapObjectGenerator {
       }
     }
 
+    // === 21. ВНЕШНИЕ ЖИЛИЩА (10 штук, канон HoMM4 — еженедельный прирост) ===
+    const dwellingDefs = [
+      { definitionId: 'hill_fort', name: 'Холмная крепость' },
+      { definitionId: 'dwarven_cottage', name: 'Домик гномов' },
+      { definitionId: 'gnoll_hollow', name: 'Логово гноллов' },
+      { definitionId: 'cyclops_cave', name: 'Пещера циклопов' },
+      { definitionId: 'dragon_cave', name: 'Логово драконов' },
+      { definitionId: 'elemental_altar', name: 'Алтарь элементалей' },
+      { definitionId: 'haven_outpost', name: 'Дозорный пост' },
+      { definitionId: 'necro_grave', name: 'Старое кладбище' },
+      { definitionId: 'preserve_wolf_den', name: 'Волчье логово' },
+      { definitionId: 'academy_workshop', name: 'Мастерская' },
+    ];
+    for (let i = 0; i < dwellingDefs.length; i++) {
+      const dwelling = dwellingDefs[i];
+      const pos = this.findPosition(rand, mapWidth, mapHeight, i < 4 ? 'medium' : 'far');
+      if (pos) {
+        this.addObject(`dwelling_${dwelling.definitionId}`, 'dwelling', pos.x, pos.y, {
+          definitionId: dwelling.definitionId,
+          dwellingName: dwelling.name,
+          owner: 'neutral',
+          bankedCreatures: Math.floor(rand() * 8) + 3,
+          isUpgraded: false,
+          lastGrowthDay: 0
+        });
+      }
+    }
+
+    // === 22. ЗЕЛЬЯ НА КАРТЕ (3-5 штук, канон HoMM4) ===
+    const potionPool = [
+      { id: 'healing_potion', name: 'Зелье лечения', effect: 'heal', value: 50 },
+      { id: 'mana_potion', name: 'Зелье маны', effect: 'restore_mana', value: 30 },
+      { id: 'minor_healing', name: 'Малое зелье лечения', effect: 'heal', value: 100 },
+      { id: 'attack_potion', name: 'Зелье ярости', effect: 'boost_attack', value: 5, duration: 3 },
+      { id: 'defense_potion', name: 'Зелье защиты', effect: 'boost_defense', value: 5, duration: 3 },
+    ];
+    const potionCount = 3 + Math.floor(rand() * 3); // 3-5 зелий
+    for (let i = 0; i < potionCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'any');
+      if (pos) {
+        const potion = potionPool[Math.floor(rand() * potionPool.length)];
+        this.addObject(`potion_${i + 1}`, 'resource', pos.x, pos.y, {
+          type: 'potion',
+          potionId: potion.id,
+          potionName: potion.name,
+          effect: potion.effect,
+          value: potion.value,
+          duration: potion.duration
+        });
+      }
+    }
+
+    // === 23. КОСТРЫ (Campfires) — золото/ресурсы (канон HoMM4) ===
+    const campfireCount = 5 + Math.floor(rand() * 4); // 5-8 костров
+    for (let i = 0; i < campfireCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'any');
+      if (pos) {
+        const goldAmount = 200 + Math.floor(rand() * 800); // 200-1000 золота
+        this.addObject(`campfire_${i + 1}`, 'resource', pos.x, pos.y, {
+          type: 'campfire',
+          gold: goldAmount,
+          name: 'Костёр'
+        });
+      }
+    }
+
+    // === 24. ОБСЕРВАТОРИИ (Observation Towers) — раскрывают область (канон HoMM4) ===
+    const towerCount = 3 + Math.floor(rand() * 2); // 3-4 обсерватории
+    for (let i = 0; i < towerCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`observation_tower_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'observation_tower',
+          revealRadius: 5,
+          name: 'Обсерватория'
+        });
+      }
+    }
+
+    // === 25. КАМЕННЫЕ ГРАНИТЫ (Stone Rocks) — бонус к характеристикам (канон HoMM4) ===
+    const rockBonusTypes = ['attack', 'defense', 'spell_power', 'knowledge'];
+    for (let i = 0; i < 4; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`rock_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'stat_rock',
+          bonus: rockBonusTypes[i],
+          value: 1,
+          name: `Камень ${rockBonusTypes[i] === 'attack' ? 'силы' : rockBonusTypes[i] === 'defense' ? 'защиты' : rockBonusTypes[i] === 'spell_power' ? 'магии' : 'знания'}`
+        });
+      }
+    }
+
+    // === 26. БОГАТЫЕ ШАХТЫ (Rich Mines) — дополнительный доход (канон HoMM4) ===
+    for (let i = 0; i < 2; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`rich_mine_${i + 1}`, 'mine', pos.x, pos.y, {
+          type: 'gold',
+          dailyIncome: 1500, // Богатая шахта: +500 к обычной
+          name: 'Богатая золотая шахта'
+        });
+      }
+    }
+
     console.log(`[MapObjectGenerator] Создано ${this.objects.length} объектов`);
   }
 
   private addObject(id: string, type: MapObjectType, x: number, y: number, data?: any): void {
     const key = `${x},${y}`;
     if (this.occupiedCells.has(key)) return;
-    
+
     this.occupiedCells.add(key);
     this.objects.push({ id, type, x, y, data, level: 'surface' as MapLevel });
   }
@@ -280,21 +461,20 @@ export class MapObjectGenerator {
     distance: 'near' | 'medium' | 'far' | 'any'
   ): { x: number; y: number } | null {
     const maxAttempts = 50;
-    
+
     for (let i = 0; i < maxAttempts; i++) {
       const x = Math.floor(rand() * mapW);
       const y = Math.floor(rand() * mapH);
       const key = `${x},${y}`;
-      
+
       if (this.occupiedCells.has(key)) continue;
-      
-      // Проверяем расстояние от центра
+
       const centerX = mapW / 2;
       const centerY = mapH / 2;
       const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-      
+
       const maxDist = Math.min(mapW, mapH) / 2;
-      
+
       let valid = true;
       switch (distance) {
         case 'near': valid = dist < maxDist * 0.3; break;
@@ -302,10 +482,10 @@ export class MapObjectGenerator {
         case 'far': valid = dist >= maxDist * 0.4; break;
         case 'any': valid = true; break;
       }
-      
+
       if (valid) return { x, y };
     }
-    
+
     return null;
   }
 
@@ -332,7 +512,6 @@ export class MapObjectGenerator {
   }
 
   private getRandomSpell(rand: () => number): string {
-    // Заклинания HoMM4 (канон) из разных школ
     const spells = ['fireball', 'lightning', 'heal', 'bless', 'resurrect', 'haste', 'slow', 'shield', 'teleport', 'blind', 'bloodlust', 'fly'];
     return spells[Math.floor(rand() * spells.length)];
   }

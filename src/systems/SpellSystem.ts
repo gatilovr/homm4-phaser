@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BattleUnit, Spell, SpellEffect } from '../types';
 import { GameRandom } from '../utils/Random';
+import { hasAbility } from './CreatureTypes';
 
 /**
  * Система магии в бою.
@@ -149,6 +150,268 @@ export class SpellSystem {
       case 'forgetfulness':
         message = this.applyForgetfulness(targets, spellPower);
         affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА ЖИЗНИ ===
+      case 'anti_magic':
+        message = this.applyBuff.stat(targets, 'magic_immunity', 3);
+        affectedUnits.push(...targets);
+        break;
+      case 'regeneration':
+        message = this.applyBuff.stat(targets, 'regeneration', 3, 5 + spellPower * 2);
+        affectedUnits.push(...targets);
+        break;
+      case 'purify':
+        message = this.applyDispel(targets);
+        affectedUnits.push(...targets);
+        break;
+      case 'guardian_angel':
+        message = this.applyBuff.stat(targets, 'immortal', 999);
+        affectedUnits.push(...targets);
+        break;
+      case 'mass_bless':
+        message = this.applyBless(targets, spellPower);
+        affectedUnits.push(...targets);
+        break;
+      case 'mass_antimagic':
+        message = this.applyBuff.stat(targets, 'magic_immunity', 3);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА СМЕРТИ ===
+      case 'weakness':
+        message = this.applyDebuff.stat(targets, 'attack', 5 + spellPower, 3);
+        affectedUnits.push(...targets);
+        break;
+      case 'curse':
+        message = this.applyDebuff.stat(targets, 'min_damage', 0, 3);
+        affectedUnits.push(...targets);
+        break;
+      case 'implosion':
+        message = this.applyDamageSpell(targets, 30 + spellPower * 5);
+        this.applyDebuff.stat(targets, 'defense', 5, 3);
+        affectedUnits.push(...targets);
+        break;
+      case 'drain_life':
+        message = this.applyDrainLife(targets, 20 + spellPower * 5, caster);
+        affectedUnits.push(...targets);
+        break;
+      case 'age':
+        this.applyDebuff.stat(targets, 'attack', 5, 3);
+        message = this.applyDebuff.stat(targets, 'defense', 5, 3);
+        affectedUnits.push(...targets);
+        break;
+      case 'soul_eater':
+        message = this.applyDamageSpell(targets, 40 + spellPower * 8);
+        affectedUnits.push(...targets);
+        break;
+      case 'animate_dead':
+        message = '💀 Оживление мертвых: призыв нежити';
+        break;
+      case 'mass_curse':
+        message = this.applyDebuff.stat(targets, 'min_damage', 0, 3);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА ПОРЯДКА ===
+      case 'dispel':
+        message = this.applyDispel(targets);
+        affectedUnits.push(...targets);
+        break;
+      case 'precision':
+        message = this.applyBuff.stat(targets, 'ranged_damage', 3, 50 + spellPower * 10);
+        affectedUnits.push(...targets);
+        break;
+      case 'shield_wall':
+        message = this.applyShield(targets, spellPower);
+        affectedUnits.push(...targets);
+        break;
+      case 'precision_shot':
+        message = this.applyBuff.stat(targets, 'critical_chance', 1, 100);
+        affectedUnits.push(...targets);
+        break;
+      case 'time_warp':
+        message = this.applyExtraTurn(targets);
+        affectedUnits.push(...targets);
+        break;
+      case 'mass_slow':
+        message = this.applySlow(targets, spellPower);
+        affectedUnits.push(...targets);
+        break;
+      case 'mass_haste':
+        message = this.applyHaste(targets, spellPower);
+        affectedUnits.push(...targets);
+        break;
+      case 'mass_shield':
+        message = this.applyShield(targets, spellPower);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА ХАОСА ===
+      case 'poison':
+        message = this.applyDebuff.stat(targets, 'poison', 5 + spellPower, 3);
+        affectedUnits.push(...targets);
+        break;
+      case 'confusion':
+        message = this.applyDebuff.stat(targets, 'confusion', 0, 3);
+        affectedUnits.push(...targets);
+        break;
+      case 'inferno':
+        message = this.applyFireball(targets, 60 + spellPower * 10, targetPosition);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА ПРИРОДЫ ===
+      case 'strength':
+        message = this.applyBloodlust(targets, spellPower + 5);
+        affectedUnits.push(...targets);
+        break;
+      case 'antidote':
+        message = this.applyDispel(targets);
+        affectedUnits.push(...targets);
+        break;
+      case 'earthquake':
+        message = this.applyDamageSpell(targets, 40 + spellPower * 8);
+        affectedUnits.push(...targets);
+        break;
+      case 'thunderbolt':
+        message = this.applyLightning(targets, spellPower);
+        this.applyBlind(targets, spellPower);
+        affectedUnits.push(...targets);
+        break;
+      case 'bark_skin':
+        message = this.applyStoneskin(targets, spellPower + 3);
+        affectedUnits.push(...targets);
+        break;
+      case 'eruption':
+        message = this.applyFireball(targets, 45 + spellPower * 8, targetPosition);
+        affectedUnits.push(...targets);
+        break;
+      case 'summon_elementals':
+        message = '🌲 Призыв элементалей: 5 элементалей на 3 хода';
+        break;
+      case 'mirage':
+        message = '🌲 Мираж: иллюзии созданы';
+        break;
+      case 'water_walk':
+        message = '💧 Хождение по воде активировано';
+        break;
+
+      // === НОВЫЕ ЗАКЛИНАНИЯ ===
+
+      // === ШКОЛА ЖИЗНИ ===
+      case 'holy_word':
+        message = this.applyDamageSpell(targets.filter(t => hasAbility(t.creatureId, 'undead')), 25 + spellPower * 5);
+        affectedUnits.push(...targets.filter(t => hasAbility(t.creatureId, 'undead')));
+        break;
+      case 'celestial_armor':
+        message = this.applyBuff.stat(targets, 'defense', 3, 10);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА СМЕРТИ ===
+      case 'spectral_arms':
+        message = this.applyBuff.stat(targets, 'attack', 3, 8);
+        affectedUnits.push(...targets);
+        break;
+      case 'fear':
+        message = this.applyDebuff.stat(targets, 'morale', 3, 3);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА ПОРЯДКА ===
+      case 'invisibility':
+        message = this.applyBuff.stat(targets, 'invisible', 2, 1);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА ХАОСА ===
+      case 'devil_sight':
+        message = this.applyBuff.stat(targets, 'damage_vs_weakened', 3, 50);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА ПРИРОДЫ ===
+      case 'mass_stoneskin':
+        message = this.applyStoneskin(targets, spellPower);
+        affectedUnits.push(...targets);
+        break;
+      case 'summon_boat':
+        message = '⛵ Корабль призван у ближайшего берега!';
+        break;
+
+      // === НЕДОСТАЮЩИЕ ЗАКЛИНАНИЯ (канон HoMM4) ===
+
+      // === ШКОЛА СМЕРТИ ===
+      case 'destroy_unholy':
+        message = this.applyDestroyUnholy(targets, spellPower);
+        affectedUnits.push(...targets.filter(t => hasAbility(t.creatureId, 'undead')));
+        break;
+      case 'hellfire':
+        message = this.applyDamageSpell(targets, 50 + spellPower * 10);
+        affectedUnits.push(...targets);
+        break;
+      case 'misery':
+        message = this.applyDebuff.stat(targets, 'morale', 3, 5 + spellPower);
+        affectedUnits.push(...targets);
+        break;
+      case 'sacrifice':
+        message = this.applySacrifice(targets, caster, spellPower);
+        affectedUnits.push(...targets);
+        break;
+      case 'summon_daemons':
+        message = '😈 Призыв демонов: 3 демонов на 5 ходов';
+        break;
+      case 'vampirism':
+        message = this.applyBuff.stat(targets, 'lifesteal', 3, 30 + spellPower * 10);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА ПОРЯДКА ===
+      case 'dimension_door':
+        message = this.applyTeleport(targets, targetPosition);
+        affectedUnits.push(...targets);
+        break;
+      case 'force_field':
+        message = '🔮 Силовое поле: непроходимый барьер создан';
+        break;
+      case 'portal':
+        message = '🌀 Портал: телепортация между двумя точками';
+        break;
+      case 'transmutation':
+        message = '⚡ Трансмутация: ресурсы преобразованы';
+        break;
+
+      // === ШКОЛА ПРИРОДЫ ===
+      case 'land_mine':
+        message = '💣 Сухопутная мина: ловушка установлена';
+        break;
+      case 'pathfinding':
+        message = this.applyBuff.stat(targets, 'movement', 3, 50 + spellPower * 10);
+        affectedUnits.push(...targets);
+        break;
+      case 'retaliation_free':
+        message = this.applyBuff.stat(targets, 'free_retaliation', 1, 1);
+        affectedUnits.push(...targets);
+        break;
+      case 'thunder_storm':
+        message = this.applyDamageSpell(targets, 35 + spellPower * 7);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА ЖИЗНИ ===
+      case 'holy_light':
+        message = this.applyHeal(targets, spellPower * 1.5);
+        affectedUnits.push(...targets);
+        break;
+      case 'resurrection_mass':
+        message = this.applyResurrect(targets, spellPower * 2);
+        affectedUnits.push(...targets);
+        break;
+
+      // === ШКОЛА ХАОСА ===
+      case 'metamorphosis':
+        message = '🔮 Метаморфоза: юнит трансформирован';
         break;
 
       default:
@@ -420,6 +683,84 @@ export class SpellSystem {
   // ============================================================================
 
   /**
+   * Нанести урон целям
+   */
+  private applyDamageSpell(targets: BattleUnit[], damage: number): string {
+    let totalDamage = 0;
+    for (const target of targets) {
+      const actualDamage = Math.min(target.currentHealth, damage);
+      target.currentHealth -= actualDamage;
+      totalDamage += actualDamage;
+      this.applyDamageToCount(target, actualDamage);
+    }
+    return `💥 ${totalDamage} урона`;
+  }
+
+  /**
+   * Пожирание жизни: урон + лечение заклинателя
+   */
+  private applyDrainLife(targets: BattleUnit[], damage: number, caster: BattleUnit | null): string {
+    let totalDamage = 0;
+    for (const target of targets) {
+      const actualDamage = Math.min(target.currentHealth, damage);
+      target.currentHealth -= actualDamage;
+      totalDamage += actualDamage;
+      this.applyDamageToCount(target, actualDamage);
+    }
+    if (caster) {
+      const heal = Math.floor(totalDamage * 0.5);
+      caster.currentHealth = Math.min(caster.maxHealth, caster.currentHealth + heal);
+      return `💀 Пожирание жизни: ${totalDamage} урона, +${heal} HP`;
+    }
+    return `💀 Пожирание жизни: ${totalDamage} урона`;
+  }
+
+  /**
+   * Снять все эффекты с целей
+   */
+  private applyDispel(targets: BattleUnit[]): string {
+    for (const target of targets) {
+      target.effects = [];
+    }
+    return '✨ Эффекты сняты';
+  }
+
+  /**
+   * Дать дополнительный ход
+   */
+  private applyExtraTurn(targets: BattleUnit[]): string {
+    for (const target of targets) {
+      target.hasActed = false;
+      target.effects.push({ spellId: 'extra_turn', duration: 1, value: 1 });
+    }
+    return '⏱ Дополнительный ход!';
+  }
+
+  /**
+   * Буфф: добавить эффект stat
+   */
+  private applyBuff = {
+    stat: (targets: BattleUnit[], stat: string, duration: number, value: number = 1): string => {
+      for (const target of targets) {
+        target.effects.push({ spellId: stat, duration, value });
+      }
+      return `✨ Буфф: ${stat} на ${duration} ходов`;
+    }
+  };
+
+  /**
+   * Дебафф: добавить негативный эффект stat
+   */
+  private applyDebuff = {
+    stat: (targets: BattleUnit[], stat: string, value: number, duration: number): string => {
+      for (const target of targets) {
+        target.effects.push({ spellId: `debuff_${stat}`, duration, value });
+      }
+      return `💀 Дебафф: -${stat} на ${duration} ходов`;
+    }
+  };
+
+  /**
    * Применить урон к количеству существ в отряде
    */
   private applyDamageToCount(unit: BattleUnit, damage: number): void {
@@ -509,8 +850,11 @@ export class SpellSystem {
   getAttackModifier(unit: BattleUnit): number {
     let modifier = 0;
     for (const effect of unit.effects) {
-      if (effect.spellId === 'bloodlust') {
+      if (effect.spellId === 'bloodlust' || effect.spellId === 'attack') {
         modifier += effect.value || 0;
+      }
+      if (effect.spellId === 'debuff_attack') {
+        modifier -= effect.value || 0;
       }
     }
     return modifier;
@@ -522,8 +866,11 @@ export class SpellSystem {
   getDefenseModifier(unit: BattleUnit): number {
     let modifier = 0;
     for (const effect of unit.effects) {
-      if (effect.spellId === 'stoneskin') {
+      if (effect.spellId === 'stoneskin' || effect.spellId === 'defense') {
         modifier += effect.value || 0;
+      }
+      if (effect.spellId === 'debuff_defense') {
+        modifier -= effect.value || 0;
       }
     }
     return modifier;
@@ -550,8 +897,14 @@ export class SpellSystem {
   getDamageModifier(unit: BattleUnit): number {
     let modifier = 1;
     for (const effect of unit.effects) {
-      if (effect.spellId === 'bless') {
+      if (effect.spellId === 'bless' || effect.spellId === 'damage') {
         modifier *= 1 + (effect.value || 0) / 100;
+      }
+      if (effect.spellId === 'ranged_damage') {
+        modifier *= 1 + (effect.value || 0) / 100;
+      }
+      if (effect.spellId === 'debuff_min_damage') {
+        modifier = 0.5; // Проклятие: минимальный урон
       }
     }
     return modifier;
@@ -563,8 +916,11 @@ export class SpellSystem {
   getIncomingDamageModifier(unit: BattleUnit): number {
     let modifier = 1;
     for (const effect of unit.effects) {
-      if (effect.spellId === 'shield') {
+      if (effect.spellId === 'shield' || effect.spellId === 'defense') {
         modifier *= 1 - (effect.value || 0) / 100;
+      }
+      if (effect.spellId === 'magic_immunity') {
+        return 0; // Антимагия:免疫 к магическому урону
       }
     }
     return modifier;
@@ -596,5 +952,60 @@ export class SpellSystem {
    */
   canFly(unit: BattleUnit): boolean {
     return unit.effects.some(e => e.spellId === 'fly');
+  }
+
+  // ============================================================================
+  // НОВЫЕ МЕТОДЫ ДЛЯ НЕДОСТАЮЩИХ ЗАКЛИНАНИЙ
+  // ============================================================================
+
+  /**
+   * Уничтожение нежити (Death school)
+   * Наносит巨额 урон нежити, лечит живых союзников
+   */
+  private applyDestroyUnholy(targets: BattleUnit[], spellPower: number): string {
+    let damage = 0;
+    let healed = 0;
+    
+    for (const target of targets) {
+      if (hasAbility(target.creatureId, 'undead')) {
+        // Урон нежити
+        const dmg = 50 + spellPower * 15;
+        target.currentHealth -= dmg;
+        damage += dmg;
+      } else {
+        // Лечение живых союзников
+        const heal = 20 + spellPower * 5;
+        const before = target.currentHealth;
+        target.currentHealth = Math.min(target.maxHealth, target.currentHealth + heal);
+        healed += target.currentHealth - before;
+      }
+    }
+    
+    return `💀 Уничтожение нежити: ${damage} урона нежити, ${healed} лечения`;
+  }
+
+  /**
+   * Жертва (Death school)
+   * Жертвует одним юнитом для лечения другого
+   */
+  private applySacrifice(targets: BattleUnit[], caster: BattleUnit | null, spellPower: number): string {
+    if (targets.length < 2 || !caster) {
+      return '❌ Жертва требует 2 юнита';
+    }
+    
+    // Первый юнит — жертва, второй — получатель
+    const victim = targets[0];
+    const recipient = targets[1];
+    
+    // Жертва погибает
+    const sacrificeHeal = victim.currentHealth * (0.5 + spellPower * 0.1);
+    victim.currentHealth = 0;
+    
+    // Получатель лечится
+    const before = recipient.currentHealth;
+    recipient.currentHealth = Math.min(recipient.maxHealth, recipient.currentHealth + sacrificeHeal);
+    const healed = recipient.currentHealth - before;
+    
+    return `💀 Жертва: ${victim.creatureId} погибает, ${recipient.creatureId} восстанавливает ${Math.round(healed)} HP`;
   }
 }

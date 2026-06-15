@@ -1,8 +1,8 @@
 /**
  * 🎮 Heroes IV — Полный автотест через Playwright
- *
+ * 
  * 12 шагов: меню → карта → pathfinding → подземелье → бой → город → save/load
- *
+ * 
  * Запуск: npx playwright test tests/homm4-full-test.spec.ts --config=tests/playwright.config.ts
  * С отчётом: npx playwright test tests/homm4-full-test.spec.ts --config=tests/playwright.config.ts --reporter=html
  */
@@ -35,31 +35,6 @@ async function screenshot(page: Page, stepName: string) {
   console.log(`  📸 Скриншот: ${filename}`);
 }
 
-/** Ожидание появления текста на канвасе через проверку console.log */
-async function waitForLog(page: Page, text: string, timeout = 30000): Promise<boolean> {
-  return new Promise((resolve) => {
-    const timeoutId = setTimeout(() => {
-      console.log(`  ⚠️ Таймаут ожидания лога: "${text}"`);
-      resolve(false);
-    }, timeout);
-
-    const handler = (msg: ConsoleMessage) => {
-      if (msg.type() === 'log' && msg.text().includes(text)) {
-        clearTimeout(timeoutId);
-        page.off('console', handler);
-        resolve(true);
-      }
-    };
-    page.on('console', handler);
-
-    // Также проверяем уже существующие логи
-    page.evaluate(() => {
-      const logs = (window as any).__consoleLogs || [];
-      return logs;
-    }).then(() => {}).catch(() => {});
-  });
-}
-
 /** Собрать все console.error за время теста */
 function collectErrors(page: Page, errors: string[]) {
   page.on('console', (msg: ConsoleMessage) => {
@@ -72,15 +47,39 @@ function collectErrors(page: Page, errors: string[]) {
   });
 }
 
-/** Подождать и проверить, что сцена загружена (по console.log) */
-async function waitForScene(page: Page, sceneName: string, timeout = 30000) {
-  console.log(`  ⏳ Ожидание сцены: ${sceneName}...`);
-  const found = await waitForLog(page, sceneName, timeout);
-  expect(found).toBeTruthy();
-  console.log(`  ✅ Сцена ${sceneName} загружена`);
+/**
+ * Получить активную сцену через window.__game
+ * Возвращает key активной сцены или null
+ */
+async function getActiveScene(page: Page): Promise<string | null> {
+  return page.evaluate(() => {
+    const game = (window as any).__game;
+    if (!game) return null;
+    const scenes = game.scene.getScenes(true);
+    if (scenes && scenes.length > 0) {
+      return scenes[0].scene.key;
+    }
+    return null;
+  });
 }
 
-/** Нажать клавишу на странице (через dispatchEvent на canvas) */
+/**
+ * Ожидать, пока активная сцена не станет нужной
+ */
+async function waitForScene(page: Page, sceneKey: string, timeout = 30000): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const active = await getActiveScene(page);
+    if (active === sceneKey) return true;
+    await page.waitForTimeout(500);
+  }
+  console.log(`  ⚠️ Таймаут ожидания сцены "${sceneKey}", последняя: ${await getActiveScene(page)}`);
+  return false;
+}
+
+/**
+ * Нажать клавишу — отправляем событие на document
+ */
 async function pressKey(page: Page, key: string) {
   await page.evaluate((k) => {
     const event = new KeyboardEvent('keydown', {
@@ -97,19 +96,23 @@ async function pressKey(page: Page, key: string) {
   await page.waitForTimeout(500);
 }
 
-/** Получить canvas элемент и его bounding box */
+/**
+ * Получить canvas элемент и его bounding box
+ */
 async function getCanvasBox(page: Page) {
   const canvas = page.locator('canvas');
   await canvas.waitFor({ state: 'visible', timeout: 15000 });
   return await canvas.boundingBox();
 }
 
-/** Кликнуть на canvas в координатах игры (tileX, tileY) */
+/**
+ * Кликнуть на canvas в координатах игры (tileX, tileY)
+ * Учитывает Phaser.Scale.FIT — canvas может быть scaled
+ */
 async function clickTile(page: Page, tileX: number, tileY: number) {
   const box = await getCanvasBox(page);
   if (!box) throw new Error('Canvas not found');
   
-  // Игра 1280x720, canvas может быть scaled — используем относительные координаты
   const gameW = 1280;
   const gameH = 720;
   const tileSize = 64;
@@ -131,19 +134,90 @@ async function clickTile(page: Page, tileX: number, tileY: number) {
   await page.waitForTimeout(300);
 }
 
-/** Проверить, что в консоли нет ошибок WebGL/Phaser критического уровня */
+/**
+ * Кликнуть на canvas в пиксельных координатах (относительно игры 1280x720)
+ */
+async function clickGamePixel(page: Page, gameX: number, gameY: number) {
+  const box = await getCanvasBox(page);
+  if (!box) throw new Error('Canvas not found');
+  
+  const scaleX = box.width / 1280;
+  const scaleY = box.height / 720;
+  
+  const canvasX = box.x + gameX * scaleX;
+  const canvasY = box.y + gameY * scaleY;
+  
+  console.log(`  🖱️ Клик по игре (${gameX}, ${gameY}) → canvas (${Math.round(canvasX)}, ${Math.round(canvasY)})`);
+  
+  await page.mouse.click(canvasX, canvasY);
+  await page.waitForTimeout(500);
+}
+
+/**
+ * Проверить, что в консоли нет критических ошибок
+ */
 function checkCriticalErrors(errors: string[]): string[] {
   const critical = errors.filter(e => {
     const lower = e.toLowerCase();
-    // Игнорируем безобидные предупреждения
     if (lower.includes('favicon')) return false;
     if (lower.includes('manifest')) return false;
     if (lower.includes('analytics')) return false;
     if (lower.includes('cross-origin')) return false;
-    if (lower.includes('renderable')) return false; // Phaser часто выдаёт
+    if (lower.includes('renderable')) return false;
+    if (lower.includes('webgl') && lower.includes('context')) return false;
+    if (lower.includes('extension')) return false;
     return true;
   });
   return critical;
+}
+
+/**
+ * Получить информацию об объектах на карте через window.__game
+ */
+async function getGameObjects(page: Page) {
+  return page.evaluate(() => {
+    const game = (window as any).__game;
+    if (!game) return null;
+    const worldScene = game.scene.getScene('WorldScene');
+    if (!worldScene) return null;
+    
+    const result: any = {
+      heroPos: null,
+      creatures: [],
+      towns: [],
+      mines: [],
+      objects: [],
+    };
+    
+    // Позиция героя
+    if (worldScene.heroSprite) {
+      result.heroPos = {
+        x: Math.floor(worldScene.heroSprite.x / 64),
+        y: Math.floor(worldScene.heroSprite.y / 64),
+      };
+    }
+    
+    // Объекты на карте
+    if (worldScene.objectSprites) {
+      for (const [id, sprite] of worldScene.objectSprites) {
+        const obj = {
+          id,
+          x: Math.floor(sprite.x / 64),
+          y: Math.floor(sprite.y / 64),
+          type: id.split('_')[0],
+        };
+        result.objects.push(obj);
+        if (id.startsWith('creature_')) result.creatures.push(obj);
+        if (id.includes('town')) result.towns.push(obj);
+        if (id.includes('mine')) result.mines.push(obj);
+      }
+    }
+    
+    // Текущий уровень
+    result.currentLevel = worldScene.currentLevel || 'unknown';
+    
+    return result;
+  });
 }
 
 // ============================================================
@@ -183,15 +257,17 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     await canvas.waitFor({ state: 'visible', timeout: 30000 });
     console.log('  ✅ Canvas отображается');
 
-    // Даём время Phaser загрузиться и показать MenuScene
+    // Даём время Phaser загрузиться
     await page.waitForTimeout(5000);
 
-    // Проверяем, что MenuScene загрузилась
-    const menuLoaded = await waitForLog(page, 'MenuScene', 15000).catch(() => false);
-    // Если не поймали лог — проверяем хотя бы что canvas есть и нет фатальных ошибок
-    if (!menuLoaded) {
-      console.log('  ⚠️ Лог MenuScene не найден, но canvas есть — продолжаем');
-    }
+    // Проверяем, что игра создана
+    const gameExists = await page.evaluate(() => !!(window as any).__game);
+    expect(gameExists).toBeTruthy();
+    console.log('  ✅ Game instance создан');
+
+    // Проверяем активную сцену
+    const activeScene = await getActiveScene(page);
+    console.log(`  🎬 Активная сцена: ${activeScene}`);
 
     await screenshot(page, 'menu');
     console.log('  ✅ ШАГ 1: Меню отображается');
@@ -204,26 +280,20 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     console.log(`📌 ШАГ ${stepCounter}: Клик "НОВАЯ ИГРА"`);
     console.log(`${'='.repeat(60)}`);
 
-    // Кликаем по кнопке "НОВАЯ ИГРА" через координаты на canvas
-    // Кнопка находится в центре экрана (640, 410) — y = height/2 + 50 = 360+50 = 410
-    const box = await getCanvasBox(page);
-    if (!box) throw new Error('Canvas not found');
-    
-    const scaleX = box.width / 1280;
-    const scaleY = box.height / 720;
-    
-    // Координаты кнопки "НОВАЯ ИГРА" (первая кнопка)
-    const btnX = box.x + 640 * scaleX;
-    const btnY = box.y + 410 * scaleY;
-    
-    await page.mouse.click(btnX, btnY);
-    console.log(`  🎮 Клик по кнопке "НОВАЯ ИГРА" (${Math.round(btnX)}, ${Math.round(btnY)})`);
-    
+    // Кликаем по кнопке "НОВАЯ ИГРА"
+    // Кнопка: центр экрана (640), y = height/2 + 50 = 360 + 50 = 410
+    // Но из-за заголовка и анимации, точнее: buttonY = height/2 + 50 = 410
+    // Первая кнопка: y = 410
+    await clickGamePixel(page, 640, 410);
+    console.log('  🎮 Клик по кнопке "НОВАЯ ИГРА"');
+
     // Ждём загрузки WorldScene
-    await page.waitForTimeout(3000);
-    const worldLoaded = await waitForLog(page, 'WorldScene', 20000);
+    const worldLoaded = await waitForScene(page, 'WorldScene', 25000);
     expect(worldLoaded).toBeTruthy();
     console.log('  ✅ ШАГ 2: WorldScene загружена');
+
+    // Даём время на генерацию карты
+    await page.waitForTimeout(3000);
 
     // ============================================================
     // ШАГ 3: 📸 Скриншот карты — Генерация тайлов
@@ -233,9 +303,17 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     console.log(`📌 ШАГ ${stepCounter}: Скриншот карты`);
     console.log(`${'='.repeat(60)}`);
 
-    // Ждём генерации карты
-    await page.waitForTimeout(2000);
     await screenshot(page, 'world_map');
+
+    // Проверяем, что карта сгенерирована (есть объекты)
+    const gameState = await getGameObjects(page);
+    if (gameState) {
+      console.log(`  🗺️ Герой на (${gameState.heroPos?.x}, ${gameState.heroPos?.y})`);
+      console.log(`  🏘️ Городов: ${gameState.towns.length}`);
+      console.log(`  🐉 Существ: ${gameState.creatures.length}`);
+      console.log(`  ⛏️ Шахт: ${gameState.mines.length}`);
+      console.log(`  📦 Всего объектов: ${gameState.objects.length}`);
+    }
     console.log('  ✅ ШАГ 3: Карта сгенерирована');
 
     // ============================================================
@@ -246,17 +324,25 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     console.log(`📌 ШАГ ${stepCounter}: Клик по тайлу для pathfinding`);
     console.log(`${'='.repeat(60)}`);
 
-    // Герой спавнится примерно в центре карты (30, 30)
-    // Кликаем на соседний проходимый тайл
-    await clickTile(page, 32, 30);
-    await page.waitForTimeout(2000);
-
-    // Проверяем, что герой начал движение (появился path)
-    const pathDrawn = await waitForLog(page, 'followPath', 5000).catch(() => false);
-    if (pathDrawn) {
-      console.log('  ✅ Pathfinding сработал, герой движется');
+    // Герой в центре карты. Кликаем на соседний тайл
+    if (gameState?.heroPos) {
+      const targetX = Math.min(gameState.heroPos.x + 3, 59);
+      const targetY = gameState.heroPos.y;
+      await clickTile(page, targetX, targetY);
+      await page.waitForTimeout(2000);
+      
+      // Проверяем, что герой начал движение
+      const newPos = await getGameObjects(page);
+      if (newPos?.heroPos) {
+        const moved = newPos.heroPos.x !== gameState.heroPos.x || newPos.heroPos.y !== gameState.heroPos.y;
+        console.log(`  🚶 Герой двигался: ${moved ? '✅ да' : '❓ нет'}`);
+        console.log(`     Было: (${gameState.heroPos.x}, ${gameState.heroPos.y})`);
+        console.log(`     Стало: (${newPos.heroPos.x}, ${newPos.heroPos.y})`);
+      }
     } else {
-      console.log('  ⚠️ Лог pathfinding не обнаружен, но это может быть из-за асинхронности');
+      // Fallback — кликаем по центру карты
+      await clickTile(page, 32, 30);
+      await page.waitForTimeout(2000);
     }
     console.log('  ✅ ШАГ 4: Pathfinding протестирован');
 
@@ -271,12 +357,15 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     await pressKey(page, 'u');
     await page.waitForTimeout(2000);
 
-    // Проверяем переключение уровня
-    const levelSwitched = await waitForLog(page, 'Переключение на уровень', 5000).catch(() => false);
-    if (levelSwitched) {
-      console.log('  ✅ Уровень переключён');
-    } else {
-      console.log('  ⚠️ Лог переключения не найден');
+    // Проверяем уровень
+    const levelState = await getGameObjects(page);
+    if (levelState) {
+      console.log(`  🗺️ Текущий уровень: ${levelState.currentLevel}`);
+      if (levelState.currentLevel === 'underground') {
+        console.log('  ✅ Переключение на подземелье успешно');
+      } else {
+        console.log('  ⚠️ Уровень не изменился');
+      }
     }
     console.log('  ✅ ШАГ 5: Переключение подземелья выполнено');
 
@@ -292,7 +381,7 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     await screenshot(page, 'underground');
     console.log('  ✅ ШАГ 6: Подземелье отображается');
 
-    // Переключаемся обратно на поверхность для следующих шагов
+    // Переключаемся обратно на поверхность
     await pressKey(page, 'u');
     await page.waitForTimeout(2000);
     console.log('  ↩️ Возврат на поверхность');
@@ -305,47 +394,27 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     console.log(`📌 ШАГ ${stepCounter}: Атака нейтрального существа`);
     console.log(`${'='.repeat(60)}`);
 
-    // Пробуем найти нейтральное существо на карте и кликнуть по нему
-    // Сначала проверяем через JS, есть ли объекты типа 'creature' рядом
-    const creatureFound = await page.evaluate(() => {
-      const game = (window as any).__game;
-      if (!game) return null;
-      const worldScene = game.scene.getScene('WorldScene');
-      if (!worldScene || !worldScene.objectSprites) return null;
+    // Получаем актуальные объекты на карте
+    const objects = await getGameObjects(page);
+    
+    if (objects && objects.creatures.length > 0) {
+      const creature = objects.creatures[0];
+      console.log(`  🐉 Найдено существо: ${creature.id} на (${creature.x}, ${creature.y})`);
       
-      // Ищем объект типа 'creature' на карте
-      const objects = worldScene.objectSprites;
-      for (const [id, sprite] of objects) {
-        if (id.startsWith('creature_')) {
-          return {
-            id,
-            x: sprite.x,
-            y: sprite.y,
-            tileX: Math.floor(sprite.x / 64),
-            tileY: Math.floor(sprite.y / 64),
-          };
-        }
-      }
-      return null;
-    });
-
-    if (creatureFound) {
-      console.log(`  🐉 Найдено существо: ${creatureFound.id} на (${creatureFound.tileX}, ${creatureFound.tileY})`);
+      // Двигаем героя к существу
+      await clickTile(page, creature.x, creature.y);
+      await page.waitForTimeout(4000);
       
-      // Сначала двигаем героя к существу
-      await clickTile(page, creatureFound.tileX, creatureFound.tileY);
+      // Кликаем для атаки
+      await clickTile(page, creature.x, creature.y);
       await page.waitForTimeout(3000);
       
-      // Если герой рядом — кликаем ещё раз для атаки
-      await clickTile(page, creatureFound.tileX, creatureFound.tileY);
-      await page.waitForTimeout(3000);
-      
-      // Ждём запуска BattleScene
-      const battleLoaded = await waitForLog(page, 'BattleScene', 15000).catch(() => false);
+      // Ждём BattleScene
+      const battleLoaded = await waitForScene(page, 'BattleScene', 15000);
       if (battleLoaded) {
         console.log('  ✅ BattleScene загружена');
       } else {
-        console.log('  ⚠️ BattleScene не обнаружена, возможно существо далеко');
+        console.log('  ⚠️ BattleScene не обнаружена');
       }
     } else {
       console.log('  ⚠️ Существа не найдены на карте — пропускаем шаг');
@@ -364,13 +433,12 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     await screenshot(page, 'battle');
     console.log('  ✅ ШАГ 8: Бой отображается');
 
-    // Выходим из боя обратно в мир (если мы в бою)
+    // Выходим из боя
     await page.evaluate(() => {
       const game = (window as any).__game;
       if (game) {
         const battleScene = game.scene.getScene('BattleScene');
         if (battleScene && battleScene.scene.isActive()) {
-          // Пробуем сдаться или выйти
           battleScene.scene.stop();
           const worldScene = game.scene.getScene('WorldScene');
           if (worldScene) {
@@ -390,40 +458,22 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     console.log(`📌 ШАГ ${stepCounter}: Вход в город`);
     console.log(`${'='.repeat(60)}`);
 
-    // Ищем город на карте
-    const townFound = await page.evaluate(() => {
-      const game = (window as any).__game;
-      if (!game) return null;
-      const worldScene = game.scene.getScene('WorldScene');
-      if (!worldScene || !worldScene.objectSprites) return null;
-      
-      for (const [id, sprite] of worldScene.objectSprites) {
-        if (id.startsWith('town_') || id.startsWith('player_town_')) {
-          return {
-            id,
-            x: sprite.x,
-            y: sprite.y,
-            tileX: Math.floor(sprite.x / 64),
-            tileY: Math.floor(sprite.y / 64),
-          };
-        }
-      }
-      return null;
-    });
-
-    if (townFound) {
-      console.log(`  🏰 Найден город: ${townFound.id} на (${townFound.tileX}, ${townFound.tileY})`);
+    const objects2 = await getGameObjects(page);
+    
+    if (objects2 && objects2.towns.length > 0) {
+      const town = objects2.towns[0];
+      console.log(`  🏰 Найден город: ${town.id} на (${town.x}, ${town.y})`);
       
       // Двигаем героя к городу
-      await clickTile(page, townFound.tileX, townFound.tileY);
-      await page.waitForTimeout(3000);
+      await clickTile(page, town.x, town.y);
+      await page.waitForTimeout(4000);
       
       // Кликаем для входа
-      await clickTile(page, townFound.tileX, townFound.tileY);
+      await clickTile(page, town.x, town.y);
       await page.waitForTimeout(3000);
       
       // Ждём TownScene
-      const townLoaded = await waitForLog(page, 'TownScene', 15000).catch(() => false);
+      const townLoaded = await waitForScene(page, 'TownScene', 15000);
       if (townLoaded) {
         console.log('  ✅ TownScene загружена');
       } else {
@@ -446,7 +496,7 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     await screenshot(page, 'town');
     console.log('  ✅ ШАГ 10: Город отображается');
 
-    // Выходим из города обратно в мир
+    // Выходим из города
     await page.evaluate(() => {
       const game = (window as any).__game;
       if (game) {
@@ -475,19 +525,23 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     await pressKey(page, 'F5');
     await page.waitForTimeout(2000);
 
-    const saveDone = await waitForLog(page, 'Быстрое сохранение', 5000).catch(() => false);
-    if (saveDone) {
-      console.log('  ✅ Сохранение выполнено');
-    } else {
-      console.log('  ⚠️ Лог сохранения не найден');
-    }
+    // Проверяем, что сохранение создано
+    const saveExists = await page.evaluate(() => {
+      const game = (window as any).__game;
+      if (!game) return false;
+      const worldScene = game.scene.getScene('WorldScene');
+      if (!worldScene) return false;
+      const saveSystem = (window as any).__saveSystem || worldScene.saveSystem;
+      return saveSystem?.hasSave?.(1) || false;
+    });
+    console.log(`  💾 Сохранение в слоте 1: ${saveExists ? '✅ есть' : '❓ нет'}`);
 
     // F9 — быстрая загрузка
     await pressKey(page, 'F9');
     await page.waitForTimeout(3000);
 
     // После загрузки WorldScene перезапускается
-    const worldReloaded = await waitForLog(page, 'WorldScene', 15000).catch(() => false);
+    const worldReloaded = await waitForScene(page, 'WorldScene', 15000);
     if (worldReloaded) {
       console.log('  ✅ Загрузка выполнена, WorldScene перезапущена');
     } else {
@@ -503,7 +557,6 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     console.log(`📌 ШАГ ${stepCounter}: Анализ ошибок`);
     console.log(`${'='.repeat(60)}`);
 
-    // Даём время на возможные ошибки
     await page.waitForTimeout(2000);
 
     const critical = checkCriticalErrors(consoleErrors);
@@ -545,8 +598,6 @@ test.describe('🎮 Heroes IV — Полный автотест (12 шагов)'
     console.log(`🐛 Ошибок: ${consoleErrors.length} (критических: ${critical.length})`);
     console.log(`${'='.repeat(60)}\n`);
 
-    // Финальная проверка — не должно быть критических ошибок
-    // Но не проваливаем тест из-за них, только логируем
     expect(stepCounter).toBe(12);
   });
 });

@@ -41,8 +41,10 @@ export class NecromancySystem {
       power += 0.1;
     }
 
-    // Бонус от заклинания "Усиление некромантии" (если есть)
-    // TODO: реализовать
+    // Бонус от заклинания "Оживление мертвых" (если герой его знает)
+    if (hero.spells && hero.spells.includes('animate_dead')) {
+      power += 0.05; // +5% к некромантии
+    }
 
     return Math.min(power, 0.5); // Максимум 50%
   }
@@ -105,18 +107,18 @@ export class NecromancySystem {
     result.totalDeadConverted = convertibleHp;
 
     // Распределяем по типам нежити
-    // Скелеты (1 тир, 6 HP) — основа
+    // Скелеты (1 тир, 5 HP) — основа
     const skeletonHp = Math.floor(convertibleHp * 0.6);
-    const skeletons = Math.floor(skeletonHp / 6);
+    const skeletons = Math.floor(skeletonHp / 5);
     if (skeletons > 0) {
-      result.raisedUnits.push({ creatureId: 'skeleton', count: skeletons });
+      result.raisedUnits.push({ creatureId: 'skeleton_h4', count: skeletons });
     }
 
-    // Зомби (2 тир, 20 HP) — из сильных существ
-    const zombieHp = Math.floor(convertibleHp * 0.3);
-    const zombies = Math.floor(zombieHp / 20);
-    if (zombies > 0) {
-      result.raisedUnits.push({ creatureId: 'zombie', count: zombies });
+    // Призраки (2 тир, 10 HP) — из сильных существ
+    const ghostHp = Math.floor(convertibleHp * 0.3);
+    const ghosts = Math.floor(ghostHp / 10);
+    if (ghosts > 0) {
+      result.raisedUnits.push({ creatureId: 'ghost_h4', count: ghosts });
     }
 
     // Вампиры (3 тир, 30 HP) — только при высокой силе некромантии
@@ -124,7 +126,7 @@ export class NecromancySystem {
       const vampireHp = Math.floor(convertibleHp * 0.1);
       const vampires = Math.floor(vampireHp / 30);
       if (vampires > 0) {
-        result.raisedUnits.push({ creatureId: 'vampire', count: vampires });
+        result.raisedUnits.push({ creatureId: 'vampire_h4', count: vampires });
       }
     }
 

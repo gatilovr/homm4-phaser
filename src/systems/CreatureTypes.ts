@@ -9,89 +9,138 @@ import { CONFIG } from '../config';
 export interface CreatureTypeInfo {
   id: string;
   type: 'melee' | 'ranged' | 'flying' | 'cavalry' | 'caster' | 'hero';
-  attackRange: number;       // Дальность атаки (1 = ближний бой, 2+ = стрелок)
+  attackRange: number;
   moveType: 'normal' | 'flying' | 'cavalry';
-  retaliations: number;       // Количество контратак за ход (0, 1, бесконечно)
-  specialAbilities: string[]; // Особые способности
+  retaliations: number;
+  specialAbilities: string[];
 }
 
 /**
- * База данных типов существ.
- * Определяет их поведение в бою.
+ * База данных типов существ (канон HoMM4).
  */
 export const CREATURE_TYPES: Record<string, CreatureTypeInfo> = {
-  // === УБЕЖИЩЕ ===
-  pikeman:      { id: 'pikeman',      type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: [] },
-  halberdier:   { id: 'halberdier',   type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 2, specialAbilities: [] },
-  archer:       { id: 'archer',       type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['double_shot'] },
-  crossbowman:  { id: 'crossbowman',  type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['ignore_armor'] },
-  griffin:      { id: 'griffin',      type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 999, specialAbilities: ['unlimited_retaliation'] },
-  royal_griffin:{ id: 'royal_griffin',type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 999, specialAbilities: ['unlimited_retaliation'] },
-  swordsman:    { id: 'swordsman',    type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: [] },
-  champion:     { id: 'champion',     type: 'cavalry',  attackRange: 1, moveType: 'cavalry',  retaliations: 1, specialAbilities: ['charge'] },
-  cavalier:     { id: 'cavalier',     type: 'cavalry',  attackRange: 1, moveType: 'cavalry',  retaliations: 1, specialAbilities: ['charge'] },
-  angel:        { id: 'angel',        type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['resurrect'] },
-  archangel:    { id: 'archangel',    type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['resurrect', 'morale_boost'] },
+  // === HAVEN (4 tiers × 2 choices) ===
+  squire:       { id: 'squire',       type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: [] },
+  ballista:     { id: 'ballista',     type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter'] },
+  pikeman_h4:   { id: 'pikeman_h4',   type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['first_strike'] },
+  archer_h4:    { id: 'archer_h4',    type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter'] },
+  crusader_h4:  { id: 'crusader_h4',  type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['double_attack'] },
+  monk_h4:      { id: 'monk_h4',      type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter', 'heal'] },
+  champion_h4:  { id: 'champion_h4',  type: 'cavalry',  attackRange: 1, moveType: 'cavalry',  retaliations: 1, specialAbilities: ['charge', 'jousting'] },
+  angel_h4:     { id: 'angel_h4',     type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'morale_boost', 'resurrect'] },
 
-  // === НЕКРОПОЛИС ===
-  skeleton:     { id: 'skeleton',     type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['undead'] },
-  skeleton_warrior: { id: 'skeleton_warrior', type: 'melee', attackRange: 1, moveType: 'normal', retaliations: 1, specialAbilities: ['undead'] },
-  zombie:       { id: 'zombie',       type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['undead', 'weakness'] },
-  plague_zombie:{ id: 'plague_zombie',type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['undead', 'disease'] },
-  vampire:      { id: 'vampire',      type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['undead', 'life_drain', 'no_retaliation'] },
-  vampire_lord: { id: 'vampire_lord', type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['undead', 'life_drain', 'no_retaliation'] },
-  lich:         { id: 'lich',         type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['undead', 'death_cloud'] },
-  power_lich:   { id: 'power_lich',   type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['undead', 'death_cloud'] },
-  bone_dragon:  { id: 'bone_dragon',  type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['undead', 'morale_debuff'] },
-  ghost_dragon: { id: 'ghost_dragon', type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['undead', 'morale_debuff', 'aging'] },
+  // === PRESERVE ===
+  sprite:       { id: 'sprite',       type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying'] },
+  wolf_h4:      { id: 'wolf_h4',      type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['double_attack'] },
+  elf_h4:       { id: 'elf_h4',       type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter'] },
+  white_tiger:  { id: 'white_tiger',  type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['stealth'] },
+  griffin_h4:   { id: 'griffin_h4',   type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 999, specialAbilities: ['flying', 'unlimited_retaliation'] },
+  unicorn_h4:   { id: 'unicorn_h4',   type: 'cavalry',  attackRange: 1, moveType: 'cavalry',  retaliations: 1, specialAbilities: ['blind_attack', 'magic_resistance'] },
+  faerie_dragon_h4: { id: 'faerie_dragon_h4', type: 'flying', attackRange: 1, moveType: 'flying', retaliations: 1, specialAbilities: ['flying', 'spell_cast'] },
+  phoenix_h4:   { id: 'phoenix_h4',   type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'fire_shield', 'rebirth'] },
 
-  // === АЗИЛУМ ===
-  goblin:       { id: 'goblin',       type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: [] },
-  hobgoblin:    { id: 'hobgoblin',    type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: [] },
-  wolf_rider:   { id: 'wolf_rider',   type: 'cavalry',  attackRange: 1, moveType: 'cavalry',  retaliations: 1, specialAbilities: ['charge'] },
-  wolf_raider:  { id: 'wolf_raider',  type: 'cavalry',  attackRange: 1, moveType: 'cavalry',  retaliations: 1, specialAbilities: ['double_attack'] },
-  orc:          { id: 'orc',          type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: [] },
-  orc_chieftain:{ id: 'orc_chieftain',type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: [] },
-  ogre:         { id: 'ogre',         type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: [] },
-  ogre_mage:    { id: 'ogre_mage',    type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['bloodlust_aura'] },
-  roc:          { id: 'roc',          type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: [] },
-  thunderbird:  { id: 'thunderbird',  type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['lightning_strike'] },
-  cyclop:       { id: 'cyclop',       type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['siege'] },
-  cyclop_king:  { id: 'cyclop_king',  type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['siege', 'multi_shot'] },
-  behemoth:     { id: 'behemoth',     type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['ignore_defense'] },
-  ancient_behemoth: { id: 'ancient_behemoth', type: 'melee', attackRange: 1, moveType: 'normal', retaliations: 1, specialAbilities: ['ignore_defense'] },
+  // === NECROPOLIS ===
+  skeleton_h4:  { id: 'skeleton_h4',  type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['undead'] },
+  imp_h4:       { id: 'imp_h4',       type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['undead', 'mana_burn'] },
+  ghost_h4:     { id: 'ghost_h4',     type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['undead', 'aging'] },
+  cerberus:     { id: 'cerberus',     type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['undead', 'triple_attack'] },
+  vampire_h4:   { id: 'vampire_h4',   type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['undead', 'drain_life', 'no_retaliation'] },
+  venom_spawn:  { id: 'venom_spawn',  type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['undead', 'poison_attack'] },
+  bone_dragon_h4: { id: 'bone_dragon_h4', type: 'flying', attackRange: 1, moveType: 'flying', retaliations: 1, specialAbilities: ['undead', 'aging'] },
+  devil_h4:     { id: 'devil_h4',     type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['undead', 'teleport', 'hellfire'] },
 
-  // === ЗАПОВЕДНИК ===
-  wolf:         { id: 'wolf',         type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['double_attack'] },
-  dire_wolf:    { id: 'dire_wolf',    type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['double_attack'] },
-  elf:          { id: 'elf',          type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: [] },
-  grand_elf:    { id: 'grand_elf',    type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['double_shot'] },
-  unicorn:      { id: 'unicorn',      type: 'cavalry',  attackRange: 1, moveType: 'cavalry',  retaliations: 1, specialAbilities: ['blind_attack'] },
-  silver_unicorn: { id: 'silver_unicorn', type: 'cavalry', attackRange: 1, moveType: 'cavalry', retaliations: 1, specialAbilities: ['blind_attack'] },
-  dwarf:        { id: 'dwarf',        type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['magic_resistance'] },
-  battle_dwarf: { id: 'battle_dwarf', type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['magic_resistance'] },
-  dendroid:     { id: 'dendroid',     type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['binding_attack'] },
-  dendroid_soldier: { id: 'dendroid_soldier', type: 'melee', attackRange: 1, moveType: 'normal', retaliations: 1, specialAbilities: ['binding_attack'] },
-  druid:        { id: 'druid',        type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['caster'] },
-  elder_druid:  { id: 'elder_druid',  type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['caster'] },
-  green_dragon: { id: 'green_dragon', type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['breath_attack', 'magic_immunity'] },
-  gold_dragon:  { id: 'gold_dragon',  type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['breath_attack', 'magic_immunity'] },
+  // === ASYLUM ===
+  bandit:       { id: 'bandit',       type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['steal_gold'] },
+  orc_h4:       { id: 'orc_h4',       type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['rage'] },
+  medusa:       { id: 'medusa',       type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter', 'stone_gaze'] },
+  minotaur_h4:  { id: 'minotaur_h4',  type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['maze_walk'] },
+  nightmare:    { id: 'nightmare',    type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'fear'] },
+  efreet:       { id: 'efreet',       type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'fire_shield'] },
+  hydra:        { id: 'hydra',        type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['multi_head_attack'] },
+  black_dragon: { id: 'black_dragon', type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'magic_immunity', 'fear'] },
 
-  // === АКАДЕМИЯ ===
-  golem:        { id: 'golem',        type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['damage_reduction'] },
-  obsidian_golem: { id: 'obsidian_golem', type: 'melee', attackRange: 1, moveType: 'normal',  retaliations: 1, specialAbilities: ['damage_reduction'] },
-  mage:         { id: 'mage',         type: 'caster',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['magic_attack'] },
-  archmage:     { id: 'archmage',     type: 'caster',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['magic_attack', 'mana_drain'] },
-  genie:        { id: 'genie',        type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['caster', 'hate_effrit'] },
-  master_genie: { id: 'master_genie', type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['caster', 'hate_effrit', 'random_spell'] },
-  naga:         { id: 'naga',         type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 0, specialAbilities: ['no_retaliation'] },
-  naga_queen:   { id: 'naga_queen',   type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 0, specialAbilities: ['no_retaliation'] },
-  titan:        { id: 'titan',        type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['lightning_attack', 'hate_black_dragon'] },
-  storm_titan:  { id: 'storm_titan',  type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['lightning_attack', 'melee_lightning'] },
+  // === ACADEMY ===
+  dwarf_h4:     { id: 'dwarf_h4',     type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['magic_resistance'] },
+  halfling:     { id: 'halfling',     type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter'] },
+  gold_golem_h4: { id: 'gold_golem_h4', type: 'melee',  attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['damage_reduction'] },
+  mage_h4:      { id: 'mage_h4',      type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter', 'no_melee_penalty'] },
+  naga_h4:      { id: 'naga_h4',      type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 0, specialAbilities: ['first_strike'] },
+  genie_h4:     { id: 'genie_h4',     type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'cast_random_spell'] },
+  dragon_golem: { id: 'dragon_golem', type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['magic_immunity', 'damage_reduction'] },
+  titan_h4:     { id: 'titan_h4',     type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter', 'no_melee_penalty', 'lightning_strike'] },
 
-  // === Герои ===
-  hero:         { id: 'hero',         type: 'hero',     attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['caster', 'hero'] },
+  // === STRONGHOLD ===
+  berserker:    { id: 'berserker',    type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['rage'] },
+  centaur:      { id: 'centaur',      type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter'] },
+  harpy:        { id: 'harpy',        type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'hit_and_run'] },
+  nomad:        { id: 'nomad',        type: 'cavalry',  attackRange: 1, moveType: 'cavalry',  retaliations: 1, specialAbilities: ['charge'] },
+  ogre_mage_h4: { id: 'ogre_mage_h4', type: 'melee',   attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['rage', 'bloodlust'] },
+  cyclops_h4:   { id: 'cyclops_h4',   type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['stone_throw'] },
+  thunderbird_h4: { id: 'thunderbird_h4', type: 'flying', attackRange: 1, moveType: 'flying', retaliations: 1, specialAbilities: ['flying', 'lightning_strike'] },
+  behemoth_h4:  { id: 'behemoth_h4',  type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['ignore_defense_50'] },
+
+  // === NEUTRAL (Tier 1) ===
+  peasant:              { id: 'peasant',              type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: [] },
+  halfling_neutral:     { id: 'halfling_neutral',     type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter'] },
+  boar:                 { id: 'boar',                 type: 'cavalry',  attackRange: 1, moveType: 'cavalry',  retaliations: 1, specialAbilities: ['charge'] },
+  goblin:               { id: 'goblin',               type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: [] },
+  wolf_neutral:         { id: 'wolf_neutral',         type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['double_attack'] },
+  zombie:               { id: 'zombie',               type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['undead'] },
+  skeleton_neutral:     { id: 'skeleton_neutral',     type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['undead'] },
+
+  // === NEUTRAL (Tier 2) ===
+  bandit_neutral:       { id: 'bandit_neutral',       type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['steal_gold'] },
+  nomad_neutral:        { id: 'nomad_neutral',        type: 'cavalry',  attackRange: 1, moveType: 'cavalry',  retaliations: 1, specialAbilities: ['charge'] },
+  nymph:                { id: 'nymph',                type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['heal'] },
+  satyr:                { id: 'satyr',                type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['morale_boost'] },
+  blind_monk:           { id: 'blind_monk',           type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter', 'no_melee_penalty'] },
+  ice_elemental:        { id: 'ice_elemental',        type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['elemental', 'cold_attack'] },
+  fire_elemental:       { id: 'fire_elemental',       type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['elemental', 'fire_shield'] },
+  earth_elemental:      { id: 'earth_elemental',      type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['elemental', 'damage_reduction'] },
+  air_elemental:        { id: 'air_elemental',        type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['elemental', 'flying'] },
+
+  // === NEUTRAL (Tier 3) ===
+  troll:                { id: 'troll',                type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['regeneration'] },
+  mummy:                { id: 'mummy',                type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['undead', 'curse_attack'] },
+  ogre_neutral:         { id: 'ogre_neutral',         type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['rage'] },
+  sea_serpent:          { id: 'sea_serpent',          type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['poison_attack'] },
+  griffin_neutral:      { id: 'griffin_neutral',      type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 999, specialAbilities: ['flying', 'unlimited_retaliation'] },
+  wizard_neutral:       { id: 'wizard_neutral',       type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter', 'caster', 'no_melee_penalty'] },
+
+  // === NEUTRAL (Tier 4) ===
+  behemoth_neutral:     { id: 'behemoth_neutral',     type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['ignore_defense_50'] },
+  dragon_neutral:       { id: 'dragon_neutral',       type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'fear', 'fire_breath'] },
+  hydra_neutral:        { id: 'hydra_neutral',        type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['multi_head_attack'] },
+  angel_neutral:        { id: 'angel_neutral',        type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'morale_boost', 'resurrect'] },
+  devil_neutral:        { id: 'devil_neutral',        type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'fear', 'teleport', 'hellfire'] },
+  phoenix_neutral:      { id: 'phoenix_neutral',      type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'fire_shield', 'rebirth'] },
+
+  // === NEUTRAL (Tier 5 — Legendary) ===
+  azure_dragon:         { id: 'azure_dragon',         type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'magic_immunity', 'fear', 'fire_breath'] },
+  rust_dragon:          { id: 'rust_dragon',          type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'magic_immunity', 'fear', 'damage_reduction'] },
+  crystal_dragon:       { id: 'crystal_dragon',       type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'magic_immunity', 'fear', 'crystal_spikes'] },
+  faerie_dragon_neutral:{ id: 'faerie_dragon_neutral',type: 'flying',   attackRange: 1, moveType: 'flying',   retaliations: 1, specialAbilities: ['flying', 'magic_immunity', 'spell_cast', 'teleport'] },
+
+  // === Спец. ID ===
+  hero:         { id: 'hero',         type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 1, specialAbilities: ['caster', 'hero'] },
+  wall:         { id: 'wall',         type: 'melee',    attackRange: 1, moveType: 'normal',   retaliations: 0, specialAbilities: ['structure'] },
+  tower:        { id: 'tower',        type: 'ranged',   attackRange: 10, moveType: 'normal',  retaliations: 1, specialAbilities: ['shooter', 'structure'] },
 };
+
+/**
+ * Зарегистрировать тип героя на основе его класса.
+ */
+export function registerHeroType(heroId: string, heroClass: string): void {
+  const isRangedClass = ['cleric', 'necromancer', 'druid', 'heretic', 'wizard', 'artificer', 'shaman'].includes(heroClass);
+  CREATURE_TYPES[heroId] = {
+    id: heroId,
+    type: isRangedClass ? 'ranged' : 'melee',
+    attackRange: isRangedClass ? 10 : 1,
+    moveType: 'normal',
+    retaliations: 1,
+    specialAbilities: isRangedClass ? ['caster'] : []
+  };
+}
 
 /**
  * Получить информацию о типе существа

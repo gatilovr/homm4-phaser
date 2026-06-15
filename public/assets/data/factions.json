@@ -2,7 +2,7 @@
   "factions": [
     {
       "id": "haven",
-      "name": "Убежище",
+      "name": "Обитель",
       "nameEn": "Haven",
       "description": "Фракция света и порядка. Сильные защитные существа, мощные заклинания поддержки.",
       "color": "#FFD700",
@@ -23,11 +23,11 @@
         "class": "knight",
         "name": "Сэр Гэвин",
         "startingArmy": [
-          { "creatureId": "pikeman", "count": 20 },
-          { "creatureId": "archer", "count": 10 }
+          { "creatureId": "squire", "count": 20 },
+          { "creatureId": "ballista", "count": 10 }
         ]
       },
-      "townBuildings": ["haven_barracks", "haven_archery", "haven_griffin_tower", "haven_swordsmith", "haven_monastery", "haven_jousting_arena", "haven_portal_of_glory"]
+      "townBuildings": ["haven_dwelling_1", "haven_dwelling_2", "haven_dwelling_3", "haven_dwelling_4"]
     },
     {
       "id": "necropolis",
@@ -52,12 +52,12 @@
         "class": "necromancer",
         "name": "Сандро",
         "startingArmy": [
-          { "creatureId": "skeleton", "count": 25 },
-          { "creatureId": "zombie", "count": 15 }
+          { "creatureId": "skeleton_h4", "count": 25 },
+          { "creatureId": "imp_h4", "count": 15 }
         ]
       },
       "specialAbility": "necromancy",
-      "townBuildings": ["necropolis_cursed_temple", "necropolis_graveyard", "necropolis_estate_of_ancestors", "necropolis_mausoleum", "necropolis_hall_of_darkness", "necropolis_dragon_vault"]
+      "townBuildings": ["necropolis_dwelling_1", "necropolis_dwelling_2", "necropolis_dwelling_3", "necropolis_dwelling_4"]
     },
     {
       "id": "preserve",
@@ -82,15 +82,15 @@
         "class": "ranger",
         "name": "Гемма",
         "startingArmy": [
-          { "creatureId": "wolf", "count": 15 },
-          { "creatureId": "elf", "count": 10 }
+          { "creatureId": "sprite", "count": 20 },
+          { "creatureId": "wolf_h4", "count": 10 }
         ]
       },
-      "townBuildings": ["preserve_wolf_den", "preserve_elven_tree", "preserve_unicorn_glade", "preserve_phoenix_nest"]
+      "townBuildings": ["preserve_dwelling_1", "preserve_dwelling_2", "preserve_dwelling_3", "preserve_dwelling_4"]
     },
     {
       "id": "asylum",
-      "name": "Азилум",
+      "name": "Пристанище",
       "nameEn": "Asylum",
       "description": "Фракция хаоса. Быстрые и агрессивные существа, разрушительная магия.",
       "color": "#FF4500",
@@ -111,11 +111,11 @@
         "class": "demoniac",
         "name": "Ксерон",
         "startingArmy": [
-          { "creatureId": "imp", "count": 30 },
-          { "creatureId": "goblin", "count": 20 }
+          { "creatureId": "bandit", "count": 25 },
+          { "creatureId": "orc_h4", "count": 15 }
         ]
       },
-      "townBuildings": ["asylum_imp_crucible", "asylum_hovel", "asylum_hall_of_war", "asylum_ogre_fort", "asylum_cyclops_cave"]
+      "townBuildings": ["asylum_dwelling_1", "asylum_dwelling_2", "asylum_dwelling_3", "asylum_dwelling_4"]
     },
     {
       "id": "academy",
@@ -129,21 +129,26 @@
           "id": "wizard",
           "name": "Волшебник",
           "description": "Могущественный маг всех школ"
+        },
+        {
+          "id": "artificer",
+          "name": "Артифекс",
+          "description": "Мастер создания магических предметов"
         }
       ],
       "startingHero": {
         "class": "wizard",
         "name": "Иона",
         "startingArmy": [
-          { "creatureId": "gremlin", "count": 40 },
-          { "creatureId": "stone_golem", "count": 10 }
+          { "creatureId": "dwarf_h4", "count": 12 },
+          { "creatureId": "halfling", "count": 15 }
         ]
       },
-      "townBuildings": ["academy_workshop", "academy_golem_factory", "academy_mage_tower", "academy_altar", "academy_titan_spire"]
+      "townBuildings": ["academy_dwelling_1", "academy_dwelling_2", "academy_dwelling_3", "academy_dwelling_4"]
     },
     {
       "id": "stronghold",
-      "name": "Твердыня",
+      "name": "Крепость",
       "nameEn": "Stronghold",
       "description": "Фракция варваров. Сильные бойцы ближнего боя, дешевые существа, мало магии.",
       "color": "#8B4513",
@@ -153,17 +158,22 @@
           "id": "barbarian",
           "name": "Варвар",
           "description": "Свирепый воин с высокой атакой"
+        },
+        {
+          "id": "shaman",
+          "name": "Шаман",
+          "description": "Духовный наставник, поддерживает ярость союзников"
         }
       ],
       "startingHero": {
         "class": "barbarian",
         "name": "Краг Хак",
         "startingArmy": [
-          { "creatureId": "goblin_raider", "count": 30 },
-          { "creatureId": "wolf_rider", "count": 10 }
+          { "creatureId": "berserker", "count": 25 },
+          { "creatureId": "centaur", "count": 10 }
         ]
       },
-      "townBuildings": ["stronghold_warren", "stronghold_kennels", "stronghold_ogre_fort", "stronghold_roc_cliff", "stronghold_behemoth_lair"]
+      "townBuildings": ["stronghold_dwelling_1", "stronghold_dwelling_2", "stronghold_dwelling_3", "stronghold_dwelling_4"]
     }
   ]
 }

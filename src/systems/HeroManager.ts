@@ -3,6 +3,7 @@ import { SkillSystem, SkillData, HeroSpecialization } from './SkillSystem';
 import { SkillChoiceUI } from '../ui/SkillChoiceUI';
 import { GameRandom } from '../utils/Random';
 import { CONFIG } from '../config';
+import { comboArtifactSystem } from './ComboArtifactSystem';
 
 /**
  * HeroManager — единый модуль управления героями и их навыками (100%).
@@ -163,6 +164,16 @@ export class HeroManager {
         hero.stats.attack += 2;
         hero.stats.defense += 1; // +2 атака ближнего боя
         break;
+      case 'artificer':
+        // +1 к защите големов и механизмов, +1 знание
+        hero.stats.knowledge += 1;
+        hero.stats.defense += 1;
+        break;
+      case 'shaman':
+        // +2 к силе магии природы, +1 атака для существ stronghold
+        hero.stats.spellPower += 2;
+        hero.stats.attack += 1;
+        break;
     }
   }
 
@@ -180,6 +191,13 @@ export class HeroManager {
 
     // Специализация barbarian: +10% урон ближнего боя
     if (hero.class === 'barbarian') mult += 0.10;
+
+    // Специализация shaman: +5% урон ближнего боя (ярость)
+    if (hero.class === 'shaman') mult += 0.05;
+
+    // Комбо-артефакты: +ATK%
+    const comboBonuses = comboArtifactSystem.getActiveComboBonuses(hero);
+    if (comboBonuses.attack) mult += comboBonuses.attack / 100;
 
     return mult;
   }
@@ -204,7 +222,16 @@ export class HeroManager {
   public getIncomingDamageMultiplier(hero: Hero | null): number {
     if (!hero) return 1;
     const reduction = this.skillSystem.getDamageReduction(hero);
-    return Math.max(0.3, 1 - reduction / 100);
+    let mult = Math.max(0.3, 1 - reduction / 100);
+
+    // Специализация artificer: +5% защиты для големов (учитывается в бою)
+    if (hero.class === 'artificer') mult *= 0.95;
+
+    // Комбо-артефакты: +DEF%
+    const comboBonuses = comboArtifactSystem.getActiveComboBonuses(hero);
+    if (comboBonuses.defense) mult *= (1 - comboBonuses.defense / 100);
+
+    return mult;
   }
 
   /**
@@ -214,7 +241,116 @@ export class HeroManager {
     if (!hero) return 0;
     let bonus = this.skillSystem.getMoraleBonus(hero);
     if (hero.class === 'knight') bonus += 1;
+
+    // Комбо-артефакты: +мораль
+    const comboBonuses = comboArtifactSystem.getActiveComboBonuses(hero);
+    if (comboBonuses.morale) bonus += comboBonuses.morale;
+
+    // Штраф за смешение фракций (канон HoMM4)
+    const factionPenalty = this.getFactionPenalty(hero);
+    bonus += factionPenalty;
+
     return bonus;
+  }
+
+  /**
+   * Рассчитать штраф за смешение фракций в армии героя
+   * Канон HoMM4: -1 к морали за каждую фракцию сверх 2
+   */
+  private getFactionPenalty(hero: Hero): number {
+    const factionMap = new Map<string, number>();
+    
+    for (const slot of hero.army) {
+      const faction = this.getCreatureFaction(slot.creatureId);
+      if (faction && faction !== 'neutral') {
+        factionMap.set(faction, (factionMap.get(faction) || 0) + slot.count);
+      }
+    }
+
+    // Добавляем фракцию героя
+    if (hero.faction && hero.faction !== 'neutral') {
+      factionMap.set(hero.faction, (factionMap.get(hero.faction) || 0) + 1);
+    }
+
+    const uniqueFactions = Array.from(factionMap.keys());
+    
+    // Проверяем Ангельский Альянс (отменяет штраф)
+    if (this.hasAngelicAlliance(hero)) return 0;
+
+    // Штраф: -1 за каждую фракцию сверх 2
+    if (uniqueFactions.length > 2) {
+      return -(uniqueFactions.length - 2);
+    }
+    
+    return 0;
+  }
+
+  /**
+   * Проверить наличие Ангельского Альянса (отменяет штраф фракций)
+   */
+  private hasAngelicAlliance(hero: Hero): boolean {
+    const comboBonuses = comboArtifactSystem.getActiveComboBonuses(hero);
+    return !!(comboBonuses as any).angelicAlliance;
+  }
+
+  /**
+   * Определить фракцию существа по ID (поддержка HoMM3 и HoMM4 ID)
+   */
+  private getCreatureFaction(creatureId: string): string | null {
+    const map: Record<string, string> = {
+      // Haven (HoMM4 IDs)
+      pikeman_h4: 'haven', halberdier_h4: 'haven', archer_h4: 'haven', crossbowman_h4: 'haven',
+      griffin_h4: 'haven', royal_griffin_h4: 'haven', swordsman_h4: 'haven', crusader_h4: 'haven',
+      cavalier_h4: 'haven', champion_h4: 'haven', angel_h4: 'haven', archangel_h4: 'haven',
+      // Haven (HoMM3 IDs - fallback)
+      pikeman: 'haven', halberdier: 'haven', archer: 'haven', crossbowman: 'haven',
+      griffin: 'haven', royal_griffin: 'haven', swordsman: 'haven', crusader: 'haven',
+      cavalier: 'haven', champion: 'haven', angel: 'haven', archangel: 'haven',
+      
+      // Necropolis (HoMM4 IDs)
+      skeleton_h4: 'necropolis', skeleton_warrior_h4: 'necropolis', zombie_h4: 'necropolis',
+      plague_zombie_h4: 'necropolis', ghost_h4: 'necropolis', wraith_h4: 'necropolis',
+      vampire_h4: 'necropolis', vampire_lord_h4: 'necropolis', lich_h4: 'necropolis',
+      arch_lich_h4: 'necropolis', black_knight_h4: 'necropolis', dread_knight_h4: 'necropolis',
+      bone_dragon_h4: 'necropolis', ghost_dragon_h4: 'necropolis',
+      // Necropolis (HoMM3 IDs - fallback)
+      skeleton: 'necropolis', skeleton_warrior: 'necropolis', zombie: 'necropolis',
+      plague_zombie: 'necropolis', ghost: 'necropolis', wraith: 'necropolis',
+      vampire: 'necropolis', vampire_lord: 'necropolis', lich: 'necropolis',
+      arch_lich: 'necropolis', black_knight: 'necropolis', dread_knight: 'necropolis',
+      bone_dragon: 'necropolis', ghost_dragon: 'necropolis',
+      
+      // Preserve (HoMM4 IDs)
+      wolf_h4: 'preserve', dire_wolf_h4: 'preserve', elf_h4: 'preserve', grand_elf_h4: 'preserve',
+      centaur_h4: 'preserve', unicorn_h4: 'preserve', dendroid_h4: 'preserve', phoenix_h4: 'preserve',
+      // Preserve (HoMM3 IDs - fallback)
+      wolf: 'preserve', dire_wolf: 'preserve', elf: 'preserve', grand_elf: 'preserve',
+      centaur: 'preserve', unicorn: 'preserve', dendroid: 'preserve', phoenix: 'preserve',
+      
+      // Asylum (HoMM4 IDs)
+      imp_h4: 'asylum', goblin_h4: 'asylum', medusa_h4: 'asylum', orc_h4: 'asylum',
+      minotaur_h4: 'asylum', ogre_h4: 'asylum', roc_h4: 'asylum', cyclops_h4: 'asylum',
+      // Asylum (HoMM3 IDs - fallback)
+      imp: 'asylum', goblin: 'asylum', medusa: 'asylum', orc: 'asylum',
+      minotaur: 'asylum', ogre: 'asylum', roc: 'asylum', cyclops: 'asylum',
+      
+      // Academy (HoMM4 IDs)
+      gremlin_h4: 'academy', master_gremlin_h4: 'academy', stone_golem_h4: 'academy',
+      mage_h4: 'academy', genie_h4: 'academy', nagi_h4: 'academy', titan_h4: 'academy',
+      // Academy (HoMM3 IDs - fallback)
+      gremlin: 'academy', master_gremlin: 'academy', stone_golem: 'academy',
+      mage: 'academy', genie: 'academy', nagi: 'academy', titan: 'academy',
+      
+      // Stronghold (HoMM4 IDs)
+      gnoll_h4: 'stronghold', gnoll_marauder_h4: 'stronghold', lizard_h4: 'stronghold',
+      troll_h4: 'stronghold', ogre_mage_h4: 'stronghold', wyvern_h4: 'stronghold',
+      behemoth_h4: 'stronghold', ancient_behemoth_h4: 'stronghold',
+      // Stronghold (HoMM3 IDs - fallback)
+      gnoll: 'stronghold', gnoll_marauder: 'stronghold', lizard: 'stronghold',
+      troll: 'stronghold', ogre_mage: 'stronghold', wyvern: 'stronghold',
+      behemoth: 'stronghold', ancient_behemoth: 'stronghold',
+    };
+    return map[creatureId] || null;
   }
 
   /**
@@ -235,6 +371,13 @@ export class HeroManager {
 
     // Специализация heretic: +15% урон разрушительных заклинаний
     if (hero.class === 'heretic') mult += 0.15;
+
+    // Специализация shaman: +10% урон заклинаний природы
+    if (hero.class === 'shaman') mult += 0.10;
+
+    // Комбо-артефакты: +Сила магии%
+    const comboBonuses = comboArtifactSystem.getActiveComboBonuses(hero);
+    if (comboBonuses.spellPower) mult += comboBonuses.spellPower / 100;
 
     return mult;
   }
@@ -472,6 +615,24 @@ export class HeroManager {
       ? hero.skills.map(s => `  ⭐ ${s.name} (ур.${s.level})`).join('\n')
       : '  (нет навыков)';
 
+    // Прогресс комбо-артефактов
+    const comboProgress = comboArtifactSystem.getComboProgress(hero);
+    const activeCombos = comboProgress.filter(c => c.isComplete);
+    const inProgressCombos = comboProgress.filter(c => !c.isComplete && c.partsFound > 0);
+
+    let comboStr = '';
+    if (activeCombos.length > 0) {
+      comboStr = activeCombos.map(c => `  ✨ ${c.name} (${c.partsTotal}/${c.partsTotal})`).join('\n');
+    }
+    if (inProgressCombos.length > 0) {
+      const progressLines = inProgressCombos.map(c => {
+        const bar = '█'.repeat(c.partsFound) + '░'.repeat(c.partsTotal - c.partsFound);
+        return `  🔨 ${c.name} [${bar}] ${c.partsFound}/${c.partsTotal}`;
+      });
+      comboStr += (comboStr ? '\n' : '') + progressLines.join('\n');
+    }
+    if (!comboStr) comboStr = '  (нет комбо-артефактов)';
+
     const bonuses = this.calculateAllBonuses(hero);
     const bonusesStr = Object.entries(bonuses)
       .filter(([_, v]) => v !== 0)
@@ -488,6 +649,9 @@ ${specStr}
 
 ━━━ Навыки (${hero.skills.length}/${HeroManager.MAX_SKILLS}) ━━━
 ${skillsStr}
+
+━━━ Комбо-артефакты ━━━
+${comboStr}
 
 ━━━ Активные бонусы ━━━
 ${bonusesStr}`;
@@ -540,6 +704,18 @@ ${bonusesStr}`;
     const diplomacy = this.getDiplomacyChance(hero);
     if (diplomacy > 0) bonuses['diplomacy_chance'] = diplomacy;
 
+    // === КОМБО-АРТЕФАКТЫ ===
+    const comboBonuses = comboArtifactSystem.getActiveComboBonuses(hero);
+    if (Object.keys(comboBonuses).length > 0) {
+      bonuses['combo_attack'] = (bonuses['combo_attack'] || 0) + (comboBonuses.attack || 0);
+      bonuses['combo_defense'] = (bonuses['combo_defense'] || 0) + (comboBonuses.defense || 0);
+      if (comboBonuses.morale) bonuses['combo_morale'] = (bonuses['combo_morale'] || 0) + comboBonuses.morale;
+      if (comboBonuses.spellPower) bonuses['combo_spell_power'] = (bonuses['combo_spell_power'] || 0) + comboBonuses.spellPower;
+      if (comboBonuses.necromancy) bonuses['combo_necromancy'] = (bonuses['combo_necromancy'] || 0) + comboBonuses.necromancy;
+      if (comboBonuses.manaRegen) bonuses['combo_mana_regen'] = (bonuses['combo_mana_regen'] || 0) + comboBonuses.manaRegen;
+      if (comboBonuses.spellDuration) bonuses['combo_spell_duration'] = (bonuses['combo_spell_duration'] || 0) + comboBonuses.spellDuration;
+    }
+
     return bonuses;
   }
 
@@ -556,7 +732,14 @@ ${bonusesStr}`;
       movement_points: 'Очки движения',
       vision_radius: 'Радиус обзора',
       daily_gold: 'Золото в день',
-      diplomacy_chance: 'Шанс дипломатии %'
+      diplomacy_chance: 'Шанс дипломатии %',
+      combo_attack: 'АТК от комбо',
+      combo_defense: 'ЗАЩ от комбо',
+      combo_morale: 'Мораль от комбо',
+      combo_spell_power: 'Сила магии от комбо',
+      combo_necromancy: 'Некромантия от комбо',
+      combo_mana_regen: 'Реген. маны от комбо',
+      combo_spell_duration: 'Длит. заклинаний от комбо'
     };
     return map[type] || type;
   }

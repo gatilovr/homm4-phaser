@@ -54,6 +54,106 @@ export class CreatureAbilitiesSystem {
       healed: 0
     };
 
+    // === ХОЛОДНАЯ АТАКА (ice_elemental) ===
+    if (hasAbility(attacker.creatureId, 'cold_attack')) {
+      if (GameRandom.chance(0.3) && defender.count > 0) {
+        defender.effects.push({ spellId: 'slow', duration: 2, value: 30 });
+        result.debuffsApplied.push({ target: defender, debuff: 'slow' });
+        this.addLog(`❄️ ${defender.creatureId} заморожен (-30% скорости на 2 хода)!`);
+      }
+    }
+
+    // === ПРОКЛЯТИЕ (mummy) ===
+    if (hasAbility(attacker.creatureId, 'curse_attack')) {
+      if (GameRandom.chance(0.4) && defender.count > 0) {
+        defender.effects.push({ spellId: 'curse', duration: 3, value: 1 });
+        result.debuffsApplied.push({ target: defender, debuff: 'curse' });
+        this.addLog(`💀 ${defender.creatureId} проклят (мин. урон на 3 хода)!`);
+      }
+    }
+
+    // === ОГНЕННОЕ ДЫХАНИЕ (dragon) ===
+    if (hasAbility(attacker.creatureId, 'fire_breath')) {
+      const fireDamage = Math.floor(baseDamage * 0.6);
+      const adjacentEnemies = battleState.units.filter(u => {
+        if (u.id === attacker.id || u.count <= 0) return false;
+        const dist = Math.max(Math.abs(u.x - defender.x), Math.abs(u.y - defender.y));
+        return dist <= 1 && u.side !== attacker.side;
+      });
+      for (const target of adjacentEnemies) {
+        applyDamage(target, fireDamage);
+        result.extraDamage.push({ target, damage: fireDamage, type: 'fire_breath' });
+      }
+      if (adjacentEnemies.length > 0) {
+        this.addLog(`🔥 Дыхание дракона: ${fireDamage} урона ${adjacentEnemies.length} соседям`);
+      }
+    }
+
+    // === КРИСТАЛЛИЧЕСКИЕ ШИПЫ (crystal_dragon) ===
+    if (hasAbility(attacker.creatureId, 'crystal_spikes')) {
+      const spikeDamage = Math.floor(baseDamage * 0.3);
+      applyDamage(defender, spikeDamage);
+      result.extraDamage.push({ target: defender, damage: spikeDamage, type: 'crystal_spikes' });
+      this.addLog(`💎 Кристальные шипы: +${spikeDamage} урона!`);
+    }
+
+    // === КАМЕННЫЙ ВЗГЛЯД (medusa) ===
+    if (hasAbility(attacker.creatureId, 'stone_gaze')) {
+      if (GameRandom.chance(0.3) && defender.count > 0) {
+        defender.effects.push({ spellId: 'stone_gaze', duration: 2, value: 1 });
+        defender.hasActed = true;
+        result.debuffsApplied.push({ target: defender, debuff: 'stone_gaze' });
+        this.addLog(`🐍 ${defender.creatureId} окаменел на 2 хода!`);
+      }
+    }
+
+    // === КРАЖА ЗОЛОТА (bandit) ===
+    if (hasAbility(attacker.creatureId, 'steal_gold')) {
+      const stolenGold = GameRandom.randomInt(10, 50) * attacker.count;
+      this.addLog(`💰 ${attacker.creatureId} украл ${stolenGold} золота!`);
+    }
+
+    // === ПОДНЯТИЕ МОРАЛИ (satyr, angel) ===
+    if (hasAbility(attacker.creatureId, 'morale_boost')) {
+      const allies = battleState.units.filter(u => u.side === attacker.side && u.count > 0 && u.id !== attacker.id);
+      for (const ally of allies) {
+        if (!ally.effects.some(e => e.spellId === 'morale_boosted')) {
+          ally.effects.push({ spellId: 'morale_boosted', duration: 3, value: 1 });
+        }
+      }
+      this.addLog(`✨ ${attacker.creatureId} поднимает мораль союзникам!`);
+    }
+
+    // === ЛЕЧЕНИЕ (nymph, monk) ===
+    if (hasAbility(attacker.creatureId, 'heal') && !attacker.isHero) {
+      const mostWounded = battleState.units
+        .filter(u => u.side === attacker.side && u.count > 0 && u.currentHealth < u.maxHealth)
+        .sort((a, b) => (a.currentHealth / a.maxHealth) - (b.currentHealth / b.maxHealth))[0];
+      if (mostWounded) {
+        const healAmount = Math.floor(mostWounded.maxHealth * 0.25);
+        mostWounded.currentHealth = Math.min(mostWounded.maxHealth, mostWounded.currentHealth + healAmount);
+        result.healed = healAmount;
+        this.addLog(`💚 ${attacker.creatureId} лечит ${mostWounded.creatureId} на ${healAmount} HP`);
+      }
+    }
+
+    // === РЕГЕНЕРАЦИЯ (troll) ===
+    if (hasAbility(attacker.creatureId, 'regeneration') && !attacker.isHero) {
+      const regenAmount = Math.floor(attacker.maxHealth * 0.1);
+      attacker.currentHealth = Math.min(attacker.maxHealth, attacker.currentHealth + regenAmount);
+      result.healed += regenAmount;
+      this.addLog(`🔄 ${attacker.creatureId} регенерирует ${regenAmount} HP`);
+    }
+
+    // === ЯДОВИТАЯ АТАКА (venom_spawn, sea_serpent) ===
+    if (hasAbility(attacker.creatureId, 'poison_attack')) {
+      if (GameRandom.chance(0.5) && defender.count > 0) {
+        defender.effects.push({ spellId: 'poison', duration: 3, value: 5 });
+        result.debuffsApplied.push({ target: defender, debuff: 'poison' });
+        this.addLog(`☠️ ${defender.creatureId} отравлен (-5 HP/ход на 3 хода)!`);
+      }
+    }
+
     // === ДВОЙНАЯ АТАКА (волки, wolf_raider) ===
     if (hasAbility(attacker.creatureId, 'double_attack')) {
       const secondHit = Math.floor(baseDamage * 0.7);
@@ -84,11 +184,10 @@ export class CreatureAbilitiesSystem {
       
       if (!immuneToDrain) {
         const healAmount = Math.floor(baseDamage * 0.5);
-        attacker.currentHealth = Math.min(attacker.maxHealth, attacker.currentHealth + healAmount);
-        result.healed = healAmount;
-        this.addLog(`🩸 ${attacker.creatureId} восстанавливает ${healAmount} HP`);
-
-        // Воскрешение убитых вампиров
+        const oldHealth = attacker.currentHealth;
+        attacker.currentHealth = attacker.currentHealth + healAmount;
+        
+        // Воскрешение убитых вампиров (излишек HP воскрешает павших)
         if (attacker.currentHealth > attacker.maxHealth) {
           const excessHp = attacker.currentHealth - attacker.maxHealth;
           const hpPerVampire = attacker.maxHealth / attacker.count;
@@ -99,6 +198,11 @@ export class CreatureAbilitiesSystem {
             this.addLog(`⚰️ ${resurrected} вампиров восстают из мёртвых!`);
           }
           attacker.currentHealth = attacker.maxHealth;
+        }
+        
+        result.healed = Math.min(healAmount, attacker.currentHealth - oldHealth);
+        if (result.healed > 0) {
+          this.addLog(`🩸 ${attacker.creatureId} восстанавливает ${result.healed} HP`);
         }
       }
     }
@@ -126,6 +230,7 @@ export class CreatureAbilitiesSystem {
       const breathDamage = Math.floor(baseDamage * 0.5);
       const adjacentEnemies = battleState.units.filter(u => {
         if (u.id === attacker.id || u.count <= 0) return false;
+        if (u.side === attacker.side) return false; // Не атаковать союзников
         const dist = Math.max(Math.abs(u.x - defender.x), Math.abs(u.y - defender.y));
         return dist <= 1;
       });
@@ -240,8 +345,8 @@ export class CreatureAbilitiesSystem {
   getDefenseModifier(attacker: BattleUnit, defender: BattleUnit): number {
     let modifier = 0;
 
-    // Бехемоты игнорируют часть защиты
-    if (hasAbility(attacker.creatureId, 'ignore_defense')) {
+    // Бехемоты игнорируют 50% защиты
+    if (hasAbility(attacker.creatureId, 'ignore_defense_50')) {
       modifier -= Math.floor(this.getCreatureDefense(defender.creatureId) * 0.5);
     }
 

@@ -568,6 +568,7 @@ export interface BattleUnit {
   isHero?: boolean;
   isWall?: boolean;
   isTower?: boolean;
+  isWarMachine?: boolean;
   wallHp?: number;
   speed?: number;
   shotsLeft?: number;

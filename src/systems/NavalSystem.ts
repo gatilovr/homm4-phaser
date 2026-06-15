@@ -273,17 +273,49 @@ export function getWaterMovementSpeed(hero: Hero): number {
 /**
  * Морское сражение ( boarding combat )
  * Когда герой на корабле встречает вражеский корабль
- * Примечание: полноценные морские сражения - будущая фича
  */
 export function initiateNavalBattle(
   attacker: Hero,
   defenderShip: MapObject
-): { battleInitiated: boolean; message: string } {
-  // Пока просто возвращаем сообщение
-  // В будущем здесь будет запуск BattleScene с типом 'naval'
+): { battleInitiated: boolean; message: string; defenderHero?: Hero } {
+  // Создаём временного защитника для морского боя
+  const defenderHero: Hero = {
+    id: `naval_defender_${defenderShip.id}`,
+    name: 'Пират',
+    class: 'Варвар',
+    faction: 'asylum',
+    level: Math.max(1, attacker.level - 1),
+    experience: 0,
+    x: defenderShip.x,
+    y: defenderShip.y,
+    movementPoints: 0,
+    maxMovementPoints: 0,
+    stats: {
+      attack: Math.max(1, attacker.stats.attack - 2),
+      defense: Math.max(1, attacker.stats.defense - 2),
+      spellPower: 1,
+      knowledge: 1,
+      hp: 20,
+      maxHp: 20,
+      morale: 0,
+      luck: 0
+    },
+    skills: [],
+    equipment: {},
+    army: [
+      { creatureId: 'pirate', count: 5 + Math.floor(Math.random() * 10) },
+      { creatureId: 'sea_serpent', count: 2 + Math.floor(Math.random() * 5) }
+    ],
+    mana: 0,
+    maxMana: 0,
+    spells: [],
+    owner: 'enemy'
+  };
+
   return {
-    battleInitiated: false,
-    message: '⚓ Морские сражения пока не реализованы',
+    battleInitiated: true,
+    message: `⚓ Морское сражение с ${defenderHero.name}!`,
+    defenderHero
   };
 }
 

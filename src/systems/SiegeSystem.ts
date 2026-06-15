@@ -246,4 +246,134 @@ export class SiegeSystem {
 
     return status.join('\n');
   }
+
+  // ==========================================================================
+  // ОСАДНЫЕ МАШИНЫ (канон HoMM4)
+  // ==========================================================================
+
+  /**
+   * Создать юнит баллисты (осадная машина)
+   */
+  static createBallistaUnit(x: number = 0, y: number = 5): BattleUnit {
+    return {
+      id: 'war_machine_ballista',
+      creatureId: 'ballista_machine',
+      count: 1,
+      currentHealth: 100,
+      maxHealth: 100,
+      x,
+      y,
+      side: 'attacker',
+      hasActed: false,
+      hasRetaliated: true,
+      effects: [],
+      isWarMachine: true
+    };
+  }
+
+  /**
+   * Создать юнит катапульты (осадная машина)
+   */
+  static createCatapultUnit(x: number = 0, y: number = 6): BattleUnit {
+    return {
+      id: 'war_machine_catapult',
+      creatureId: 'catapult_machine',
+      count: 1,
+      currentHealth: 200,
+      maxHealth: 200,
+      x,
+      y,
+      side: 'attacker',
+      hasActed: false,
+      hasRetaliated: true,
+      effects: [],
+      isWarMachine: true
+    };
+  }
+
+  /**
+   * Создать палатку первой помощи (осадная машина)
+   */
+  static createFirstAidTentUnit(x: number = 0, y: number = 7): BattleUnit {
+    return {
+      id: 'war_machine_first_aid',
+      creatureId: 'first_aid_tent_machine',
+      count: 1,
+      currentHealth: 50,
+      maxHealth: 50,
+      x,
+      y,
+      side: 'attacker',
+      hasActed: false,
+      hasRetaliated: true,
+      effects: [],
+      isWarMachine: true
+    };
+  }
+
+  /**
+   * Атака баллисты (стреляет по вражескому юниту)
+   */
+  static ballistaAttack(
+    ballista: BattleUnit,
+    target: BattleUnit,
+    skillLevel: number = 0
+  ): { damage: number; hit: boolean } {
+    // Баллиста всегда попадает (100% точность)
+    let damage = 25; // Базовый урон
+    
+    // Бонус от навыка Артиллерии
+    if (skillLevel >= 1) damage = Math.floor(damage * 1.25); // Basic: +25%
+    if (skillLevel >= 2) damage = Math.floor(damage * 1.5);  // Advanced: +50%
+    if (skillLevel >= 3) damage = Math.floor(damage * 2.0);  // Expert: +100%
+    
+    return { damage, hit: true };
+  }
+
+  /**
+   * Атака катапульты (стреляет по стенам/башням)
+   */
+  static catapultAttackWarMachine(
+    catapult: BattleUnit,
+    target: WallSegment,
+    skillLevel: number = 0
+  ): { damage: number; destroyed: boolean } {
+    let damage = 50; // Базовый урон
+    
+    // Бонус от навыка Артиллерии
+    if (skillLevel >= 1) damage = Math.floor(damage * 1.25);
+    if (skillLevel >= 2) damage = Math.floor(damage * 1.5);
+    if (skillLevel >= 3) damage = Math.floor(damage * 2.0);
+    
+    target.currentHp -= damage;
+    const destroyed = target.currentHp <= 0;
+    if (destroyed) {
+      target.currentHp = 0;
+      target.isDestroyed = true;
+    }
+    
+    return { damage, destroyed };
+  }
+
+  /**
+   * Лечение палаткой первой помощи (лечит одного юнита)
+   */
+  static firstAidTentHeal(
+    tent: BattleUnit,
+    target: BattleUnit,
+    skillLevel: number = 0
+  ): { healed: number; success: boolean } {
+    let healAmount = 50; // Базовое лечение
+    
+    // Бонус от навыка Первой помощи
+    if (skillLevel >= 1) healAmount = Math.floor(healAmount * 1.25);
+    if (skillLevel >= 2) healAmount = Math.floor(healAmount * 1.5);
+    if (skillLevel >= 3) healAmount = Math.floor(healAmount * 2.0);
+    
+    const before = target.currentHealth;
+    target.currentHealth = Math.min(target.maxHealth, target.currentHealth + healAmount);
+    const healed = target.currentHealth - before;
+    
+    return { healed, success: healed > 0 };
+  }
 }

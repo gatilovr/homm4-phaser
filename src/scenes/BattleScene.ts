@@ -84,6 +84,10 @@ export class BattleScene extends Phaser.Scene {
   private wallHpBars: { graphics: Phaser.GameObjects.Graphics; segment: any; x: number; y: number }[] = [];
   private towerSprites: { graphics: Phaser.GameObjects.Graphics; segment: any }[] = [];
 
+  // === ФАЗА ТАКТИКИ (канон HoMM4) ===
+  private tacticsPhase: boolean = false;
+  private tacticsDeployedUnits: Set<string> = new Set();
+
   // === ДАННЫЕ ===
   private attackerHero!: Hero;
   private defenderHero: Hero | null = null;
@@ -1054,6 +1058,13 @@ export class BattleScene extends Phaser.Scene {
 
   private onTileClick(x: number, y: number): void {
     if (this.isAnimating || this.battleEnded) return;
+    
+    // Фаза тактики: размещение юнитов
+    if (this.tacticsPhase) {
+      this.handleTacticsClick(x, y);
+      return;
+    }
+    
     if (!this.selectedUnit || this.selectedUnit.side === 'defender') return;
 
     if (this.targetingMode && this.currentSpell) {
@@ -1104,6 +1115,61 @@ export class BattleScene extends Phaser.Scene {
 
     if (isHighlighted) {
       this.moveUnit(this.selectedUnit, x, y);
+    }
+  }
+
+  /**
+   * Обработка клика в фазе тактики (канон HoMM4)
+   * Позволяет перемещать юнитов в зоне размещения
+   */
+  private handleTacticsClick(x: number, y: number): void {
+    // Проверяем, что клик в зоне размещения (первые 3 ряда)
+    if (x > 2) {
+      this.addLog('❌ Можно размещать только в первых 3 рядах!');
+      return;
+    }
+    
+    // Проверяем, есть ли юнит на этой клетке
+    const unitOnTile = this.battleState.units.find(u => 
+      u.count > 0 && u.x === x && u.y === y && u.side === 'attacker'
+    );
+    
+    if (unitOnTile) {
+      // Выбираем юнита для перемещения
+      this.selectedUnit = unitOnTile;
+      this.addLog(`🎯 Выбран: ${unitOnTile.creatureId} (${unitOnTile.count})`);
+      
+      // Подсвечиваем клетку
+      this.clearHighlights();
+      const TS = CONFIG.BATTLE_TILE_SIZE;
+      const offsetX = this.getOffsetX();
+      const offsetY = this.getOffsetY();
+      const highlight = this.add.rectangle(
+        offsetX + x * TS + TS / 2,
+        offsetY + y * TS + TS / 2,
+        TS - 4, TS - 4
+      ).setStrokeStyle(2, 0x4488ff).setFillStyle(0x4488ff, 0.3).setDepth(46);
+      // Не добавляем в highlights (Rectangle не Sprite)
+    } else if (this.selectedUnit) {
+      // Перемещаем выбранного юнита на пустую клетку
+      const oldX = this.selectedUnit.x;
+      const oldY = this.selectedUnit.y;
+      
+      this.selectedUnit.x = x;
+      this.selectedUnit.y = y;
+      
+      // Обновляем позицию спрайта
+      const sprite = this.unitSprites.get(this.selectedUnit.id);
+      if (sprite) {
+        const TS = CONFIG.BATTLE_TILE_SIZE;
+        const offsetX = this.getOffsetX();
+        const offsetY = this.getOffsetY();
+        sprite.setPosition(offsetX + x * TS + TS / 2, offsetY + y * TS + TS / 2);
+      }
+      
+      this.addLog(`↔️ ${this.selectedUnit.creatureId} перемещён на (${x}, ${y})`);
+      this.selectedUnit = null;
+      this.clearHighlights();
     }
   }
 
@@ -1198,7 +1264,113 @@ export class BattleScene extends Phaser.Scene {
   // ============================================================================
 
   private startBattle(): void {
-    this.addLog(`⚔️ ${this.battleType === 'siege' ? 'ОСАДА началась!' : 'Бой начался!'}`);
+    // Проверяем, есть ли у героя навык Тактика
+    const hasTactics = this.attackerHero.skills?.some(s => s.id === 'tactics');
+    
+    if (hasTactics && this.battleType !== 'siege') {
+      // Начинаем фазу тактики (канон HoMM4)
+      this.startTacticsPhase();
+    } else {
+      // Обычное начало боя
+      this.addLog(`⚔️ ${this.battleType === 'siege' ? 'ОСАДА началась!' : 'Бой начался!'}`);
+      this.sortUnitsBySpeed();
+      this.updateQueue();
+      this.selectNextUnit();
+    }
+  }
+
+  /**
+   * Фаза тактики (канон HoMM4)
+   * Позволяет игроку разместить юнитов перед боем
+   */
+  private startTacticsPhase(): void {
+    this.tacticsPhase = true;
+    this.addLog('🎯 ФАЗА ТАКТИКИ: Разместите юнитов перед боем!');
+    
+    // Показываем зону размещения (первые 3 ряда для атакующего)
+    this.showDeploymentZone();
+    
+    // Показываем кнопку "Начать бой"
+    this.showStartBattleButton();
+    
+    // Подсвечиваем юнитов атакующего для размещения
+    this.highlightTacticsUnits();
+  }
+
+  /**
+   * Показать зону размещения
+   */
+  private showDeploymentZone(): void {
+    const TS = CONFIG.TILE_SIZE;
+    const graphics = this.add.graphics().setDepth(45);
+    
+    // Зона размещения: первые 3 ряда (x: 0-4, y: 0-10)
+    for (let y = 0; y < 11; y++) {
+      for (let x = 0; x < 3; x++) {
+        graphics.fillStyle(0x4488ff, 0.3);
+        graphics.fillRect(x * TS, y * TS, TS, TS);
+        graphics.lineStyle(1, 0x4488ff, 0.5);
+        graphics.strokeRect(x * TS, y * TS, TS, TS);
+      }
+    }
+    
+    this.highlights.push(graphics as any);
+  }
+
+  /**
+   * Показать кнопку "Начать бой"
+   */
+  private showStartBattleButton(): void {
+    const { width, height } = this.scale;
+    
+    const startBtn = this.add.text(width - 150, height - 50, '⚔️ НАЧАТЬ БОЙ', {
+      fontSize: '18px',
+      color: '#ffffff',
+      fontFamily: 'Segoe UI',
+      fontStyle: 'bold',
+      backgroundColor: '#2ecc71',
+      padding: { x: 15, y: 8 }
+    }).setOrigin(0.5).setDepth(100).setInteractive({ useHandCursor: true });
+    
+    startBtn.on('pointerover', () => startBtn.setBackgroundColor('#27ae60'));
+    startBtn.on('pointerout', () => startBtn.setBackgroundColor('#2ecc71'));
+    startBtn.on('pointerdown', () => {
+      startBtn.destroy();
+      this.endTacticsPhase();
+    });
+  }
+
+  /**
+   * Подсветить юнитов для размещения
+   */
+  private highlightTacticsUnits(): void {
+    const attackerUnits = this.battleState.units.filter(u => u.side === 'attacker' && u.count > 0 && !u.isHero);
+    
+    for (const unit of attackerUnits) {
+      const sprite = this.unitSprites.get(unit.id);
+      if (sprite) {
+        sprite.setTint(0x4488ff);
+      }
+    }
+  }
+
+  /**
+   * Завершить фазу тактики
+   */
+  private endTacticsPhase(): void {
+    this.tacticsPhase = false;
+    
+    // Убираем подсветку с юнитов
+    const attackerUnits = this.battleState.units.filter(u => u.side === 'attacker' && u.count > 0);
+    for (const unit of attackerUnits) {
+      const sprite = this.unitSprites.get(unit.id);
+      if (sprite) {
+        sprite.clearTint();
+      }
+    }
+    
+    // Начинаем бой
+    this.addLog('⚔️ Бой начинается!');
     this.sortUnitsBySpeed();
     this.updateQueue();
     this.selectNextUnit();

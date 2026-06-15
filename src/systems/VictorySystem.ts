@@ -78,6 +78,7 @@ export class VictorySystem {
   private victoryCondition: VictoryCondition;
   private defeatCondition: DefeatCondition;
   private currentGold: number = 0;
+  private score: number = 0;
 
   constructor(
     victory: VictoryCondition = { type: 'defeat_all_enemies' },
@@ -85,6 +86,69 @@ export class VictorySystem {
   ) {
     this.victoryCondition = victory;
     this.defeatCondition = defeat;
+  }
+
+  // === ОЧКИ ПОБЕДЫ (канон HoMM4) ===
+
+  /**
+   * Рассчитать очки победы (канон HoMM4)
+   * Формула: золото + существа + здания + герои + ресурсы
+   */
+  calculateScore(): number {
+    let score = 0;
+
+    // Очки за золото (1 очко за 100 золота)
+    score += Math.floor(this.currentGold / 100);
+
+    // Очки за города (500 за город)
+    for (const town of this.towns.values()) {
+      if (town.owner === 'player') {
+        score += 500;
+        // Бонус за здания в городе
+        score += town.builtBuildings.length * 50;
+      }
+    }
+
+    // Очки за шахты (200 за шахту)
+    for (const mine of this.mines.values()) {
+      if (mine.owner === 'player') {
+        score += 200;
+      }
+    }
+
+    // Очки за героев (100 за уровень)
+    for (const hero of this.heroes.values()) {
+      if (hero.owner === 'player' && hero.alive) {
+        score += hero.hero.level * 100;
+      }
+    }
+
+    // Очки за время (бонус за быструю победу)
+    const timeBonus = Math.max(0, 1000 - this.day * 10);
+    score += timeBonus;
+
+    this.score = score;
+    return score;
+  }
+
+  /**
+   * Получить текущий рейтинг (канон HoMM4)
+   */
+  getRating(): string {
+    const score = this.calculateScore();
+    if (score >= 5000) return '.legendary';
+    if (score >= 3000) return 'epic';
+    if (score >= 2000) return 'heroic';
+    if (score >= 1000) return 'veteran';
+    if (score >= 500) return 'expert';
+    return 'beginner';
+  }
+
+  /**
+   * Получить текущий счёт
+   */
+  getScore(): number {
+    return this.score;
   }
 
   // === РЕГИСТРАЦИЯ ===

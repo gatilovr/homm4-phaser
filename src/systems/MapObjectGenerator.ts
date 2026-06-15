@@ -614,6 +614,86 @@ export class MapObjectGenerator {
       }
     }
 
+    // === 39. ИСТОЧНИКИ УДАЧИ (Luck Fountains) — +удача (канон HoMM4) ===
+    const luckFountainCount = 2;
+    for (let i = 0; i < luckFountainCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
+      if (pos) {
+        this.addObject(`luck_fountain_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'luck_fountain',
+          luckBonus: 1 + Math.floor(rand() * 2),
+          name: 'Источник удачи'
+        });
+      }
+    }
+
+    // === 40. МАГИЧЕСКИЕ РАВНИНЫ (Magic Plains) — +сила магии (канон HoMM4) ===
+    const magicPlainsCount = 2;
+    for (let i = 0; i < magicPlainsCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`magic_plains_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'magic_plains',
+          spellPowerBonus: 1 + Math.floor(rand() * 2),
+          name: 'Магические равнины'
+        });
+      }
+    }
+
+    // === 41. ПРОКЛЯТАЯ ЗЕМЛЯ (Cursed Lands) — -мораль (канон HoMM4) ===
+    const cursedLandsCount = 1;
+    for (let i = 0; i < cursedLandsCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`cursed_lands_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'cursed_lands',
+          moralePenalty: -2,
+          name: 'Проклятая земля'
+        });
+      }
+    }
+
+    // === 42. ТОРГОВЫЕ ПОСТЫ (Trading Posts) — обмен ресурсов (канон HoMM4) ===
+    const tradingPostCount = 2;
+    for (let i = 0; i < tradingPostCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'any');
+      if (pos) {
+        this.addObject(`trading_post_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'trading_post',
+          exchangeRate: 1.5, // Лучший курс чем на рынке
+          name: 'Торговый пост'
+        });
+      }
+    }
+
+    // === 43. ФРАКЦИОННЫЕ СВЯТИЛИЩА (Faction Shrines) — +опыт特定фракции (канон HoMM4) ===
+    const factionShrineCount = 3;
+    const factions = ['haven', 'necropolis', 'preserve'];
+    for (let i = 0; i < factionShrineCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
+      if (pos) {
+        this.addObject(`faction_shrine_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'faction_shrine',
+          faction: factions[i % factions.length],
+          expBonus: 1000,
+          name: `Святилище ${factions[i % factions.length]}`
+        });
+      }
+    }
+
+    // === 44. УНИВЕРСИТЕТЫ (Universities) — +навык (канон HoMM4) ===
+    const universityCount = 1;
+    for (let i = 0; i < universityCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`university_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'university',
+          skillReward: 'random',
+          name: 'Университет'
+        });
+      }
+    }
+
     console.log(`[MapObjectGenerator] Создано ${this.objects.length} объектов`);
   }
 

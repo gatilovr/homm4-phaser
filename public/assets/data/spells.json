@@ -1249,6 +1249,111 @@
           "type": "summon_boat"
         }
       ]
+    },
+    {
+      "id": "prayer",
+      "name": "Молитва",
+      "nameEn": "Prayer",
+      "school": "life",
+      "manaCost": 12,
+      "description": "+3 к характеристикам всех союзников на 3 хода (канон HoMM4)",
+      "target": "all_allies",
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "all_stats",
+          "value": 3,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "dark_ritual",
+      "name": "Тёмный ритуал",
+      "nameEn": "Dark Ritual",
+      "school": "death",
+      "manaCost": 15,
+      "description": "Пожертвуйте 50% HP для восстановления 100% маны (канон HoMM4)",
+      "target": "self",
+      "effects": [
+        {
+          "type": "dark_ritual",
+          "hpCostPercent": 50,
+          "manaRestorePercent": 100
+        }
+      ]
+    },
+    {
+      "id": "slayer",
+      "name": "Истребитель",
+      "nameEn": "Slayer",
+      "school": "chaos",
+      "manaCost": 10,
+      "description": "+50% урона по существам уровня 4+ на 3 хода (канон HoMM4)",
+      "target": "single",
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "damage_vs_high_tier",
+          "value": 50,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "frenzy",
+      "name": "Безумие",
+      "nameEn": "Frenzy",
+      "school": "chaos",
+      "manaCost": 8,
+      "description": "+100% урона, -50% защиты на 3 хода (канон HoMM4)",
+      "target": "single",
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "damage",
+          "value": 100,
+          "duration": 3
+        },
+        {
+          "type": "debuff",
+          "stat": "defense",
+          "value": 50,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "clone",
+      "name": "Клонирование",
+      "nameEn": "Clone",
+      "school": "order",
+      "manaCost": 20,
+      "description": "Создаёт копию дружественного юнита (канон HoMM4)",
+      "target": "single",
+      "effects": [
+        {
+          "type": "clone",
+          "copyPercent": 50
+        }
+      ]
+    },
+    {
+      "id": "counterstrike",
+      "name": "Контрудар",
+      "nameEn": "Counterstrike",
+      "school": "order",
+      "manaCost": 10,
+      "description": "Даёт дополнительную контратаку (канон HoMM4)",
+      "target": "single",
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "extra_retaliation",
+          "value": 1,
+          "duration": 3
+        }
+      ]
     }
   ]
 }

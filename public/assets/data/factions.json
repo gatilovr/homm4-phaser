@@ -8,25 +8,21 @@
       "color": "#FFD700",
       "icon": "🏰",
       "heroClasses": [
+        { "id": "knight", "name": "Рыцарь", "description": "Воин с сильной защитой и лидерством" },
+        { "id": "cleric", "name": "Клирик", "description": "Священник, владеющий магией света" }
+      ],
+      "heroes": [
         {
-          "id": "knight",
-          "name": "Рыцарь",
-          "description": "Воин с сильной защитой и лидерством"
+          "class": "knight", "name": "Сэр Гэвин", "description": "Молодой рыцарь, верный клятве",
+          "startingArmy": [{"creatureId": "squire", "count": 20}, {"creatureId": "ballista", "count": 10}],
+          "stats": {"attack": 3, "defense": 4, "spellPower": 1, "knowledge": 1}
         },
         {
-          "id": "cleric",
-          "name": "Клирик",
-          "description": "Священник, владеющий магией света"
+          "class": "cleric", "name": "Леди Кэтрин", "description": "Священница, целительница армий",
+          "startingArmy": [{"creatureId": "squire", "count": 15}, {"creatureId": "pikeman_h4", "count": 5}],
+          "stats": {"attack": 1, "defense": 2, "spellPower": 3, "knowledge": 3}
         }
       ],
-      "startingHero": {
-        "class": "knight",
-        "name": "Сэр Гэвин",
-        "startingArmy": [
-          { "creatureId": "squire", "count": 20 },
-          { "creatureId": "ballista", "count": 10 }
-        ]
-      },
       "townBuildings": ["haven_dwelling_1", "haven_dwelling_2", "haven_dwelling_3", "haven_dwelling_4"]
     },
     {
@@ -37,25 +33,21 @@
       "color": "#8B008B",
       "icon": "💀",
       "heroClasses": [
+        { "id": "death_knight", "name": "Рыцарь смерти", "description": "Воин-нежить с некронавыками" },
+        { "id": "necromancer", "name": "Некромант", "description": "Маг, владеющий магией смерти" }
+      ],
+      "heroes": [
         {
-          "id": "death_knight",
-          "name": "Рыцарь смерти",
-          "description": "Воин-нежить с некронавыками"
+          "class": "necromancer", "name": "Сандро", "description": "Великий некромант, повелитель смерти",
+          "startingArmy": [{"creatureId": "skeleton_h4", "count": 25}, {"creatureId": "imp_h4", "count": 15}],
+          "stats": {"attack": 1, "defense": 1, "spellPower": 4, "knowledge": 4}
         },
         {
-          "id": "necromancer",
-          "name": "Некромант",
-          "description": "Маг, владеющий магией смерти"
+          "class": "death_knight", "name": "Лорд Хаард", "description": "Рыцарь смерти, повелитель вампиров",
+          "startingArmy": [{"creatureId": "skeleton_h4", "count": 20}, {"creatureId": "zombie", "count": 10}],
+          "stats": {"attack": 4, "defense": 3, "spellPower": 1, "knowledge": 2}
         }
       ],
-      "startingHero": {
-        "class": "necromancer",
-        "name": "Сандро",
-        "startingArmy": [
-          { "creatureId": "skeleton_h4", "count": 25 },
-          { "creatureId": "imp_h4", "count": 15 }
-        ]
-      },
       "specialAbility": "necromancy",
       "townBuildings": ["necropolis_dwelling_1", "necropolis_dwelling_2", "necropolis_dwelling_3", "necropolis_dwelling_4"]
     },
@@ -67,25 +59,21 @@
       "color": "#228B22",
       "icon": "🌲",
       "heroClasses": [
+        { "id": "ranger", "name": "Следопыт", "description": "Стрелок с высокой скоростью и разведкой" },
+        { "id": "druid", "name": "Друид", "description": "Маг природы, владеющий стихиями" }
+      ],
+      "heroes": [
         {
-          "id": "ranger",
-          "name": "Следопыт",
-          "description": "Стрелок с высокой скоростью и разведкой"
+          "class": "ranger", "name": "Гемма", "description": "Дева леса, защитница природы",
+          "startingArmy": [{"creatureId": "sprite", "count": 20}, {"creatureId": "wolf_h4", "count": 10}],
+          "stats": {"attack": 3, "defense": 2, "spellPower": 1, "knowledge": 2}
         },
         {
-          "id": "druid",
-          "name": "Друид",
-          "description": "Маг природы, владеющий стихиями"
+          "class": "druid", "name": "Мелодия", "description": "Друидесса, хранительница древних тайн",
+          "startingArmy": [{"creatureId": "sprite", "count": 15}, {"creatureId": "elf_h4", "count": 5}],
+          "stats": {"attack": 1, "defense": 2, "spellPower": 3, "knowledge": 4}
         }
       ],
-      "startingHero": {
-        "class": "ranger",
-        "name": "Гемма",
-        "startingArmy": [
-          { "creatureId": "sprite", "count": 20 },
-          { "creatureId": "wolf_h4", "count": 10 }
-        ]
-      },
       "townBuildings": ["preserve_dwelling_1", "preserve_dwelling_2", "preserve_dwelling_3", "preserve_dwelling_4"]
     },
     {
@@ -96,83 +84,71 @@
       "color": "#FF4500",
       "icon": "👹",
       "heroClasses": [
+        { "id": "demoniac", "name": "Демониак", "description": "Воин хаоса, повелитель демонов" },
+        { "id": "heretic", "name": "Еретик", "description": "Маг хаоса, владеющий огнём" }
+      ],
+      "heroes": [
         {
-          "id": "demoniac",
-          "name": "Демониак",
-          "description": "Воин-демон с силой хаоса"
+          "class": "demoniac", "name": "Ксерон", "description": "Повелитель демонов, воин хаоса",
+          "startingArmy": [{"creatureId": "bandit", "count": 15}, {"creatureId": "orc_h4", "count": 10}],
+          "stats": {"attack": 4, "defense": 2, "spellPower": 1, "knowledge": 1}
         },
         {
-          "id": "heretic",
-          "name": "Еретик",
-          "description": "Маг хаоса, владеющий разрушением"
+          "class": "heretic", "name": "Фиена", "description": "Еретичка, повелительница огня",
+          "startingArmy": [{"creatureId": "bandit", "count": 10}, {"creatureId": "orc_h4", "count": 8}],
+          "stats": {"attack": 2, "defense": 1, "spellPower": 4, "knowledge": 3}
         }
       ],
-      "startingHero": {
-        "class": "demoniac",
-        "name": "Ксерон",
-        "startingArmy": [
-          { "creatureId": "bandit", "count": 25 },
-          { "creatureId": "orc_h4", "count": 15 }
-        ]
-      },
       "townBuildings": ["asylum_dwelling_1", "asylum_dwelling_2", "asylum_dwelling_3", "asylum_dwelling_4"]
     },
     {
       "id": "academy",
       "name": "Академия",
       "nameEn": "Academy",
-      "description": "Фракция знания. Искусственные существа, мощные маги, заклинания всех школ.",
-      "color": "#4169E1",
-      "icon": "📚",
+      "description": "Фракция магии. Могущественные заклинания, големы, интеллект.",
+      "color": "#9370DB",
+      "icon": "🧙",
       "heroClasses": [
+        { "id": "wizard", "name": "Волшебник", "description": "Маг с высокой силой заклинаний" },
+        { "id": "artificer", "name": "Алхимик", "description": "Мастер алхимии и големов" }
+      ],
+      "heroes": [
         {
-          "id": "wizard",
-          "name": "Волшебник",
-          "description": "Могущественный маг всех школ"
+          "class": "wizard", "name": "Иона", "description": "Великий волшебник, хранитель знаний",
+          "startingArmy": [{"creatureId": "dwarf_h4", "count": 15}, {"creatureId": "halfling", "count": 10}],
+          "stats": {"attack": 1, "defense": 1, "spellPower": 4, "knowledge": 5}
         },
         {
-          "id": "artificer",
-          "name": "Артифекс",
-          "description": "Мастер создания магических предметов"
+          "class": "artificer", "name": "Зилли", "description": "Алхимик-изобретатель, мастер големов",
+          "startingArmy": [{"creatureId": "dwarf_h4", "count": 12}, {"creatureId": "halfling", "count": 8}],
+          "stats": {"attack": 2, "defense": 2, "spellPower": 3, "knowledge": 4}
         }
       ],
-      "startingHero": {
-        "class": "wizard",
-        "name": "Иона",
-        "startingArmy": [
-          { "creatureId": "dwarf_h4", "count": 12 },
-          { "creatureId": "halfling", "count": 15 }
-        ]
-      },
       "townBuildings": ["academy_dwelling_1", "academy_dwelling_2", "academy_dwelling_3", "academy_dwelling_4"]
     },
     {
       "id": "stronghold",
       "name": "Крепость",
       "nameEn": "Stronghold",
-      "description": "Фракция варваров. Сильные бойцы ближнего боя, дешевые существа, мало магии.",
-      "color": "#8B4513",
+      "description": "Фракция варваров. Сильные ближние бойцы, ярость, первобытная сила.",
+      "color": "#A0522D",
       "icon": "⚔️",
       "heroClasses": [
+        { "id": "barbarian", "name": "Варвар", "description": "Воин первобытной силы" },
+        { "id": "shaman", "name": "Шаман", "description": "Духовный лидер, целитель" }
+      ],
+      "heroes": [
         {
-          "id": "barbarian",
-          "name": "Варвар",
-          "description": "Свирепый воин с высокой атакой"
+          "class": "barbarian", "name": "Краг Хак", "description": "Вождь варваров, повелитель битвы",
+          "startingArmy": [{"creatureId": "berserker", "count": 15}, {"creatureId": "centaur", "count": 10}],
+          "stats": {"attack": 5, "defense": 2, "spellPower": 1, "knowledge": 1}
         },
         {
-          "id": "shaman",
-          "name": "Шаман",
-          "description": "Духовный наставник, поддерживает ярость союзников"
+          "class": "shaman", "name": "Камилла", "description": "Шаманка, целительница племени",
+          "startingArmy": [{"creatureId": "berserker", "count": 12}, {"creatureId": "centaur", "count": 8}],
+          "stats": {"attack": 2, "defense": 2, "spellPower": 3, "knowledge": 3}
         }
       ],
-      "startingHero": {
-        "class": "barbarian",
-        "name": "Краг Хак",
-        "startingArmy": [
-          { "creatureId": "berserker", "count": 25 },
-          { "creatureId": "centaur", "count": 10 }
-        ]
-      },
       "townBuildings": ["stronghold_dwelling_1", "stronghold_dwelling_2", "stronghold_dwelling_3", "stronghold_dwelling_4"]
     }
   ]

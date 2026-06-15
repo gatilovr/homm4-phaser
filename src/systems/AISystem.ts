@@ -1143,6 +1143,91 @@ export class AISystem {
   }
 
   // =========================================================================
+  // КАСТ ЗАКЛИНАНИЙ ИИ (канон HoMM4)
+  // =========================================================================
+
+  /**
+   * ИИ выбирает заклинание для каста в бою
+   */
+  chooseBattleSpell(ai: AIPlayer, targets: any[]): string | null {
+    const hero = ai.hero;
+    if (!hero.spells || hero.spells.length === 0) return null;
+    if (hero.mana <= 0) return null;
+
+    // Приоритет заклинаний ИИ
+    const spellPriority = [
+      'heal', 'resurrect', 'bless', 'haste', 'shield',
+      'fireball', 'lightning', 'implosion', 'curse', 'slow'
+    ];
+
+    for (const spellId of spellPriority) {
+      if (hero.spells.includes(spellId)) {
+        return spellId;
+      }
+    }
+
+    // Если нет приоритетных — выбираем случайное
+    return hero.spells[Math.floor(Math.random() * hero.spells.length)];
+  }
+
+  /**
+   * ИИ выбирает заклинание для каста на карте приключений
+   */
+  chooseAdventureSpell(ai: AIPlayer): string | null {
+    const hero = ai.hero;
+    if (!hero.spells || hero.spells.length === 0) return null;
+    if (hero.mana <= 0) return null;
+
+    // Приоритет заклинаний на карте
+    const adventureSpellPriority = [
+      'haste', 'slow', 'bless', 'shield', 'heal'
+    ];
+
+    for (const spellId of adventureSpellPriority) {
+      if (hero.spells.includes(spellId)) {
+        return spellId;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * ИИ применяет заклинание на карте приключений
+   */
+  applyAdventureSpell(ai: AIPlayer, spellId: string): boolean {
+    const hero = ai.hero;
+    if (!hero.spells.includes(spellId)) return false;
+
+    // Простая реализация: усиление армии
+    switch (spellId) {
+      case 'haste':
+        // Увеличиваем очки движения
+        hero.movementPoints = Math.min(
+          hero.maxMovementPoints,
+          hero.movementPoints! + 500
+        );
+        this.notify(`${ai.name} использует Ускорение!`);
+        return true;
+
+      case 'bless':
+        // Увеличиваем мораль
+        hero.morale = Math.min(3, hero.morale + 1);
+        this.notify(`${ai.name} использует Благословение!`);
+        return true;
+
+      case 'shield':
+        // Увеличиваем защиту
+        hero.stats.defense += 2;
+        this.notify(`${ai.name} использует Щит!`);
+        return true;
+
+      default:
+        return false;
+    }
+  }
+
+  // =========================================================================
   // ГЕТТЕРЫ
   // =========================================================================
 

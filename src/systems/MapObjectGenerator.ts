@@ -443,6 +443,177 @@ export class MapObjectGenerator {
       }
     }
 
+    // === 27. ИЗБЫ СЕРА (Seer Huts) — случайные квесты (канон HoMM4) ===
+    const questTypes = [
+      { type: 'kill_creatures', target: 'bandit_neutral', count: 10, reward: { gold: 2000, exp: 500 } },
+      { type: 'collect_artifacts', count: 2, reward: { gold: 1500, exp: 300 } },
+      { type: 'visit_town', reward: { gold: 1000, exp: 200 } },
+      { type: 'level_up', targetLevel: 5, reward: { gold: 3000, exp: 1000 } },
+    ];
+    const seerCount = 3 + Math.floor(rand() * 2); // 3-4 избы
+    for (let i = 0; i < seerCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
+      if (pos) {
+        const quest = questTypes[Math.floor(rand() * questTypes.length)];
+        this.addObject(`seer_hut_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'seer_hut',
+          quest: quest.type,
+          questTarget: quest.target,
+          questCount: quest.count,
+          questTargetLevel: quest.targetLevel,
+          reward: quest.reward,
+          completed: false,
+          name: 'Изба Старца'
+        });
+      }
+    }
+
+    // === 28. ОБЕЛИСКИ ЗНАНИЯ (Learning Stones) — +опыт (канон HoMM4) ===
+    const learningStoneCount = 4 + Math.floor(rand() * 3); // 4-6 камней
+    for (let i = 0; i < learningStoneCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
+      if (pos) {
+        this.addObject(`learning_stone_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'learning_stone',
+          expBonus: 500 + Math.floor(rand() * 1000),
+          name: 'Камень знаний'
+        });
+      }
+    }
+
+    // === 29. КОПИ (Blacksmith) — +артефакт (канон HoMM4) ===
+    const blacksmithCount = 2;
+    for (let i = 0; i < blacksmithCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
+      if (pos) {
+        this.addObject(`blacksmith_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'blacksmith',
+          artifactTier: 'minor',
+          name: 'Кузнец'
+        });
+      }
+    }
+
+    // === 30. РЫБАЦКИЕ ХИЖИНЫ (Fishing Villages) — +золото (канон HoMM4) ===
+    const fishingCount = 2;
+    for (let i = 0; i < fishingCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'any');
+      if (pos) {
+        this.addObject(`fishing_village_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'fishing_village',
+          goldBonus: 500 + Math.floor(rand() * 500),
+          name: 'Рыбацкая деревня'
+        });
+      }
+    }
+
+    // === 31. КОНЮШНИ (Stables) — +очки движения (канон HoMM4) ===
+    const stableCount = 2;
+    for (let i = 0; i < stableCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
+      if (pos) {
+        this.addObject(`stables_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'stables',
+          movementBonus: 400,
+          name: 'Конюшни'
+        });
+      }
+    }
+
+    // === 32. АРЕНЫ (Arena) — +статы на выбор (канон HoMM4) ===
+    const arenaCount = 2;
+    for (let i = 0; i < arenaCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`arena_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'arena',
+          statBonus: 'random', // +2 к случайному стату
+          name: 'Арена'
+        });
+      }
+    }
+
+    // === 33. ХОЛМОВЫЕ ФОРТЫ (Hill Fort) — апгрейд существ (канон HoMM4) ===
+    const hillFortCount = 1;
+    for (let i = 0; i < hillFortCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`hill_fort_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'hill_fort',
+          upgradeDiscount: 0.5, // -50% стоимость улучшения
+          name: 'Холмовой форт'
+        });
+      }
+    }
+
+    // === 34. ПИРАМИДЫ (Pyramids) — бой + заклинание (канон HoMM4) ===
+    const pyramidCount = 1;
+    for (let i = 0; i < pyramidCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`pyramid_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'pyramid',
+          spellReward: 'random',
+          guardStrength: 'strong',
+          name: 'Пирамида'
+        });
+      }
+    }
+
+    // === 35. ДРАКОНЬЯ УТОПИЯ (Dragon's Utopia) — сильный бой + награда (канон HoMM4) ===
+    const utopiaCount = 1;
+    for (let i = 0; i < utopiaCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'far');
+      if (pos) {
+        this.addObject(`dragon_utopia_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'dragons_utopia',
+          guardStrength: 'legendary',
+          reward: { gold: 5000, artifacts: 2 },
+          name: 'Драконья Утопия'
+        });
+      }
+    }
+
+    // === 36. УЧЁНЫЕ (Scholars) — +навык или +заклинание (канон HoMM4) ===
+    const scholarCount = 2;
+    for (let i = 0; i < scholarCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'medium');
+      if (pos) {
+        this.addObject(`scholar_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'scholar',
+          rewardType: Math.random() > 0.5 ? 'skill' : 'spell',
+          name: 'Учёный'
+        });
+      }
+    }
+
+    // === 37. ИСТОЧНИКИ (Wells) — +мана/лечение (канон HoMM4) ===
+    const wellCount = 3;
+    for (let i = 0; i < wellCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'any');
+      if (pos) {
+        this.addObject(`magic_well_${i + 1}`, 'shrine', pos.x, pos.y, {
+          type: 'magic_well',
+          manaRestore: 20 + Math.floor(rand() * 20),
+          name: 'Волшебный колодец'
+        });
+      }
+    }
+
+    // === 38. БОГАТЫЕ СУНДУКИ (Treasure Chests) — золото или артефакт (канон HoMM4) ===
+    const richChestCount = 4;
+    for (let i = 0; i < richChestCount; i++) {
+      const pos = this.findPosition(rand, mapWidth, mapHeight, 'any');
+      if (pos) {
+        this.addObject(`rich_chest_${i + 1}`, 'treasure_chest', pos.x, pos.y, {
+          type: 'treasure_chest',
+          gold: 1000 + Math.floor(rand() * 2000),
+          exp: 500 + Math.floor(rand() * 1000),
+          name: 'Сундук с сокровищами'
+        });
+      }
+    }
+
     console.log(`[MapObjectGenerator] Создано ${this.objects.length} объектов`);
   }
 

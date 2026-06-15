@@ -196,8 +196,107 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private showSettings(): void {
-    console.log('Settings clicked');
-    this.showNotification('Функция в разработке');
+    const { width, height } = this.scale;
+    
+    // Затемнение фона
+    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+      .setInteractive();
+    
+    // Панель настроек
+    const panel = this.add.rectangle(width / 2, height / 2, 500, 400, 0x1a1a2e, 0.95)
+      .setStrokeStyle(2, 0xd4af37);
+    
+    const title = this.add.text(width / 2, height / 2 - 160, '⚙️ НАСТРОЙКИ', {
+      fontSize: '28px',
+      color: '#d4af37',
+      fontFamily: 'Segoe UI',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    
+    // Скорость игры
+    const speedLabel = this.add.text(width / 2 - 180, height / 2 - 100, '🎮 Скорость игры:', {
+      fontSize: '16px',
+      color: '#f0e6d2',
+      fontFamily: 'Segoe UI'
+    });
+    
+    const speedOptions = ['Медленная', 'Нормальная', 'Быстрая'];
+    const currentSpeed = localStorage.getItem('game_speed') || 'normal';
+    
+    let speedY = height / 2 - 70;
+    for (const speed of speedOptions) {
+      const isSelected = speed === currentSpeed || (speed === 'Нормальная' && !localStorage.getItem('game_speed'));
+      const btn = this.add.text(width / 2 - 100, speedY, `• ${speed}`, {
+        fontSize: '14px',
+        color: isSelected ? '#ffd700' : '#aaaaaa',
+        fontFamily: 'Segoe UI'
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      
+      btn.on('pointerdown', () => {
+        localStorage.setItem('game_speed', speed === 'Нормальная' ? 'normal' : speed === 'Быстрая' ? 'fast' : 'slow');
+        this.showSettings(); // Обновляем UI
+      });
+      
+      speedY += 25;
+    }
+    
+    // Графика
+    const graphicsLabel = this.add.text(width / 2 - 180, height / 2 + 10, '🎨 Графика:', {
+      fontSize: '16px',
+      color: '#f0e6d2',
+      fontFamily: 'Segoe UI'
+    });
+    
+    const graphicsOptions = ['Низкая', 'Средняя', 'Высокая'];
+    const currentGraphics = localStorage.getItem('graphics_quality') || 'medium';
+    
+    let graphicsY = height / 2 + 40;
+    for (const quality of graphicsOptions) {
+      const isSelected = quality === currentGraphics || (quality === 'Средняя' && !localStorage.getItem('graphics_quality'));
+      const btn = this.add.text(width / 2 - 100, graphicsY, `• ${quality}`, {
+        fontSize: '14px',
+        color: isSelected ? '#ffd700' : '#aaaaaa',
+        fontFamily: 'Segoe UI'
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      
+      btn.on('pointerdown', () => {
+        localStorage.setItem('graphics_quality', quality === 'Средняя' ? 'medium' : quality === 'Высокая' ? 'high' : 'low');
+        this.showSettings(); // Обновляем UI
+      });
+      
+      graphicsY += 25;
+    }
+    
+    // Звук (заглушка)
+    const soundLabel = this.add.text(width / 2 - 180, height / 2 + 100, '🔊 Звук:', {
+      fontSize: '16px',
+      color: '#f0e6d2',
+      fontFamily: 'Segoe UI'
+    });
+    
+    const soundBtn = this.add.text(width / 2 - 100, height / 2 + 130, '• ВЫКЛ (скоро)', {
+      fontSize: '14px',
+      color: '#666666',
+      fontFamily: 'Segoe UI'
+    }).setOrigin(0.5);
+    
+    // Кнопка закрытия
+    const closeBtn = this.add.text(width / 2 + 200, height / 2 - 160, '✕', {
+      fontSize: '24px',
+      color: '#ff4444',
+      fontFamily: 'Segoe UI'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    
+    closeBtn.on('pointerdown', () => {
+      overlay.destroy();
+      panel.destroy();
+      title.destroy();
+      speedLabel.destroy();
+      graphicsLabel.destroy();
+      soundLabel.destroy();
+      soundBtn.destroy();
+      closeBtn.destroy();
+    });
   }
 
   private showAbout(): void {

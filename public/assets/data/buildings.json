@@ -16,6 +16,25 @@
       }
     },
     {
+      "id": "alchemy_laboratory",
+      "name": "Алхимическая лаборатория",
+      "faction": "common",
+      "category": "magic",
+      "tier": 0,
+      "cost": {
+        "gold": 2000,
+        "mercury": 3,
+        "crystal": 2
+      },
+      "description": "Позволяет покупать зелья (канон HoMM4)",
+      "requires": [
+        "mage_guild_1"
+      ],
+      "effects": {
+        "alchemyLab": true
+      }
+    },
+    {
       "id": "town_hall",
       "name": "Ратуша",
       "faction": "common",

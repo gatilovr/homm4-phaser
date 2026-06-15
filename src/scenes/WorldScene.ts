@@ -179,6 +179,12 @@ export class WorldScene extends Phaser.Scene {
       padding: { x: 10, y: 5 }
     }).setScrollFactor(0).setDepth(999);
 
+    // === TUTORIAL: Показываем подсказки при первом запуске (канон HoMM4) ===
+    if (!localStorage.getItem('tutorial_shown')) {
+      this.showTutorialTips();
+      localStorage.setItem('tutorial_shown', 'true');
+    }
+
     try {
       // === ИНИЦИАЛИЗАЦИЯ HERO MANAGER ===
       this.heroManager = HeroManager.getInstance(CONFIG.MAP_SEED);
@@ -1465,6 +1471,50 @@ export class WorldScene extends Phaser.Scene {
     this.stopMovement();
   }
 
+  /**
+   * Показать подсказки для новых игроков (канон HoMM4 tutorial)
+   */
+  private showTutorialTips(): void {
+    const tips = [
+      '🎮 Добро пожаловать в Heroes IV!',
+      '🏰 Войдите в город кликом для строительства и найма',
+      '⚔️ Кликните на существ чтобы начать бой',
+      '📦 Собирайте ресурсы и артефакты на карте',
+      '🧙 Изучайте заклинания в школах магии',
+      '🤝 Используйте D для дипломатии с ИИ',
+      '🧪 Используйте P для зелий в бою',
+      '🎯 Используйте G для улучшения жилищ',
+      '💾 F5 — сохранить, F9 — загрузить'
+    ];
+
+    const { width, height } = this.scale;
+    
+    // Показываем первую подсказку
+    let tipIndex = 0;
+    
+    const showTip = (index: number) => {
+      if (index >= tips.length) return;
+      
+      const tipBg = this.add.rectangle(width / 2, height - 50, 500, 40, 0x1a1a2e, 0.9)
+        .setScrollFactor(0).setDepth(1000);
+      const tipText = this.add.text(width / 2, height - 50, tips[index], {
+        fontSize: '14px',
+        color: '#f0e6d2',
+        fontFamily: 'Segoe UI'
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+      
+      // Автоматически скрываем через 3 секунды
+      this.time.delayedCall(3000, () => {
+        tipBg.destroy();
+        tipText.destroy();
+        showTip(index + 1);
+      });
+    };
+    
+    // Запускаем через 1 секунду после загрузки
+    this.time.delayedCall(1000, () => showTip(0));
+  }
+
   private stopMovement(): void {
     this.currentPath = [];
     this.isMoving = false;
@@ -1782,6 +1832,9 @@ export class WorldScene extends Phaser.Scene {
       // Применяем еженедельный прирост существ с учётом эффектов недели
       this.applyWeeklyGrowth();
 
+      // Рост нейтральных существ (канон HoMM4: +20% каждую неделю)
+      this.growNeutralCreatures();
+
       // Случайные события (канон HoMM4: 30% шанс каждую неделю)
       const event = RandomEventsSystem.tryGenerateEvent();
       if (event) {
@@ -1959,6 +2012,31 @@ export class WorldScene extends Phaser.Scene {
         const name = info?.dwellingName || growth.dwellingId;
         this.showNotification(`📈 ${name}: +${growth.growth}×${growth.creatureId} (банк: ${growth.newBankTotal})`);
       }
+    }
+  }
+
+  /**
+   * Рост нейтральных существ (канон HoMM4: +20% каждую неделю)
+   */
+  private growNeutralCreatures(): void {
+    let totalGrown = 0;
+    
+    for (let y = 0; y < this.map.length; y++) {
+      for (let x = 0; x < this.map[y].length; x++) {
+        const obj = this.map[y][x].object;
+        if (obj && obj.type === 'creature' && obj.data?.count) {
+          // Рост +20% каждую неделю (округляем вниз)
+          const growth = Math.floor(obj.data.count * 0.2);
+          if (growth > 0) {
+            obj.data.count += growth;
+            totalGrown += growth;
+          }
+        }
+      }
+    }
+    
+    if (totalGrown > 0) {
+      this.showNotification(`📈 Нейтральные существа выросли (+${totalGrown} шт.)`);
     }
   }
 
